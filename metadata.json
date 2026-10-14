@@ -1,0 +1,6 @@
+{
+  "name": "AS Computer — Shop Management System",
+  "description": "High-performance billing, due ledger, stock inventory, and cash closing management system for AS Computer, Paduar Bazar, Cumilla.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

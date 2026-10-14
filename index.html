@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="bn">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AS Computer — Shop Management System</title>
+    <meta name="description" content="High-performance billing, due ledger, stock inventory, and cash closing management system for AS Computer, Paduar Bazar, Cumilla." />
+    <meta property="og:title" content="AS Computer — Shop Management System" />
+    <meta property="og:description" content="High-performance billing, due ledger, stock inventory, and cash closing management system for AS Computer, Paduar Bazar, Cumilla." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      (function() {
+        // Fix for browser extensions attempting to assign window.fetch when window has only a getter
+        try {
+          var _origFetch = window.fetch ? window.fetch.bind(window) : null;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return _origFetch;
+            },
+            set: function(newFetch) {
+              _origFetch = newFetch;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (err) {
+          try {
+            var _desc = Object.getOwnPropertyDescriptor(Window.prototype, 'fetch');
+            if (_desc && !_desc.set) {
+              var _fn = _desc.get ? _desc.get.call(window) : window.fetch;
+              Object.defineProperty(window, 'fetch', {
+                value: _fn,
+                writable: true,
+                configurable: true,
+                enumerable: true
+              });
+            }
+          } catch (e) {}
+        }
+
+        // Suppress external chrome-extension injected script errors from bubbling up to dev overlay
+        window.addEventListener('error', function(event) {
+          if (
+            (event.filename && event.filename.indexOf('chrome-extension://') !== -1) ||
+            (event.message && event.message.indexOf('Cannot set property fetch') !== -1)
+          ) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-blue-600 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
