@@ -133,15 +133,8 @@ export const UserModal: React.FC<UserModalProps> = ({
                 className="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-2xl flex-wrap gap-2"
               >
                 <div>
-                  <div className="font-bold text-white text-sm flex items-center gap-2">
+                  <div className="font-bold text-white text-sm">
                     {u.username}
-                    <span
-                      className={`text-[10px] uppercase px-1.5 py-0.5 rounded font-black ${
-                        u.role === 'admin' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-300'
-                      }`}
-                    >
-                      {u.role}
-                    </span>
                   </div>
                   <div className="text-xs text-slate-400">{u.phone || 'No phone'}</div>
                 </div>
