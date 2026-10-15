@@ -7,7 +7,7 @@ interface CustomerSalesModalProps {
   sales: SaleRecord[];
   customers: Customer[];
   onClose: () => void;
-  onOpenCustomerSalesPrint: () => void;
+  onOpenCustomerSalesPrint: (filterCustomer?: string, startDate?: string, endDate?: string) => void;
   onPrintInvoice: (sale: SaleRecord) => void;
 }
 
@@ -124,7 +124,7 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onOpenCustomerSalesPrint}
+              onClick={() => onOpenCustomerSalesPrint(selectedCustomer, startDate, endDate)}
               className="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               <Printer className="w-4 h-4 text-amber-200" />

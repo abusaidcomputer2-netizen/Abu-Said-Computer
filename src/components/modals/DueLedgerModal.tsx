@@ -9,7 +9,7 @@ interface DueLedgerModalProps {
   dueTotals: { shopTotalDue: number; shopTotalPaid: number; netDue: number };
   currentUser: string;
   onClose: () => void;
-  onOpenLedgerPrint: () => void;
+  onOpenLedgerPrint: (filterCustomer?: string, startDate?: string, endDate?: string, month?: string) => void;
   onSubmitPayment: (paymentData: any) => Promise<void>;
   showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
@@ -114,7 +114,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onOpenLedgerPrint}
+              onClick={() => onOpenLedgerPrint(selectedFilterCust, filterStartDate, filterEndDate, filterMonth)}
               className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               <Printer className="w-4 h-4 text-amber-300" />
@@ -263,9 +263,21 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                       {formatDateDisplay(r.date)}
                     </td>
                     <td className="p-3">
-                      <div className="font-bold text-white text-xs sm:text-sm">{r.customer}</div>
-                      <div className="text-[10px] text-amber-300 font-medium mt-0.5">
-                        {r.phone || '--'}
+                      <div className="flex items-center justify-between gap-1">
+                        <div>
+                          <div className="font-bold text-white text-xs sm:text-sm">{r.customer}</div>
+                          <div className="text-[10px] text-amber-300 font-medium mt-0.5">
+                            {r.phone || '--'}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onOpenLedgerPrint(r.customer, filterStartDate, filterEndDate, filterMonth)}
+                          className="p-1 hover:bg-slate-800 text-slate-400 hover:text-amber-400 rounded transition cursor-pointer"
+                          title={`Print ${r.customer}'s Due Ledger`}
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                     <td className="p-3 text-amber-300 font-bold whitespace-nowrap">

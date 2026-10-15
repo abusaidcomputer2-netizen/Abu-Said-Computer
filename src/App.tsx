@@ -97,6 +97,10 @@ export default function App() {
   const [invoiceModalSale, setInvoiceModalSale] = useState<SaleRecord | null>(null);
   const [dueLedgerOpen, setDueLedgerOpen] = useState(false);
   const [ledgerPrintOpen, setLedgerPrintOpen] = useState(false);
+  const [ledgerPrintFilterCustomer, setLedgerPrintFilterCustomer] = useState('ALL');
+  const [ledgerPrintStartDate, setLedgerPrintStartDate] = useState('');
+  const [ledgerPrintEndDate, setLedgerPrintEndDate] = useState('');
+  const [ledgerPrintMonth, setLedgerPrintMonth] = useState('');
   const [summaryReportOpen, setSummaryReportOpen] = useState(false);
   const [stockInventoryOpen, setStockInventoryOpen] = useState(false);
   const [stockPrintOpen, setStockPrintOpen] = useState(false);
@@ -107,6 +111,9 @@ export default function App() {
   const [businessSummaryOpen, setBusinessSummaryOpen] = useState(false);
   const [customerSalesOpen, setCustomerSalesOpen] = useState(false);
   const [customerSalesPrintOpen, setCustomerSalesPrintOpen] = useState(false);
+  const [customerSalesPrintCustomer, setCustomerSalesPrintCustomer] = useState('');
+  const [customerSalesPrintStartDate, setCustomerSalesPrintStartDate] = useState('');
+  const [customerSalesPrintEndDate, setCustomerSalesPrintEndDate] = useState('');
   const [cashClosingOpen, setCashClosingOpen] = useState(false);
   const [cashClosingPrintData, setCashClosingPrintData] = useState<CashClosingRecord | null>(null);
   const [cashClosingPrintOpen, setCashClosingPrintOpen] = useState(false);
@@ -762,7 +769,13 @@ export default function App() {
           dueTotals={dueTotals}
           currentUser={currentUser.username}
           onClose={() => setDueLedgerOpen(false)}
-          onOpenLedgerPrint={() => setLedgerPrintOpen(true)}
+          onOpenLedgerPrint={(cust, sDate, eDate, m) => {
+            setLedgerPrintFilterCustomer(cust || 'ALL');
+            setLedgerPrintStartDate(sDate || '');
+            setLedgerPrintEndDate(eDate || '');
+            setLedgerPrintMonth(m || '');
+            setLedgerPrintOpen(true);
+          }}
           onSubmitPayment={handleSubmitPayment}
           showToast={showToast}
         />
@@ -772,10 +785,10 @@ export default function App() {
         <LedgerPrintModal
           records={dueRecords}
           customerSummaries={customerSummaries}
-          filterCustomer="ALL"
-          startDate={filterStartDate}
-          endDate={filterEndDate}
-          month={filterMonth}
+          filterCustomer={ledgerPrintFilterCustomer}
+          startDate={ledgerPrintStartDate}
+          endDate={ledgerPrintEndDate}
+          month={ledgerPrintMonth}
           currentUser={currentUser.username}
           onClose={() => setLedgerPrintOpen(false)}
         />
@@ -870,7 +883,12 @@ export default function App() {
           sales={sales}
           customers={customers}
           onClose={() => setCustomerSalesOpen(false)}
-          onOpenCustomerSalesPrint={() => setCustomerSalesPrintOpen(true)}
+          onOpenCustomerSalesPrint={(cust, sDate, eDate) => {
+            setCustomerSalesPrintCustomer(cust || '');
+            setCustomerSalesPrintStartDate(sDate || '');
+            setCustomerSalesPrintEndDate(eDate || '');
+            setCustomerSalesPrintOpen(true);
+          }}
           onPrintInvoice={sale => setInvoiceModalSale(sale)}
         />
       )}
@@ -879,8 +897,9 @@ export default function App() {
         <CustomerSalesPrintModal
           sales={sales}
           customers={customers}
-          startDate={filterStartDate}
-          endDate={filterEndDate}
+          filterCustomer={customerSalesPrintCustomer}
+          startDate={customerSalesPrintStartDate || filterStartDate}
+          endDate={customerSalesPrintEndDate || filterEndDate}
           currentUser={currentUser.username}
           onClose={() => setCustomerSalesPrintOpen(false)}
         />
