@@ -13,21 +13,50 @@ interface ExpenseModalProps {
   showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
-const DEFAULT_CATEGORIES = [
-  'Shop Rent',
-  'Electricity Bill',
-  'Internet Bill',
-  'Staff Salary',
-  'Paper Purchase',
-  'Ink / Toner',
-  'Machine Maintenance',
-  'Tea & Snacks',
-  'Stationery Products Purchase',
-  'Photocopy Paper & Toner Purchase',
-  'Hardware & Tools',
-  'Conveyance',
-  'Others'
+export const EXPENSE_CATEGORIES_BN = [
+  'দোকান ভাড়া',
+  'বিদ্যুৎ বিল',
+  'ইন্টারনেট বিল',
+  'কর্মচারী বেতন',
+  'কাগজ ক্রয়',
+  'কালি ও টোনার ক্রয়',
+  'মেশিন মেরামত ও সার্ভিসিং',
+  'চা ও আপ্যায়ন',
+  'স্টেশনারি মালামাল ক্রয়',
+  'ফটোকপি কাগজ ও মালামাল',
+  'হার্ডওয়্যার ও কম্পিউটার যন্ত্রাংশ',
+  'যাতায়াত ও পরিবহন খরচ',
+  'মোবাইল রিচার্জ ও বিল',
+  'দোকান সাজসজ্জা ও সংস্কার',
+  'প্যাকেজিং ও অন্যান্য খরচ',
+  'অন্যান্য খরচ'
 ];
+
+export const formatExpenseCategoryBn = (cat: string) => {
+  const map: Record<string, string> = {
+    'shop rent': 'দোকান ভাড়া',
+    'electricity bill': 'বিদ্যুৎ বিল',
+    'internet bill': 'ইন্টারনেট বিল',
+    'staff salary': 'কর্মচারী বেতন',
+    'paper purchase': 'কাগজ ক্রয়',
+    'ink / toner': 'কালি ও টোনার ক্রয়',
+    'ink and toner': 'কালি ও টোনার ক্রয়',
+    'machine maintenance': 'মেশিন মেরামত ও সার্ভিসিং',
+    'tea & snacks': 'চা ও আপ্যায়ন',
+    'tea and snacks': 'চা ও আপ্যায়ন',
+    'stationery products purchase': 'স্টেশনারি মালামাল ক্রয়',
+    'photocopy paper & toner purchase': 'ফটোকপি কাগজ ও মালামাল',
+    'hardware & tools': 'হার্ডওয়্যার ও কম্পিউটার যন্ত্রাংশ',
+    'conveyance': 'যাতায়াত ও পরিবহন খরচ',
+    'mobile recharge': 'মোবাইল রিচার্জ ও বিল',
+    'others': 'অন্যান্য খরচ',
+    'general': 'অন্যান্য খরচ'
+  };
+  const key = (cat || '').toLowerCase().trim();
+  return map[key] || cat;
+};
+
+const DEFAULT_CATEGORIES = EXPENSE_CATEGORIES_BN;
 
 export const ExpenseModal: React.FC<ExpenseModalProps> = ({
   expenses,

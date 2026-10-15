@@ -122,8 +122,15 @@ export const Layout: React.FC<LayoutProps> = ({
           {/* Brand Header */}
           <div className="p-4 border-b border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-slate-950 p-2 border border-slate-700/80 flex items-center justify-center text-amber-400 shadow-inner">
-                <Building2 className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-xl bg-slate-950 p-0.5 border border-slate-700/80 flex items-center justify-center shadow-inner overflow-hidden flex-shrink-0">
+                <img 
+                  src="/logo.png" 
+                  alt="AS Computer" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://lh3.googleusercontent.com/d/1OXthEw7eAn6SkWLFzlW9G8MItn3ARvFM";
+                  }}
+                />
               </div>
               <div>
                 <div className="flex items-center gap-1.5 leading-none">
@@ -225,19 +232,8 @@ export const Layout: React.FC<LayoutProps> = ({
             <div className="flex items-center justify-between p-2.5 bg-slate-900 border border-slate-800 rounded-2xl">
               <div>
                 <div className="text-xs font-black text-white">{currentUser.username}</div>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span
-                    className={`text-[9px] uppercase px-1.5 py-0.2 rounded font-black ${
-                      currentUser.role === 'admin'
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                        : 'bg-slate-800 text-slate-300'
-                    }`}
-                  >
-                    {currentUser.role}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {currentUser.phone || '01904142370'}
-                  </span>
+                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                  {currentUser.phone || '01904142370'}
                 </div>
               </div>
               <button
@@ -275,14 +271,9 @@ export const Layout: React.FC<LayoutProps> = ({
 
             {/* Header Right Stats & Date Indicator */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-300">
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-300">
                 <Calendar className="w-3.5 h-3.5 text-blue-400" />
                 <span>{currentDateDisplay}</span>
-              </div>
-
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-400 font-bold">
-                <Sparkles className="w-3 h-3" />
-                <span>BDT (৳) Asia/Dhaka</span>
               </div>
             </div>
           </div>

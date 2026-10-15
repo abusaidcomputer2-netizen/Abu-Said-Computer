@@ -234,10 +234,18 @@ export default function App() {
   };
 
   // Filtered sales records for table & stats
+  // Business Rule:
+  // - Normally, staff accounts only see their own sales/memos (auto-filtered).
+  // - Admin can always see everyone's sales/memos.
+  // - If any user (staff or admin) searches by Memo No., they can search and see all memos across the system.
+  const isMemoSearch = Boolean(searchMemo && searchMemo.trim() !== '');
+
   const filteredSales = sales.filter(s => {
-    if (searchMemo) {
-      const q = searchMemo.toLowerCase().replace('#', '');
-      return String(s.invoiceNo).includes(q);
+    if (isMemoSearch) {
+      const q = searchMemo.toLowerCase().replace(/^as-?/i, '').replace('#', '').trim();
+      const inv = String(s.invoiceNo).toLowerCase();
+      const formatted = `as-${s.invoiceNo}`.toLowerCase();
+      return inv.includes(q) || formatted.includes(q);
     }
 
     if (currentUser?.role === 'staff') {
@@ -540,8 +548,15 @@ export default function App() {
 
         <div className="relative z-10 w-full max-w-md p-7 sm:p-9 rounded-3xl shadow-2xl border border-slate-700/60 bg-slate-900/90 backdrop-blur-xl">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 mx-auto mb-3 bg-slate-950 p-3 rounded-2xl border border-slate-800 flex items-center justify-center shadow-lg">
-              <Building2 className="w-10 h-10 text-amber-400" />
+            <div className="w-16 h-16 mx-auto mb-3 bg-slate-950 p-1.5 rounded-2xl border border-slate-700/80 flex items-center justify-center shadow-lg overflow-hidden">
+              <img 
+                src="/logo.png" 
+                alt="AS Computer Logo" 
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://lh3.googleusercontent.com/d/1OXthEw7eAn6SkWLFzlW9G8MItn3ARvFM";
+                }}
+              />
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
               <span className="text-amber-500">AS</span> Computer

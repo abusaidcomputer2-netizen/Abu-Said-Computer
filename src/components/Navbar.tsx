@@ -58,8 +58,15 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="w-full px-4 sm:px-6 py-2.5 flex items-center justify-between flex-wrap gap-2">
         {/* Brand Lockup */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-950 p-1.5 border border-slate-700/80 flex items-center justify-center shadow-inner">
-            <Building2 className="w-6 h-6 text-amber-400" />
+          <div className="w-10 h-10 rounded-xl bg-slate-950 p-1 border border-slate-700/80 flex items-center justify-center shadow-inner overflow-hidden flex-shrink-0">
+            <img 
+              src="/logo.png" 
+              alt="AS Computer" 
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "https://lh3.googleusercontent.com/d/1OXthEw7eAn6SkWLFzlW9G8MItn3ARvFM";
+              }}
+            />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
@@ -206,7 +213,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
             <div className="text-right">
               <div className="text-xs font-black text-white">{currentUser.username}</div>
-              <div className="text-[10px] uppercase font-bold text-slate-400">{currentUser.role}</div>
             </div>
             <button
               onClick={onLogout}

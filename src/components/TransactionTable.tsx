@@ -180,51 +180,62 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
         <table className="w-full text-left text-xs text-slate-300">
           <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800">
             <tr>
+              <th className="p-3 text-center w-12">SL</th>
               <th className="p-3">Memo No</th>
               <th className="p-3">Customer & Mobile</th>
               <th className="p-3">Category / Service</th>
               <th className="p-3 text-right">Amount</th>
-              <th className="p-3">{isAdmin ? 'Staff & Time' : 'Time'}</th>
+              <th className="p-3 text-center">Status</th>
+              <th className="p-3">{isAdmin || searchMemo ? 'Staff & Time' : 'Time'}</th>
               <th className="p-3 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/80">
             {sales.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-slate-500 font-medium">
-                  No transaction records found matching active filter.
+                <td colSpan={8} className="py-8 text-center text-slate-500 font-medium">
+                  {searchMemo ? `No memo found matching "${searchMemo}".` : 'No transaction records found matching active filter.'}
                 </td>
               </tr>
             ) : (
-              sales.map(s => (
+              sales.map((s, idx) => (
                 <tr key={s.id} className="hover:bg-slate-800/40 transition">
+                  <td className="p-3 text-center text-slate-500 font-mono text-[11px] font-bold">
+                    {idx + 1}
+                  </td>
                   <td className="p-3 font-black text-amber-400 whitespace-nowrap">
                     #{s.invoiceNo}
                   </td>
                   <td className="p-3">
                     <div className="font-bold text-white">{s.customer || 'New Customer'}</div>
-                    <div className="text-[10px] text-slate-400">{s.phone || '01904142370'}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">{s.phone || '01904142370'}</div>
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-300 border border-blue-500/20 font-bold text-[10px]">
                         {s.category}
                       </span>
-                      {s.due > 0 && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
-                          Due: ৳ {formatCurrency(s.due)}
-                        </span>
-                      )}
                     </div>
                     {s.desc && (
                       <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-xs">{s.desc}</div>
                     )}
                   </td>
-                  <td className="p-3 text-right font-black text-emerald-400 text-sm font-tabular">
+                  <td className="p-3 text-right font-black text-emerald-400 text-sm font-tabular whitespace-nowrap">
                     ৳ {formatCurrency(s.grandTotal)}
                   </td>
-                  <td className="p-3">
-                    {isAdmin ? (
+                  <td className="p-3 text-center whitespace-nowrap">
+                    {s.due > 0 ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                        Due: ৳{formatCurrency(s.due)}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold">
+                        Paid
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-3 whitespace-nowrap">
+                    {isAdmin || searchMemo ? (
                       <>
                         <div className="font-bold text-slate-300">{s.user}</div>
                         <div className="text-[10px] text-slate-500">{s.timestamp}</div>
@@ -236,14 +247,14 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                   <td className="p-3 text-center space-x-1.5 whitespace-nowrap">
                     <button
                       onClick={() => onPrintInvoice(s)}
-                      className="p-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white rounded-lg transition"
+                      className="p-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white rounded-lg transition cursor-pointer"
                       title="Print Invoice / PDF"
                     >
                       <Printer className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => onEditSale(s)}
-                      className="p-1.5 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white rounded-lg transition"
+                      className="p-1.5 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white rounded-lg transition cursor-pointer"
                       title="Edit Memo"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
@@ -251,7 +262,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                     {isAdmin && (
                       <button
                         onClick={() => onDeleteSale(s)}
-                        className="p-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-lg transition"
+                        className="p-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-lg transition cursor-pointer"
                         title="Delete Memo (Admin Only)"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

@@ -69,35 +69,43 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
         </div>
 
         {/* Printable Area */}
-        <div className="text-slate-900 bg-white overflow-y-auto flex-grow p-6 sm:p-8 space-y-4">
-          {/* Header */}
-          <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-slate-950 p-2 flex items-center justify-center text-amber-400">
-                <Building2 className="w-7 h-7" />
+        <div className="print-page-container text-slate-900 bg-white overflow-y-auto flex-grow p-6 sm:p-8 flex flex-col justify-between min-h-[620px]">
+          <div className="print-content-body space-y-4">
+            {/* Header */}
+            <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 bg-transparent">
+                  <img 
+                    src="/logo.png" 
+                    alt="AS Computer" 
+                    className="w-full h-full object-contain filter-none"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "https://lh3.googleusercontent.com/d/1OXthEw7eAn6SkWLFzlW9G8MItn3ARvFM";
+                    }}
+                  />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
+                    <span className="text-amber-500">AS</span> Computer
+                  </h2>
+                  <p className="text-xs font-bold text-slate-700 tracking-wide mt-1">
+                    Daily Cash Closing & Drawer Reconciliation Slip
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    Office: Bhai Bhai Super Market, 2nd Floor, Paduar Bazar, Cumilla • Mobile: 01904142370
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                  <span className="text-amber-500">AS</span> Computer
-                </h2>
-                <p className="text-xs font-bold text-slate-700 tracking-wide mt-1">
-                  Daily Cash Closing & Drawer Reconciliation Slip
+              <div className="text-right flex-shrink-0">
+                <h3 className="text-xl font-black text-emerald-900 uppercase">CASH CLOSING</h3>
+                <p className="text-xs text-slate-800 font-bold mt-1">
+                  Date : <span className="font-black text-slate-900">{formatDateDisplay(cashClosing.date)}</span>
                 </p>
-                <p className="text-[10px] text-slate-500">
-                  Office: Bhai Bhai Super Market, 2nd Floor, Paduar Bazar, Cumilla • Mobile: 01904142370
+                <p className="text-[11px] text-slate-600 font-semibold mt-0.5">
+                  Cashier : <span className="font-bold text-slate-900">{cashClosing.user || currentUser}</span>
                 </p>
               </div>
             </div>
-            <div className="text-right flex-shrink-0">
-              <h3 className="text-xl font-black text-emerald-900 uppercase">CASH CLOSING</h3>
-              <p className="text-xs text-slate-800 font-bold mt-1">
-                Date : <span className="font-black text-slate-900">{formatDateDisplay(cashClosing.date)}</span>
-              </p>
-              <p className="text-[11px] text-slate-600 font-semibold mt-0.5">
-                Cashier : <span className="font-bold text-slate-900">{cashClosing.user || currentUser}</span>
-              </p>
-            </div>
-          </div>
 
           {/* Status Banner */}
           <div className={`p-3 rounded-2xl border text-center ${statusColor}`}>
@@ -263,9 +271,10 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
               </div>
             </div>
           </div>
+        </div>
 
           {/* Footer */}
-          <div className="print-doc-footer flex justify-between items-center pt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium">
+          <div className="print-doc-footer flex justify-between items-center pt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
             <div>
               Daily Cash Closing Slip - Printed : {nowFormatted} • {currentUser}
             </div>
