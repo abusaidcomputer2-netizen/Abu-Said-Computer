@@ -19,8 +19,8 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white text-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden my-4 border border-slate-200">
+    <div className="print-modal-backdrop fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 print:p-0 print:m-0 print:bg-white print:static print:block">
+      <div className="print-modal-dialog bg-white text-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden my-4 border border-slate-200 print:w-full print:max-w-none print:shadow-none print:border-none print:m-0 print:rounded-none print:static">
         {/* Modal Top Bar (Hidden during printing) */}
         <div className="no-print bg-slate-50 px-6 py-3 border-b border-slate-200 flex justify-between items-center">
           <span className="text-xs font-black text-slate-700 uppercase flex items-center gap-1.5">
@@ -47,12 +47,12 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
         </div>
 
         {/* Printable Invoice Container */}
-        <div className="print-page-container p-6 sm:p-8 text-slate-900 bg-white flex flex-col justify-between min-h-[620px]">
-          <div className="print-content-body space-y-4">
+        <div className="print-page-container invoice-print-container p-6 sm:p-8 text-slate-900 bg-white flex flex-col justify-between print:min-h-0 print:p-0 print:shadow-none print:border-none">
+          <div className="print-content-body space-y-3">
             {/* Header */}
-            <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3">
+            <div className="flex justify-between items-start border-b border-slate-300 pb-2">
               <div className="flex items-center gap-3">
-                <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 bg-transparent">
+                <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 bg-transparent">
                   <img 
                     src="/logo.png" 
                     alt="AS Computer" 
@@ -63,7 +63,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                   />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight leading-none">
                     <span className="text-amber-500">AS</span> Computer
                   </h2>
                   <p className="text-xs font-bold text-slate-700 tracking-wide mt-1">
@@ -75,150 +75,150 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <h3 className="text-2xl font-black text-teal-800 leading-tight tracking-normal">
+                <h3 className="text-xl font-black text-teal-800 leading-tight tracking-normal">
                   INVOICE
                 </h3>
-                <p className="text-[11px] text-slate-600 font-bold mt-1">
+                <p className="text-[11px] text-slate-600 font-bold mt-0.5">
                   Date : <span className="font-black text-slate-900">{formatDateDisplay(sale.rawDate || sale.date)}</span>
                 </p>
               </div>
             </div>
 
-          {/* Customer & Invoice Metadata Box */}
-          <div className="grid grid-cols-12 gap-3 bg-slate-50 border border-slate-200 p-3 rounded-2xl text-xs items-center">
-            <div className="col-span-7 space-y-0.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                Customer Info:
-              </span>
-              <div className="text-sm font-black text-slate-900">{sale.customer || 'New Customer'}</div>
-              <div className="text-slate-700 font-semibold">
-                Mobile: <span className="font-bold">{sale.phone || '01904142370'}</span>
+            {/* Customer & Invoice Metadata Box */}
+            <div className="grid grid-cols-12 gap-2 bg-slate-50 border border-slate-200 p-2.5 rounded-xl text-xs items-center">
+              <div className="col-span-7 space-y-0.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Customer Info:
+                </span>
+                <div className="text-sm font-black text-slate-900">{sale.customer || 'New Customer'}</div>
+                <div className="text-slate-700 font-semibold text-[11px]">
+                  Mobile: <span className="font-bold">{sale.phone || '01904142370'}</span>
+                </div>
+                <div className="text-slate-600 font-medium text-[11px]">
+                  Address: <span>{sale.address || 'Paduar Bazar, Cumilla'}</span>
+                </div>
               </div>
-              <div className="text-slate-600 font-medium">
-                Address: <span>{sale.address || 'Paduar Bazar, Cumilla'}</span>
+
+              <div className="col-span-5 flex flex-col items-end text-right space-y-0.5">
+                <p className="text-xs font-bold leading-tight">
+                  Invoice No : <span className="text-red-600 font-black">AS-{sale.invoiceNo}</span>
+                </p>
+                <p className="text-xs font-bold leading-tight">
+                  Seller : <span className="text-blue-600 font-black">{sale.user}</span>
+                </p>
+                <div
+                  className="pt-0.5 flex items-center justify-end"
+                  dangerouslySetInnerHTML={{ __html: barcodeHtml }}
+                />
               </div>
             </div>
 
-            <div className="col-span-5 flex flex-col items-end text-right space-y-0.5">
-              <p className="text-xs font-bold leading-tight">
-                Invoice No : <span className="text-red-600 font-black">AS-{sale.invoiceNo}</span>
-              </p>
-              <p className="text-xs font-bold leading-tight">
-                Seller : <span className="text-blue-600 font-black">{sale.user}</span>
-              </p>
-              <div
-                className="pt-1 flex items-center justify-end"
-                dangerouslySetInnerHTML={{ __html: barcodeHtml }}
-              />
-            </div>
-          </div>
-
-          {/* Items Table */}
-          <table className="w-full text-left text-xs border border-slate-200 border-collapse">
-            <thead>
-              <tr className="bg-slate-100 text-slate-800 font-black border-b border-slate-200">
-                <th className="py-2 px-2 text-center w-10 border-r border-slate-200">SL</th>
-                <th className="py-2 px-2.5 border-r border-slate-200">Item Description / Service</th>
-                <th className="py-2 px-3 text-right w-24 border-r border-slate-200">Rate</th>
-                <th className="py-2 px-2 text-center w-16 border-r border-slate-200">Qty</th>
-                <th className="py-2 px-3 text-right w-28">Total Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-800 font-medium">
-              {sale.items.map((it, idx) => (
-                <tr key={idx} className="hover:bg-slate-50">
-                  <td className="py-1.5 px-2 text-center border-r border-slate-200 font-bold text-slate-500">
-                    {idx + 1}
-                  </td>
-                  <td className="py-1.5 px-2.5 border-r border-slate-200 font-bold">{it.name}</td>
-                  <td className="py-1.5 px-3 text-right border-r border-slate-200 font-tabular">
-                    {formatCurrency(it.price)}
-                  </td>
-                  <td className="py-1.5 px-2 text-center border-r border-slate-200 font-bold font-tabular">
-                    {it.qty}
-                  </td>
-                  <td className="py-1.5 px-3 text-right font-black font-tabular">
-                    ৳ {formatCurrency(it.total)}
-                  </td>
+            {/* Items Table */}
+            <table className="w-full text-left text-xs border border-slate-200 border-collapse">
+              <thead>
+                <tr className="bg-slate-100 text-slate-800 font-black border-b border-slate-200">
+                  <th className="py-1.5 px-2 text-center w-10 border-r border-slate-200">SL</th>
+                  <th className="py-1.5 px-2.5 border-r border-slate-200">Item Description / Service</th>
+                  <th className="py-1.5 px-3 text-right w-24 border-r border-slate-200">Rate</th>
+                  <th className="py-1.5 px-2 text-center w-16 border-r border-slate-200">Qty</th>
+                  <th className="py-1.5 px-3 text-right w-28">Total Amount</th>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot className="text-xs border-t-2 border-slate-300">
-              <tr className="border-b border-slate-200">
-                <td colSpan={4} className="py-2 px-3 text-right font-bold text-slate-700">
-                  Subtotal:
-                </td>
-                <td className="py-2 px-3 text-right font-black text-slate-900 font-tabular">
-                  ৳ {formatCurrency(sale.subtotal)}
-                </td>
-              </tr>
-              {sale.discount > 0 && (
-                <tr className="border-b border-slate-200 text-red-600">
-                  <td colSpan={4} className="py-1.5 px-3 text-right font-bold">
-                    Discount:
-                  </td>
-                  <td className="py-1.5 px-3 text-right font-black font-tabular">
-                    -৳ {formatCurrency(sale.discount)}
-                  </td>
-                </tr>
-              )}
-              <tr className="bg-teal-50 text-teal-900 border-b border-slate-300">
-                <td colSpan={4} className="py-2.5 px-3 text-right font-black text-sm">
-                  Grand Total:
-                </td>
-                <td className="py-2.5 px-3 text-right font-black text-base text-teal-900 font-tabular">
-                  ৳ {formatCurrency(sale.grandTotal)}
-                </td>
-              </tr>
-              {sale.due > 0 && (
-                <>
-                  <tr className="border-b border-slate-200 text-emerald-800">
-                    <td colSpan={4} className="py-1.5 px-3 text-right font-bold">
-                      Paid Amount:
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-800 font-medium">
+                {sale.items.map((it, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="py-1 px-2 text-center border-r border-slate-200 font-bold text-slate-500">
+                      {idx + 1}
                     </td>
-                    <td className="py-1.5 px-3 text-right font-black text-emerald-700 font-tabular">
-                      ৳ {formatCurrency(sale.paid)}
+                    <td className="py-1 px-2.5 border-r border-slate-200 font-bold">{it.name}</td>
+                    <td className="py-1 px-3 text-right border-r border-slate-200 font-tabular">
+                      {formatCurrency(it.price)}
+                    </td>
+                    <td className="py-1 px-2 text-center border-r border-slate-200 font-bold font-tabular">
+                      {it.qty}
+                    </td>
+                    <td className="py-1 px-3 text-right font-black font-tabular">
+                      ৳ {formatCurrency(it.total)}
                     </td>
                   </tr>
-                  <tr className="bg-rose-50 border-b border-slate-300 text-rose-800">
-                    <td colSpan={4} className="py-2 px-3 text-right font-black">
-                      Due Amount:
+                ))}
+              </tbody>
+              <tfoot className="text-xs border-t-2 border-slate-300">
+                <tr className="border-b border-slate-200">
+                  <td colSpan={4} className="py-1.5 px-3 text-right font-bold text-slate-700">
+                    Subtotal:
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-black text-slate-900 font-tabular">
+                    ৳ {formatCurrency(sale.subtotal)}
+                  </td>
+                </tr>
+                {sale.discount > 0 && (
+                  <tr className="border-b border-slate-200 text-red-600">
+                    <td colSpan={4} className="py-1 px-3 text-right font-bold">
+                      Discount:
                     </td>
-                    <td className="py-2 px-3 text-right font-black text-sm text-rose-700 font-tabular">
-                      ৳ {formatCurrency(sale.due)}
+                    <td className="py-1 px-3 text-right font-black font-tabular">
+                      -৳ {formatCurrency(sale.discount)}
                     </td>
                   </tr>
-                </>
-              )}
-            </tfoot>
-          </table>
+                )}
+                <tr className="bg-teal-50 text-teal-900 border-b border-slate-300">
+                  <td colSpan={4} className="py-1.5 px-3 text-right font-black text-sm">
+                    Grand Total:
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-black text-base text-teal-900 font-tabular">
+                    ৳ {formatCurrency(sale.grandTotal)}
+                  </td>
+                </tr>
+                {sale.due > 0 && (
+                  <>
+                    <tr className="border-b border-slate-200 text-emerald-800">
+                      <td colSpan={4} className="py-1 px-3 text-right font-bold">
+                        Paid Amount:
+                      </td>
+                      <td className="py-1 px-3 text-right font-black text-emerald-700 font-tabular">
+                        ৳ {formatCurrency(sale.paid)}
+                      </td>
+                    </tr>
+                    <tr className="bg-rose-50 border-b border-slate-300 text-rose-800">
+                      <td colSpan={4} className="py-1 px-3 text-right font-black">
+                        Due Amount:
+                      </td>
+                      <td className="py-1 px-3 text-right font-black text-sm text-rose-700 font-tabular">
+                        ৳ {formatCurrency(sale.due)}
+                      </td>
+                    </tr>
+                  </>
+                )}
+              </tfoot>
+            </table>
 
-          {/* Company Official Details */}
-          <div className="pt-2 text-[11px] text-slate-600 leading-normal border-t border-slate-200">
-            <p className="font-black text-slate-900 uppercase text-xs">ABU SAID COMPUTER</p>
-            <p>Office: Bhai Bhai Super Market (2nd Floor), Paduar Bazar, Cumilla-3500</p>
-            <p>
-              Mobile: <span className="font-bold text-slate-900">+88 01904 142370</span> | Email: abusaidcomputer2@gmail.com
-            </p>
-          </div>
+            {/* Company Official Details */}
+            <div className="pt-1.5 text-[10.5px] text-slate-600 leading-tight border-t border-slate-200">
+              <p className="font-black text-slate-900 uppercase text-[11px]">ABU SAID COMPUTER</p>
+              <p>Office: Bhai Bhai Super Market (2nd Floor), Paduar Bazar, Cumilla-3500</p>
+              <p>
+                Mobile: <span className="font-bold text-slate-900">+88 01904 142370</span> | Email: abusaidcomputer2@gmail.com
+              </p>
+            </div>
 
-          {/* Signatures */}
-          <div className="flex justify-between items-end pt-8 pb-3 text-center text-xs text-slate-700">
-            <div>
-              <div className="border-t border-dotted border-slate-400 w-44 pt-1 font-bold text-slate-800 text-[10px] uppercase tracking-wider">
-                CUSTOMER SIGNATURE
+            {/* Signatures */}
+            <div className="flex justify-between items-end pt-5 pb-1 text-center text-xs text-slate-700">
+              <div>
+                <div className="border-t border-dotted border-slate-400 w-44 pt-1 font-bold text-slate-800 text-[10px] uppercase tracking-wider">
+                  CUSTOMER SIGNATURE
+                </div>
+              </div>
+              <div>
+                <div className="border-t border-slate-400 w-48 pt-1 font-bold text-slate-900 text-[10px] uppercase tracking-wider">
+                  AUTHORIZED SIGNATURE
+                </div>
               </div>
             </div>
-            <div>
-              <div className="border-t border-slate-800 w-48 pt-1 font-bold text-slate-900 text-[10px] uppercase tracking-wider">
-                AUTHORIZED SIGNATURE
-              </div>
-            </div>
           </div>
-        </div>
 
           {/* Print Document Footer */}
-          <div className="print-doc-footer flex justify-between items-center pt-2 text-[10.5px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
+          <div className="print-doc-footer flex justify-between items-center pt-1.5 text-[10px] text-slate-600 border-t border-slate-300 font-medium">
             <div>
               Sales Invoice - Printed : {printTimestamp} • {sale.user}
             </div>

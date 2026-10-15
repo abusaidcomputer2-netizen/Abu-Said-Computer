@@ -81,8 +81,8 @@ export const UserModal: React.FC<UserModalProps> = ({
       showToast('Username is required!', 'warning');
       return;
     }
-    if (!editingId && !password.trim()) {
-      showToast('Password is required for new accounts!', 'warning');
+    if (!password.trim()) {
+      showToast('পাসওয়ার্ড প্রদান বাধ্যতামূলক (Password is mandatory)!', 'warning');
       return;
     }
 
@@ -195,14 +195,14 @@ export const UserModal: React.FC<UserModalProps> = ({
 
             <div>
               <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                {editingId ? 'New Password (Optional)' : 'Password *'}
+                Password * (বাধ্যতামূলক)
               </label>
               <input
                 type="password"
-                required={!editingId}
+                required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder={editingId ? 'Keep current' : 'Password'}
+                placeholder="Enter password..."
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-white font-semibold focus:outline-none"
               />
             </div>

@@ -29,8 +29,8 @@ export const StockPrintModal: React.FC<StockPrintModalProps> = ({ products, curr
   });
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white text-slate-800 w-full max-w-4xl max-h-[92vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto border border-slate-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 print:p-0 print:m-0 print:bg-white print:static print:block">
+      <div className="bg-white text-slate-800 w-full max-w-4xl max-h-[92vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto border border-slate-200 print:w-full print:max-w-none print:max-h-none print:shadow-none print:border-none print:m-0 print:rounded-none print:static">
         <div className="no-print bg-slate-50 px-6 py-3.5 border-b border-slate-200 flex justify-between items-center flex-shrink-0">
           <span className="text-xs font-black text-slate-700 uppercase flex items-center gap-1.5">
             <Boxes className="w-4 h-4 text-emerald-600" />
@@ -52,7 +52,7 @@ export const StockPrintModal: React.FC<StockPrintModalProps> = ({ products, curr
         </div>
 
         {/* Printable Stock Area */}
-        <div className="print-page-container text-slate-900 bg-white overflow-y-auto flex-grow p-6 sm:p-8 flex flex-col justify-between min-h-[620px]">
+        <div className="print-page-container text-slate-900 bg-white overflow-y-auto flex-grow p-6 sm:p-8 flex flex-col justify-between print:min-h-0 print:p-0 print:shadow-none print:border-none">
           <div className="print-content-body space-y-4">
             {/* Header */}
             <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3">

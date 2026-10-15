@@ -176,9 +176,9 @@ function seedInitialData(): void {
   if (userCount === 0) {
     db.run(`
       INSERT INTO users (username, password_hash, role, phone, permissions) VALUES
-      ('Md Abu Said', '123456', 'admin', '01904142370', 'all'),
-      ('Md Sujon', '123456', 'staff', '01800000000', 'memo,due,customer,cust_sales,stock,purchase,paper,cash_closing,summary_print'),
-      ('Md Saimon Hasan', '123456', 'staff', '01700000000', 'memo,due,customer,cust_sales,stock,purchase,paper,cash_closing,summary_print');
+      ('Md Abu Said', '12345', 'admin', '01904142370', 'all'),
+      ('Md Sujon', '2008', 'staff', '01800000000', 'memo,due,customer,cust_sales,stock,purchase,paper,cash_closing,summary_print'),
+      ('Md Saimon Hasan', '1020', 'staff', '01700000000', 'memo,due,customer,cust_sales,stock,purchase,paper,cash_closing,summary_print');
     `);
   }
 

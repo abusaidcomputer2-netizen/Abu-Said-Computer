@@ -24,7 +24,7 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
   currentUser,
   onClose
 }) => {
-  const [selectedCust, setSelectedCust] = useState(filterCustomer || 'ALL');
+  const selectedCust = filterCustomer || 'ALL';
   const nowFormatted = formatInvoicePrintTimestamp(new Date());
 
   const handlePrint = () => {
@@ -70,29 +70,20 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
   const periodLabel = month || (startDate && endDate ? `${startDate} to ${endDate}` : 'All Records');
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white text-slate-800 w-full max-w-4xl max-h-[92vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto border border-slate-200">
-        {/* Top Control Bar */}
+    <div className="print-modal-backdrop fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 print:p-0 print:m-0 print:bg-white print:static print:block">
+      <div className="print-modal-dialog bg-white text-slate-800 w-full max-w-4xl max-h-[92vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto border border-slate-200 print:w-full print:max-w-none print:max-h-none print:shadow-none print:border-none print:m-0 print:rounded-none print:static">
+        {/* Top Control Bar (Clean preview header without customer select dropdown) */}
         <div className="no-print bg-slate-50 px-6 py-3.5 border-b border-slate-200 flex justify-between items-center flex-wrap gap-2 flex-shrink-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className="text-xs font-black text-slate-700 uppercase flex items-center gap-1.5">
               <BookMarked className="w-4 h-4 text-amber-600" />
               <span>Customer Due Statement Preview</span>
             </span>
-
-            {/* Quick customer selection dropdown */}
-            <select
-              value={selectedCust}
-              onChange={e => setSelectedCust(e.target.value)}
-              className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
-            >
-              <option value="ALL">All Active Due Customers ({customerSummaries.length})</option>
-              {customerSummaries.map(c => (
-                <option key={c.name} value={c.name}>
-                  {c.name} (Due: ৳{formatCurrency(c.netBalance)})
-                </option>
-              ))}
-            </select>
+            {isSingle && (
+              <span className="px-2 py-0.5 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                {selectedCust}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -115,10 +106,10 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
         </div>
 
         {/* Printable Statement Area */}
-        <div className="print-page-container text-slate-900 bg-white overflow-y-auto flex-grow p-6 sm:p-8 flex flex-col justify-between min-h-[620px]">
+        <div className="print-page-container text-slate-900 bg-white overflow-y-auto flex-grow p-6 sm:p-8 flex flex-col justify-between print:min-h-0 print:p-0 print:shadow-none print:border-none">
           <div className="print-content-body space-y-4">
             {/* Header */}
-            <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3">
+            <div className="flex justify-between items-start border-b border-slate-300 pb-2">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 bg-transparent">
                   <img 

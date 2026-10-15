@@ -12,7 +12,8 @@ import {
   UserCog, 
   LogOut,
   Database,
-  Building2
+  Building2,
+  KeyRound
 } from 'lucide-react';
 import { User } from '../types';
 
@@ -20,6 +21,7 @@ interface NavbarProps {
   currentUser: User;
   lowStockCount: number;
   onLogout: () => void;
+  onOpenChangePassword?: () => void;
   onOpenDueLedger: () => void;
   onOpenCustomer: () => void;
   onOpenCustomerSales: () => void;
@@ -37,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   lowStockCount,
   onLogout,
+  onOpenChangePassword,
   onOpenDueLedger,
   onOpenCustomer,
   onOpenCustomerSales,
@@ -214,9 +217,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="text-right">
               <div className="text-xs font-black text-white">{currentUser.username}</div>
             </div>
+            {onOpenChangePassword && (
+              <button
+                type="button"
+                onClick={onOpenChangePassword}
+                className="p-2 bg-slate-800/80 hover:bg-amber-500/20 hover:text-amber-400 text-slate-400 rounded-xl border border-slate-700 transition cursor-pointer"
+                title="Change Password (পাসওয়ার্ড পরিবর্তন)"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               onClick={onLogout}
-              className="p-2 bg-slate-800/80 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 rounded-xl border border-slate-700 transition"
+              className="p-2 bg-slate-800/80 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 rounded-xl border border-slate-700 transition cursor-pointer"
               title="Logout"
             >
               <LogOut className="w-3.5 h-3.5" />

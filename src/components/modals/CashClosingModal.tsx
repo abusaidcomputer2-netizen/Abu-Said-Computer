@@ -30,6 +30,16 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const yesterdayStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  }, []);
+
+  // Strict Business Rule: Only today and yesterday can be edited. Any earlier dates are locked/read-only.
+  const isEditable = closingDate === todayStr || closingDate === yesterdayStr;
+
   const [denoms, setDenoms] = useState<DenominationCounts>({
     n1000: 0,
     n500: 0,
@@ -127,6 +137,10 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
   };
 
   const handleSave = async () => {
+    if (!isEditable) {
+      showToast('আগের কোন দিনের তথ্য এডিট করা যাবে না! শুধু আজকের ও গতকালের তথ্য এডিট করা সম্ভব।', 'warning');
+      return;
+    }
     setIsSubmitting(true);
     try {
       await onSubmitCashClosing({
@@ -181,23 +195,57 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
 
         {/* Top Control Bar */}
         <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex justify-between items-center flex-wrap gap-3">
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-slate-400">Closing Date:</span>
+              <span className="text-xs font-bold text-slate-400">তারিখ:</span>
               <input
                 type="date"
                 value={closingDate}
                 onChange={e => setClosingDate(e.target.value)}
-                className="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-emerald-500"
+                className="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white font-bold focus:outline-none focus:border-emerald-500 cursor-pointer"
               />
             </div>
             <button
               type="button"
-              onClick={() => setClosingDate(new Date().toISOString().split('T')[0])}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+              onClick={() => setClosingDate(todayStr)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                closingDate === todayStr ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-300 hover:text-white'
+              }`}
             >
-              Today
+              আজ
             </button>
+            <button
+              type="button"
+              onClick={() => setClosingDate(yesterdayStr)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                closingDate === yesterdayStr ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-300 hover:text-white'
+              }`}
+            >
+              গতকাল
+            </button>
+
+            {/* Past Closings Dropdown */}
+            {cashClosings.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-slate-400">রেকর্ড:</span>
+                <select
+                  value={closingDate}
+                  onChange={e => setClosingDate(e.target.value)}
+                  className="bg-slate-900 border border-slate-700/80 rounded-xl px-2.5 py-1.5 text-xs text-white font-semibold cursor-pointer max-w-[200px]"
+                >
+                  <option value={todayStr}>আজ ({todayStr})</option>
+                  <option value={yesterdayStr}>গতকাল ({yesterdayStr})</option>
+                  {cashClosings
+                    .filter(c => c.date !== todayStr && c.date !== yesterdayStr)
+                    .map(c => (
+                      <option key={c.id || c.date} value={c.date}>
+                        {c.date} (৳{formatCurrency(c.actualCash)})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
             <span
               className={`px-2.5 py-1 rounded-full text-xs font-black border ${
                 existingSaved
@@ -212,10 +260,32 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
               {existingSaved ? `Closed (${existingSaved.status})` : 'Open / In Progress'}
             </span>
           </div>
-          <div className="text-xs text-slate-400 font-semibold">
-            Cashier: <span className="font-bold text-white">{currentUser}</span>
+
+          <div className="flex items-center gap-2 text-xs">
+            {isEditable ? (
+              <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/30">
+                এডিট করার অনুমতি আছে (Editable)
+              </span>
+            ) : (
+              <span className="text-rose-400 font-bold bg-rose-500/10 px-2.5 py-1 rounded-xl border border-rose-500/30">
+                লক করা (Read-Only)
+              </span>
+            )}
+            <div className="text-slate-400 font-semibold pl-2 border-l border-slate-800">
+              Cashier: <span className="font-bold text-white">{currentUser}</span>
+            </div>
           </div>
         </div>
+
+        {/* Lock Warning Notice if viewing older date */}
+        {!isEditable && (
+          <div className="p-3 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-2xl text-xs font-bold flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+            <span>
+              নিয়ম অনুযায়ী শুধুমাত্র আজকের এবং গতকালের ক্যাশ ক্লোজিং তথ্য এডিট করা যাবে। {closingDate} তারিখের পূর্ববর্তী রেকর্ড লক করা (Read-Only)।
+            </span>
+          </div>
+        )}
 
         {/* 2 Column Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -384,10 +454,11 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                         <input
                           type="number"
                           min="0"
+                          disabled={!isEditable}
                           value={count || ''}
                           onChange={e => updateDenom(d.key as any, parseFloat(e.target.value) || 0)}
                           placeholder="0"
-                          className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-center text-white font-black text-xs focus:outline-none focus:border-emerald-400 font-tabular"
+                          className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-center text-white font-black text-xs focus:outline-none focus:border-emerald-400 font-tabular disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                       <div className="col-span-4 text-right font-black text-white font-tabular">
@@ -405,10 +476,11 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                       type="number"
                       min="0"
                       step="any"
+                      disabled={!isEditable}
                       value={denoms.coins || ''}
                       onChange={e => updateDenom('coins', parseFloat(e.target.value) || 0)}
                       placeholder="0"
-                      className="w-28 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-right text-emerald-400 font-black text-xs focus:outline-none focus:border-emerald-400 font-tabular"
+                      className="w-28 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-right text-emerald-400 font-black text-xs focus:outline-none focus:border-emerald-400 font-tabular disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -436,21 +508,26 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                 </label>
                 <input
                   type="text"
+                  disabled={!isEditable}
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
-                  placeholder="e.g. Drawer balanced, shortage noted..."
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500"
+                  placeholder={isEditable ? "e.g. Drawer balanced, shortage noted..." : "লক করা (Read-Only)"}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
               <button
                 type="button"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !isEditable}
                 onClick={handleSave}
-                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <CheckCheck className="w-4 h-4" />
-                <span>Save & Complete Daily Cash Closing</span>
+                <span>
+                  {isEditable 
+                    ? 'Save & Complete Daily Cash Closing' 
+                    : 'আগের দিনের তথ্য এডিট করা যাবে না (লক করা)'}
+                </span>
               </button>
             </div>
           </div>

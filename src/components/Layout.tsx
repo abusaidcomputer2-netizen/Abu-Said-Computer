@@ -17,13 +17,16 @@ import {
   LogOut,
   Calendar,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  KeyRound,
+  LayoutDashboard
 } from 'lucide-react';
 import { User } from '../types';
 import { formatCurrency } from '../utils/helpers';
 
 export type ActiveTab = 
   | 'sales' 
+  | 'dashboard'
   | 'due' 
   | 'customers' 
   | 'cust_sales' 
@@ -43,6 +46,7 @@ interface LayoutProps {
   lowStockCount: number;
   totalOutstandingDue: number;
   onLogout: () => void;
+  onOpenChangePassword?: () => void;
   children: React.ReactNode;
 }
 
@@ -53,6 +57,7 @@ export const Layout: React.FC<LayoutProps> = ({
   lowStockCount,
   totalOutstandingDue,
   onLogout,
+  onOpenChangePassword,
   children
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -62,6 +67,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
   const navItems = [
     { id: 'sales' as ActiveTab, label: 'Sales & Invoices', icon: Receipt, perm: 'memo' },
+    { id: 'dashboard' as ActiveTab, label: 'Analytics Dashboard', icon: LayoutDashboard, perm: 'memo', badge: 'PRO', badgeColor: 'bg-blue-500/20 text-cyan-300 border-blue-500/30' },
     { id: 'due' as ActiveTab, label: 'Due Ledger', icon: BookMarked, perm: 'due', badge: totalOutstandingDue > 0 ? `৳${formatCurrency(totalOutstandingDue)}` : null, badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
     { id: 'customers' as ActiveTab, label: 'Customer Directory', icon: Users, perm: 'customer' },
     { id: 'cust_sales' as ActiveTab, label: 'Customer Sales', icon: TrendingUp, perm: 'cust_sales' },
@@ -87,6 +93,7 @@ export const Layout: React.FC<LayoutProps> = ({
   const getSectionTitle = () => {
     switch (activeTab) {
       case 'sales': return 'Daily Sales & Memo Entry';
+      case 'dashboard': return 'Executive Analytics & Performance Dashboard';
       case 'due': return 'Customer Due Ledger & Debt Collection';
       case 'customers': return 'Customer Directory & Accounts';
       case 'cust_sales': return 'Customer Purchase History & Sales';
@@ -103,7 +110,7 @@ export const Layout: React.FC<LayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row antialiased selection:bg-blue-600 selection:text-white">
+    <div id="app-main-layout" className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row antialiased selection:bg-blue-600 selection:text-white print:hidden">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
@@ -236,13 +243,25 @@ export const Layout: React.FC<LayoutProps> = ({
                   {currentUser.phone || '01904142370'}
                 </div>
               </div>
-              <button
-                onClick={onLogout}
-                className="p-2 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 rounded-xl transition cursor-pointer"
-                title="Logout"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                {onOpenChangePassword && (
+                  <button
+                    type="button"
+                    onClick={onOpenChangePassword}
+                    className="p-2 bg-slate-800 hover:bg-amber-500/20 hover:text-amber-400 text-slate-400 rounded-xl transition cursor-pointer"
+                    title="Change Password (পাসওয়ার্ড পরিবর্তন)"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={onLogout}
+                  className="p-2 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 rounded-xl transition cursor-pointer"
+                  title="Logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -269,11 +288,23 @@ export const Layout: React.FC<LayoutProps> = ({
               </div>
             </div>
 
-            {/* Header Right Stats & Date Indicator */}
-            <div className="flex items-center gap-3">
+            {/* Header Right Stats, Date & User Actions */}
+            <div className="flex items-center gap-2 sm:gap-3">
               <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-300">
                 <Calendar className="w-3.5 h-3.5 text-blue-400" />
                 <span>{currentDateDisplay}</span>
+              </div>
+
+              <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+                <span className="text-xs font-bold text-white hidden sm:inline">{currentUser.username}</span>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="p-1.5 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 rounded-xl border border-slate-700 transition cursor-pointer"
+                  title="Logout"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           </div>

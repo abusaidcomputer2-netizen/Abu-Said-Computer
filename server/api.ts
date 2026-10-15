@@ -46,10 +46,7 @@ apiRouter.post('/auth/login', (req: Request, res: Response) => {
   }>('SELECT * FROM users WHERE LOWER(username) = LOWER(?)', [username.trim()]);
 
   const p = (password || '').toString().trim();
-  const isMatch = user && (
-    user.password_hash === p ||
-    ((p === '123' || p === '123456') && (user.password_hash === '123' || user.password_hash === '123456'))
-  );
+  const isMatch = user && user.password_hash === p;
 
   if (!user || !isMatch) {
     return res.status(401).json({ status: 'error', message: 'Incorrect username or password' });
@@ -859,6 +856,37 @@ apiRouter.post('/cash-closings', (req: Request, res: Response) => {
 });
 
 // ---------------- USERS & PERMISSIONS ----------------
+apiRouter.post('/users/change-password', (req: Request, res: Response) => {
+  try {
+    const { username, currentPassword, newPassword, targetUserId, isAdminChange } = req.body;
+    if (!newPassword || newPassword.trim() === '') {
+      return res.status(400).json({ status: 'error', message: 'New password cannot be empty' });
+    }
+
+    if (isAdminChange && targetUserId) {
+      runSql('UPDATE users SET password_hash = ? WHERE id = ?', [newPassword.trim(), targetUserId]);
+      return res.json({ status: 'success', message: 'Password updated successfully' });
+    }
+
+    const user = queryOne<{ id: number; password_hash: string }>(
+      'SELECT id, password_hash FROM users WHERE LOWER(username) = LOWER(?)',
+      [username.trim()]
+    );
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+
+    if (currentPassword && user.password_hash !== currentPassword.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Current password is incorrect' });
+    }
+
+    runSql('UPDATE users SET password_hash = ? WHERE id = ?', [newPassword.trim(), user.id]);
+    return res.json({ status: 'success', message: 'Password changed successfully' });
+  } catch (err: any) {
+    return res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
 apiRouter.post('/users', (req: Request, res: Response) => {
   try {
     const { username, password, role, phone, permissions } = req.body;
