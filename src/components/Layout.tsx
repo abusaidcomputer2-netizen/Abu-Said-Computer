@@ -100,8 +100,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'financial' as ActiveTab, label: 'Financial Statement', icon: PieChart, perm: 'financial' },
     { id: 'expenses' as ActiveTab, label: 'Operating Expenses', icon: Receipt, perm: 'expense' },
     { id: 'products' as ActiveTab, label: 'Products & Services', icon: Tags, perm: 'product' },
-    { id: 'users' as ActiveTab, label: 'Users & Permissions', icon: UserCog, perm: 'admin' },
-    { id: 'migration' as ActiveTab, label: 'Google Sheets Sync', icon: FileSpreadsheet, perm: 'admin' }
+    { id: 'users' as ActiveTab, label: 'Users & Permissions', icon: UserCog, perm: 'admin' }
   ];
 
   const currentDateDisplay = new Date().toLocaleDateString('en-GB', {

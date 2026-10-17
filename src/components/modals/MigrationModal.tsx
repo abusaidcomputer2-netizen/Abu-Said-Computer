@@ -26,7 +26,7 @@ interface MigrationModalProps {
 
 export const MigrationModal: React.FC<MigrationModalProps> = ({ onClose, onSyncSuccess, showToast }) => {
   const [activeTab, setActiveTab] = useState<'sheets' | 'cpanel'>('sheets');
-  const [sheetUrl, setSheetUrl] = useState('');
+  const [sheetUrl, setSheetUrl] = useState('https://docs.google.com/spreadsheets/d/1-KTTPMKUbEZGyEVtTWOQwJZS8Ednit5svHaPW1tDB6g/edit');
   const [tabName, setTabName] = useState('');
   const [clearExisting, setClearExisting] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -171,10 +171,9 @@ export const MigrationModal: React.FC<MigrationModalProps> = ({ onClose, onSyncS
                 <span>গুগল শিটের লিঙ্ক সংযুক্ত করার সহজ নিয়মাবলী:</span>
               </div>
               <ul className="space-y-1 text-slate-300 list-disc list-inside text-[11px] leading-relaxed">
-                <li>আপনার গুগল শিটটি ওপেন করে উপরের ডান পাশের <strong>"Share"</strong> বাটনে ক্লিক করুন।</li>
-                <li><strong>General access</strong> অপশনে <strong>"Anyone with the link"</strong> নির্বাচন করে <strong>"Viewer"</strong> রাখুন।</li>
-                <li>নিচে <strong>"Copy link"</strong> বাটনে ক্লিক করে লিঙ্কটি কপি করে নিচের ঘরে পেস্ট করুন।</li>
-                <li>শিটের কলামে <em>Invoice / মেমো নং, Date / তারিখ, Customer / কাস্টমার, Phone, Category, Grand Total / মোট, Paid / জমা, Due / বাকি</em> ইত্যাদি থাকলে তা স্বয়ংক্রিয়ভাবে শনাক্ত হবে।</li>
+                <li>আপনার গুগল স্প্রেডশিটে ৪টি ট্যাব স্বয়ংক্রিয়ভাবে শনাক্ত ও সিঙ্ক হবে: <strong>বিক্রয় খাতা</strong> (Sales), <strong>বাকির খাতা</strong> (Due Ledger - কাস্টমারদের আসল নাম ও মোবাইলসহ), <strong>স্টক তালিকা</strong> (Stock), এবং <strong>ইউজার তালিকা</strong> (Staff Users)।</li>
+                <li>গুগল শিটটির Share সেটিংসে <strong>"Anyone with the link can view"</strong> নিশ্চিত করুন।</li>
+                <li>নিচের বাটনে ক্লিক করলে আপনার গুগল শিটের সম্পূর্ণ ডাটাবেজ নির্ভুলভাবে অ্যাপ্লিকেশনে সিঙ্ক ও আপডেট হয়ে যাবে।</li>
               </ul>
             </div>
 

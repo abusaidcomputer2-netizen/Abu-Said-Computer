@@ -59,8 +59,8 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
     return `${yr}-${mo}-${da}`;
   }, []);
 
-  // Strict Business Rule: Only today and yesterday can be edited. Any earlier dates are locked/read-only.
-  const isEditable = closingDate === todayStr || closingDate === yesterdayStr;
+  // Daily cash closing is fully accessible and editable for any selected date
+  const isEditable = true;
 
   const [denoms, setDenoms] = useState<DenominationCounts>({
     n1000: 0,
@@ -403,29 +403,13 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                 </span>
               </div>
 
-              {/* Cashier & Status Indicator */}
+              {/* Cashier Indicator */}
               <div className="flex items-center gap-2 text-xs">
-                {!isEditable && (
-                  <span className="text-rose-400 font-bold bg-rose-500/10 px-2.5 py-1 rounded-xl border border-rose-500/30 flex items-center gap-1">
-                    <Lock className="w-3.5 h-3.5 text-rose-400" />
-                    <span>Locked (Read-Only)</span>
-                  </span>
-                )}
-                <div className="text-slate-400 font-semibold pl-2 border-l border-slate-800 hidden sm:block">
+                <div className="text-slate-400 font-semibold pl-2 hidden sm:block">
                   Cashier: <span className="font-bold text-white">{currentUser}</span>
                 </div>
               </div>
             </div>
-
-            {/* Lock Notice if date is older than yesterday */}
-            {!isEditable && (
-              <div className="p-3 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-2xl text-xs font-bold flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                <span>
-                  নিয়ম অনুযায়ী শুধুমাত্র আজকের এবং গতকালের ক্যাশ ক্লোজিং এডিট করা যাবে। {closingDate} তারিখের পূর্ববর্তী রেকর্ড লক করা (Read-Only)।
-                </span>
-              </div>
-            )}
 
             {/* 2-Column Split: System Drawer on Left, Physical Denominations on Right */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">

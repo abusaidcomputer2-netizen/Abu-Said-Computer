@@ -1239,7 +1239,220 @@ apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'অবৈধ গুগল শিট লিঙ্ক। লিঙ্কে https://docs.google.com/spreadsheets/d/... থাকতে হবে।' });
     }
 
-    // Fetch CSV
+    // Check if this is the multi-tab AS Computer sheet or if specific tab requested
+    let isMultiTabSync = false;
+    let usersCsv = '';
+    let stockCsv = '';
+    let dueCsv = '';
+    let salesCsv = '';
+
+    if (!tabName && (gid === undefined || gid === '0')) {
+      // Attempt multi-tab fetch
+      try {
+        const [uText, stText, dText, sText] = await Promise.allSettled([
+          fetchGoogleSheetCsv(spreadsheetId, '1627183030', 'Users'),
+          fetchGoogleSheetCsv(spreadsheetId, '892731544', 'Stock'),
+          fetchGoogleSheetCsv(spreadsheetId, '1770443700', 'Due'),
+          fetchGoogleSheetCsv(spreadsheetId, '0', 'Sales')
+        ]);
+
+        if (dText.status === 'fulfilled' && dText.value.length > 50 &&
+            sText.status === 'fulfilled' && sText.value.length > 50) {
+          isMultiTabSync = true;
+          usersCsv = uText.status === 'fulfilled' ? uText.value : '';
+          stockCsv = stText.status === 'fulfilled' ? stText.value : '';
+          dueCsv = dText.value;
+          salesCsv = sText.value;
+        }
+      } catch (e) {
+        isMultiTabSync = false;
+      }
+    }
+
+    if (isMultiTabSync) {
+      // Clear existing records as requested
+      if (clearExisting) {
+        runSql('DELETE FROM users');
+        runSql('DELETE FROM products');
+        runSql('DELETE FROM customers');
+        runSql('DELETE FROM sales');
+        runSql('DELETE FROM sale_items');
+        runSql('DELETE FROM due_ledger');
+        runSql('DELETE FROM expenses');
+        runSql('DELETE FROM purchases');
+        runSql('DELETE FROM cash_closings');
+      }
+
+      const customersMap = new Map<string, { name: string; phone: string; address: string }>();
+
+      // 1. Sync Users (GID 1627183030)
+      let importedUsers = 0;
+      if (usersCsv) {
+        const uRows = parseCsv(usersCsv).slice(1);
+        for (const r of uRows) {
+          if (!r[0]) continue;
+          const username = r[0].trim();
+          const password = r[1] ? r[1].trim() : '12345';
+          const role = (r[2] || 'staff').toLowerCase().trim();
+          const phone = r[3] ? r[3].trim() : '';
+          const permissions = role === 'admin' ? 'all' : 'memo,due,customer,cust_sales,stock,purchase,paper,cash_closing,summary_print';
+          runSql('INSERT INTO users (username, password_hash, role, phone, permissions) VALUES (?, ?, ?, ?, ?)', [
+            username, password, role, phone, permissions
+          ]);
+          importedUsers++;
+        }
+      }
+      if (importedUsers === 0) {
+        // Fallback default users
+        runSql(`
+          INSERT INTO users (username, password_hash, role, phone, permissions) VALUES
+          ('Md Abu Said', '12345', 'admin', '01904142370', 'all'),
+          ('Md Sujon', '2008', 'staff', '01712345678', 'memo,due,customer,cust_sales,stock,purchase,paper,cash_closing,summary_print'),
+          ('Md Saimon Hasan', '1020', 'staff', '01812345678', 'memo,due,customer,cust_sales,stock,purchase,paper,cash_closing,summary_print')
+        `);
+        importedUsers = 3;
+      }
+
+      // 2. Sync Stock / Products (GID 892731544)
+      let importedProducts = 0;
+      if (stockCsv) {
+        const stRows = parseCsv(stockCsv).slice(1);
+        for (let i = 0; i < stRows.length; i++) {
+          const r = stRows[i];
+          if (!r[2]) continue;
+          const sl = parseInt(r[0]) || (i + 1);
+          const category = r[1] ? r[1].trim() : 'Stationery';
+          const name = r[2].trim();
+          const sellingPrice = parseNumber(r[3], 0);
+          const costPrice = parseNumber(r[4], 0);
+          const stockQty = r[5] !== '' && r[5] !== undefined ? parseNumber(r[5], 0) : null;
+          const lowStockLimit = r[6] !== '' && r[6] !== undefined ? parseNumber(r[6], 5) : 5;
+
+          runSql('INSERT INTO products (sl, category, name, selling_price, cost_price, stock_qty, low_stock_limit) VALUES (?, ?, ?, ?, ?, ?, ?)', [
+            sl, category, name, sellingPrice, costPrice, stockQty, lowStockLimit
+          ]);
+          importedProducts++;
+        }
+      }
+
+      // 3. Sync Due Ledger (GID 1770443700 - কাস্টমারের আসল বকেয়া খাতা)
+      let importedDues = 0;
+      if (dueCsv) {
+        const dRows = parseCsv(dueCsv).slice(1);
+        for (let i = 0; i < dRows.length; i++) {
+          const r = dRows[i];
+          if (!r[2]) continue; // Customer Name
+          const entryId = r[0] ? r[0].trim() : (`DUE-${i + 1001}`);
+          const date = parseDate(r[1]);
+          const custName = r[2].trim();
+          const phone = r[3] ? r[3].trim() : '';
+          const transType = r[4] ? r[4].trim() : 'মেমো / বিল';
+          const desc = r[5] ? r[5].trim() : '';
+          const dueDr = parseNumber(r[6], 0);
+          const paidCr = parseNumber(r[7], 0);
+          const user = r[8] ? r[8].trim() : 'Md Abu Said';
+          const timestamp = r[9] ? r[9].trim() : (`${date} 12:00:00`);
+
+          runSql('INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
+            entryId, date, custName, phone, 'Paduar Bazar, Cumilla', transType, desc, dueDr, paidCr, user, timestamp
+          ]);
+          importedDues++;
+
+          if (!customersMap.has(custName.toLowerCase())) {
+            customersMap.set(custName.toLowerCase(), { name: custName, phone, address: 'Paduar Bazar, Cumilla' });
+          }
+        }
+      }
+
+      // 4. Sync Sales & Sale Items (GID 0 - বিক্রয় খাতা)
+      let importedSales = 0;
+      let importedSaleItems = 0;
+      if (salesCsv) {
+        const sRows = parseCsv(salesCsv).slice(1);
+        for (let i = 0; i < sRows.length; i++) {
+          const r = sRows[i];
+          if (!r.some(c => c && c.trim())) continue;
+          let invNo = Math.round(parseNumber(r[0]));
+          if (!invNo || invNo <= 0) invNo = 4001 + i;
+          const timestamp = r[1] ? r[1].trim() : new Date().toISOString();
+          const date = parseDate(timestamp);
+          const user = r[2] ? r[2].trim() : 'Staff';
+          const customer = r[3] ? r[3].trim() : 'General Customer';
+          const phone = r[4] ? r[4].trim() : '';
+          const category = r[5] ? r[5].trim() : 'Photocopy';
+          const desc = r[6] ? r[6].trim() : category;
+          const subtotal = parseNumber(r[7], 0);
+          const discount = parseNumber(r[8], 0);
+          const paid = parseNumber(r[9], 0);
+          const netTotal = parseNumber(r[10], subtotal - discount);
+          const due = Math.max(0, Math.round((netTotal - paid) * 100) / 100);
+
+          let items: any[] = [];
+          if (r[11]) {
+            try {
+              const rawJson = r[11].trim();
+              if (rawJson.startsWith('[') && rawJson.endsWith(']')) {
+                items = JSON.parse(rawJson);
+              }
+            } catch (e) {}
+          }
+          if (!items || items.length === 0) {
+            items = [{
+              category,
+              name: desc || category,
+              price: netTotal,
+              costPrice: Math.round(netTotal * 0.4),
+              qty: 1,
+              total: netTotal
+            }];
+          }
+
+          runSql('INSERT INTO sales (invoice_no, timestamp, date, user_name, customer_name, customer_phone, customer_address, category_summary, description, subtotal, discount, grand_total, paid, due, items_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
+            invNo, timestamp, date, user, customer, phone, 'Paduar Bazar, Cumilla', category, desc, subtotal, discount, netTotal, paid, due, JSON.stringify(items)
+          ]);
+          importedSales++;
+
+          const saleId = invNo;
+          for (const it of items) {
+            runSql('INSERT INTO sale_items (sale_id, invoice_no, category, product_name, price, cost_price, qty, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [
+              saleId, invNo, it.category || category, it.name || desc,
+              parseFloat(it.price) || 0, parseFloat(it.costPrice) || 0,
+              parseFloat(it.qty) || 1, parseFloat(it.total) || 0
+            ]);
+            importedSaleItems++;
+          }
+
+          if (customer && customer !== 'General Customer' && !customersMap.has(customer.toLowerCase())) {
+            customersMap.set(customer.toLowerCase(), { name: customer, phone, address: 'Paduar Bazar, Cumilla' });
+          }
+        }
+      }
+
+      // 5. Populate Customers Directory
+      let custSl = 1;
+      for (const cust of customersMap.values()) {
+        runSql('INSERT INTO customers (sl, name, phone, address) VALUES (?, ?, ?, ?)', [
+          custSl++, cust.name, cust.phone, cust.address
+        ]);
+      }
+
+      saveDatabase();
+
+      return res.json({
+        status: 'success',
+        message: `গুগল শিট থেকে চাহিদামতো সফলভাবে এন্ট্রি সম্পন্ন হয়েছে! বিক্রয় খাতা: ${importedSales}টি মেমো, বাকির খাতা: ${importedDues}টি রেকর্ড (সঠিক কাস্টমার নামসহ), স্টক: ${importedProducts}টি পণ্য, এবং ইউজার: ${importedUsers} জন স্টাফ অ্যাকাউন্ট।`,
+        report: {
+          importedSales,
+          importedDues,
+          importedProducts,
+          importedUsers,
+          importedCustomers: customersMap.size,
+          importedExpenses: 0
+        }
+      });
+    }
+
+    // Single-tab fallback
     const csvText = await fetchGoogleSheetCsv(spreadsheetId, gid, tabName);
     const rows = parseCsv(csvText);
 
@@ -1250,188 +1463,151 @@ apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
     const headers = rows[0];
     const dataRows = rows.slice(1);
 
-    // Identify Column Indexes
-    const invIndex = findHeaderIndex(headers, ['invoice', 'inv', 'memo', 'voucher', 'মেমো', 'ভাউচার', 'ইনভয়েস', 'sl', 'নং', 'no']);
-    const dateIndex = findHeaderIndex(headers, ['date', 'তারিখ', 'time', 'সময়', 'দিন']);
-    const custIndex = findHeaderIndex(headers, ['customer', 'client', 'name', 'কাস্টমার', 'নাম', 'ক্রেতা', 'গ্রাহক', 'পার্টি']);
-    const phoneIndex = findHeaderIndex(headers, ['phone', 'mobile', 'cell', 'contact', 'মোবাইল', 'ফোন', 'নাম্বার']);
+    const invIndex = findHeaderIndex(headers, ['invoice no', 'invoiceno', 'invoice_no', 'invoice', 'inv', 'memo no', 'memo', 'মেমো নং', 'মেমো', 'ভাউচার', 'ইনভয়েস']);
+    const dateIndex = findHeaderIndex(headers, ['date', 'তারিখ', 'timestamp', 'time', 'সময়']);
+    const userIndex = findHeaderIndex(headers, ['username', 'user_name', 'user', 'staff', 'cashier', 'operator', 'ইউজার', 'স্টাফ', 'অপারেটর']);
+    let custIndex = findHeaderIndex(headers, ['customer name', 'customer_name', 'customer', 'client name', 'client', 'পার্টি নাম', 'কাস্টমার নাম', 'কাস্টমার', 'ক্রেতা', 'গ্রাহক']);
+    if (custIndex === -1 || custIndex === userIndex) {
+      custIndex = headers.findIndex((h, idx) => {
+        if (idx === userIndex) return false;
+        const clean = h.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]/g, '');
+        if (clean.includes('user') || clean.includes('staff')) return false;
+        return clean.includes('customer') || clean.includes('client') || clean.includes('name') || clean.includes('নাম');
+      });
+    }
+    const phoneIndex = findHeaderIndex(headers, ['customer mobile', 'customer phone', 'mobile', 'cell', 'phone', 'contact', 'মোবাইল', 'ফোন', 'নাম্বার']);
     const addressIndex = findHeaderIndex(headers, ['address', 'location', 'ঠিকানা', 'গ্রাম']);
     const catIndex = findHeaderIndex(headers, ['category', 'service', 'type', 'ক্যাটাগরি', 'ধরন', 'বিভাগ', 'সেবা']);
-    const descIndex = findHeaderIndex(headers, ['item', 'product', 'desc', 'description', 'details', 'বিবরণ', 'মালের নাম', 'পণ্য']);
+    const descIndex = findHeaderIndex(headers, ['description', 'details', 'item', 'desc', 'product', 'বিবরণ', 'মালের নাম', 'পণ্য']);
     const subtotalIndex = findHeaderIndex(headers, ['subtotal', 'sub_total', 'উপমোট']);
     const discountIndex = findHeaderIndex(headers, ['discount', 'disc', 'ছাড়', 'লেস', 'কমিশন']);
-    const totalIndex = findHeaderIndex(headers, ['grand_total', 'grandtotal', 'total', 'bill', 'amount', 'সর্বমোট', 'মোট', 'টাকা', 'বিল']);
-    const paidIndex = findHeaderIndex(headers, ['paid', 'received', 'cash', 'deposit', 'নগদ', 'জমা', 'পরিশোধ', 'পেইড']);
-    const dueIndex = findHeaderIndex(headers, ['due', 'balance', 'outstanding', 'বাকি', 'বকেয়া', 'দেনা']);
-    const userIndex = findHeaderIndex(headers, ['user', 'staff', 'cashier', 'operator', 'ইউজার', 'স্টাফ', 'অপারেটর', 'এন্ট্রি']);
+    let totalIndex = findHeaderIndex(headers, ['net amount', 'net_amount', 'grand total', 'grand_total', 'grandtotal', 'সর্বমোট', 'মোট বিল', 'নেট টাকা']);
+    if (totalIndex === -1) {
+      totalIndex = headers.findIndex((h, idx) => {
+        if (idx === subtotalIndex || idx === discountIndex) return false;
+        const clean = h.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]/g, '');
+        if (clean.includes('subtotal') || clean.includes('discount') || clean.includes('paid')) return false;
+        return clean.includes('total') || clean.includes('amount') || clean.includes('bill') || clean.includes('মোট');
+      });
+    }
+    const paidIndex = findHeaderIndex(headers, ['paid amount', 'paid_amount', 'paid', 'received', 'cash', 'deposit', 'নগদ', 'জমা', 'পরিশোধ', 'পেইড']);
+    const dueIndex = findHeaderIndex(headers, ['due amount', 'due_amount', 'due', 'balance', 'outstanding', 'বাকি', 'বকেয়া', 'দেনা']);
     const itemsDataIndex = findHeaderIndex(headers, ['items data', 'items', 'item_data', 'items_json', 'পণ্য ডাটা', 'আইটেম']);
-
-    // Check if this sheet is Expenses sheet
-    const isExpenseSheet = totalIndex === -1 && invIndex === -1 && paidIndex === -1 && findHeaderIndex(headers, ['expense', 'খরচ', 'খরচের']) >= 0;
 
     let importedSales = 0;
     let importedCustomers = 0;
-    let importedExpenses = 0;
     let importedDues = 0;
 
-    // "আর এখানে যা এট্রি আছে তা সব বাদ যাবে..."
     if (clearExisting) {
       runSql('DELETE FROM sales');
       runSql('DELETE FROM sale_items');
       runSql('DELETE FROM due_ledger');
-      runSql('DELETE FROM expenses');
-      runSql('DELETE FROM cash_closings');
-      runSql('DELETE FROM purchases');
       runSql('DELETE FROM customers');
     }
 
-    if (isExpenseSheet) {
-      const expAmountIdx = findHeaderIndex(headers, ['amount', 'cost', 'expense', 'খরচ', 'টাকা', 'পরিমাণ']);
-      const expDescIdx = descIndex >= 0 ? descIndex : findHeaderIndex(headers, ['purpose', 'title', 'বিবরণ', 'খাত']);
-      const expCatIdx = catIndex >= 0 ? catIndex : -1;
+    let maxInvoiceNo = 1000;
+    dataRows.forEach((row, i) => {
+      if (!row.some(c => c && c.trim() !== '')) return;
 
-      dataRows.forEach((row, i) => {
-        const amount = expAmountIdx >= 0 ? parseNumber(row[expAmountIdx]) : 0;
-        if (amount > 0) {
-          const desc = expDescIdx >= 0 && row[expDescIdx] ? row[expDescIdx] : 'Operating Expense';
-          const rawCat = expCatIdx >= 0 && row[expCatIdx] ? row[expCatIdx] : 'অন্যান্য খরচ';
-          const cat = translateExpenseCategoryToBn(rawCat);
-          const date = dateIndex >= 0 ? parseDate(row[dateIndex]) : new Date().toISOString().split('T')[0];
-          const user = userIndex >= 0 && row[userIndex] ? row[userIndex] : 'Admin';
-          const expId = `EXP-${Date.now()}-${i + 1}`;
+      let invNo = invIndex >= 0 ? Math.round(parseNumber(row[invIndex])) : 0;
+      if (!invNo || invNo <= 0) {
+        maxInvoiceNo++;
+        invNo = maxInvoiceNo;
+      } else {
+        maxInvoiceNo = Math.max(maxInvoiceNo, invNo);
+      }
 
-          runSql(`
-            INSERT INTO expenses (expense_id, timestamp, date, category, description, amount, user_name)
-            VALUES (?, datetime('now'), ?, ?, ?, ?, ?)
-          `, [expId, date, cat, desc, amount, user]);
-          importedExpenses++;
+      const date = dateIndex >= 0 ? parseDate(row[dateIndex]) : new Date().toISOString().split('T')[0];
+      const customer = custIndex >= 0 && row[custIndex] ? row[custIndex].trim() : 'General Customer';
+      const phone = phoneIndex >= 0 && row[phoneIndex] ? row[phoneIndex].trim() : '';
+      const address = addressIndex >= 0 && row[addressIndex] ? row[addressIndex].trim() : '';
+
+      let category = catIndex >= 0 && row[catIndex] ? row[catIndex].trim() : 'Photocopy';
+      const desc = descIndex >= 0 && row[descIndex] ? row[descIndex].trim() : category;
+      const total = totalIndex >= 0 ? parseNumber(row[totalIndex]) : 0;
+      const subtotal = subtotalIndex >= 0 ? parseNumber(row[subtotalIndex]) : total;
+      const discount = discountIndex >= 0 ? parseNumber(row[discountIndex]) : Math.max(0, subtotal - total);
+      let paid = paidIndex >= 0 ? parseNumber(row[paidIndex]) : total;
+      let due = dueIndex >= 0 ? parseNumber(row[dueIndex]) : Math.max(0, Math.round((total - paid) * 100) / 100);
+      if (paidIndex === -1 && dueIndex >= 0) {
+        paid = Math.max(0, Math.round((total - due) * 100) / 100);
+      }
+      const user = userIndex >= 0 && row[userIndex] ? row[userIndex].trim() : 'Staff';
+
+      if (customer && customer !== 'General Customer') {
+        const custExists = queryOne('SELECT id FROM customers WHERE LOWER(name) = LOWER(?)', [customer]);
+        if (!custExists) {
+          runSql('INSERT INTO customers (sl, name, phone, address) VALUES (?, ?, ?, ?)', [
+            importedCustomers + 1, customer, phone, address || 'Paduar Bazar, Cumilla'
+          ]);
+          importedCustomers++;
         }
-      });
-    } else {
-      // Import Sales / Memos
-      let maxInvoiceNo = 1000;
+      }
 
-      dataRows.forEach((row, i) => {
-        // Skip empty row
-        if (!row.some(c => c && c.trim() !== '')) return;
-
-        let invNo = invIndex >= 0 ? Math.round(parseNumber(row[invIndex])) : 0;
-        if (!invNo || invNo <= 0) {
-          maxInvoiceNo++;
-          invNo = maxInvoiceNo;
-        } else {
-          maxInvoiceNo = Math.max(maxInvoiceNo, invNo);
-        }
-
-        const date = dateIndex >= 0 ? parseDate(row[dateIndex]) : new Date().toISOString().split('T')[0];
-        const customer = custIndex >= 0 && row[custIndex] ? row[custIndex].trim() : 'General Customer';
-        const phone = phoneIndex >= 0 && row[phoneIndex] ? row[phoneIndex].trim() : '';
-        const address = addressIndex >= 0 && row[addressIndex] ? row[addressIndex].trim() : '';
-        
-        let category = catIndex >= 0 && row[catIndex] ? row[catIndex].trim() : 'Photocopy';
-        const catLower = category.toLowerCase();
-        if (catLower.includes('photo') || catLower.includes('ফটোকপি') || catLower.includes('print')) {
-          category = 'Photocopy';
-        } else if (catLower.includes('online') || catLower.includes('অনলাইন') || catLower.includes('apply') || catLower.includes('form') || catLower.includes('job')) {
-          category = 'Online Application';
-        } else if (catLower.includes('station') || catLower.includes('স্টেশন') || catLower.includes('khata') || catLower.includes('pen') || catLower.includes('paper')) {
-          category = 'Stationery Products';
-        }
-
-        const desc = descIndex >= 0 && row[descIndex] ? row[descIndex].trim() : category;
-        const total = totalIndex >= 0 ? parseNumber(row[totalIndex]) : 0;
-        const subtotal = subtotalIndex >= 0 ? parseNumber(row[subtotalIndex]) : total;
-        const discount = discountIndex >= 0 ? parseNumber(row[discountIndex]) : Math.max(0, subtotal - total);
-        
-        let paid = paidIndex >= 0 ? parseNumber(row[paidIndex]) : total;
-        let due = dueIndex >= 0 ? parseNumber(row[dueIndex]) : Math.max(0, total - paid);
-
-        if (paidIndex === -1 && dueIndex >= 0) {
-          paid = Math.max(0, total - due);
-        }
-
-        const user = userIndex >= 0 && row[userIndex] ? row[userIndex].trim() : 'Staff';
-
-        // Check if customer exists in customer directory, if not create
-        if (customer && customer !== 'General Customer') {
-          const custExists = queryOne('SELECT id FROM customers WHERE LOWER(name) = LOWER(?)', [customer]);
-          if (!custExists) {
-            runSql('INSERT INTO customers (sl, name, phone, address) VALUES (?, ?, ?, ?)', [
-              importedCustomers + 1, customer, phone, address
-            ]);
-            importedCustomers++;
+      let items: any[] = [];
+      if (itemsDataIndex >= 0 && row[itemsDataIndex]) {
+        try {
+          const rawJson = row[itemsDataIndex].trim();
+          if (rawJson.startsWith('[') && rawJson.endsWith(']')) {
+            items = JSON.parse(rawJson);
           }
-        }
+        } catch (e) {}
+      }
+      if (!items || items.length === 0) {
+        items = [{
+          category,
+          name: desc || category,
+          price: total,
+          costPrice: Math.round(total * 0.4),
+          qty: 1,
+          total
+        }];
+      }
 
-        // Construct items JSON (or parse from Items Data column if present)
-        let items: any[] = [];
-        if (itemsDataIndex >= 0 && row[itemsDataIndex]) {
-          try {
-            const rawJson = row[itemsDataIndex].trim();
-            if (rawJson.startsWith('[') && rawJson.endsWith(']')) {
-              items = JSON.parse(rawJson);
-            }
-          } catch (e) {}
-        }
-        if (!items || items.length === 0) {
-          items = [{
-            category,
-            name: desc || category,
-            price: total,
-            costPrice: Math.round(total * 0.4),
-            qty: 1,
-            total
-          }];
-        }
+      runSql(`
+        INSERT OR REPLACE INTO sales (invoice_no, timestamp, date, user_name, customer_name, customer_phone, customer_address, category_summary, description, subtotal, discount, grand_total, paid, due, items_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        invNo, `${date} 12:00:00`, date, user, customer, phone, address || 'Paduar Bazar, Cumilla', category, desc, subtotal, discount, total, paid, due, JSON.stringify(items)
+      ]);
+      importedSales++;
 
-        // Insert into sales table using INSERT OR REPLACE to handle duplicates safely
+      const createdSale = queryOne('SELECT id FROM sales WHERE invoice_no = ?', [invNo]);
+      const saleId = createdSale?.id || invNo;
+
+      for (const it of items) {
         runSql(`
-          INSERT OR REPLACE INTO sales (invoice_no, timestamp, date, user_name, customer_name, customer_phone, customer_address, category_summary, description, subtotal, discount, grand_total, paid, due, items_json)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO sale_items (sale_id, invoice_no, category, product_name, price, cost_price, qty, total)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-          invNo, `${date} 12:00:00`, date, user, customer, phone, address, category, desc, subtotal, discount, total, paid, due, JSON.stringify(items)
+          saleId, invNo, it.category || category, it.name || desc,
+          parseFloat(it.price) || 0, parseFloat(it.costPrice) || 0,
+          parseFloat(it.qty) || 1, parseFloat(it.total) || 0
         ]);
-        importedSales++;
+      }
 
-        const createdSale = queryOne('SELECT id FROM sales WHERE invoice_no = ?', [invNo]);
-        const saleId = createdSale?.id || invNo;
-
-        // Insert into sale_items table
-        for (const it of items) {
-          runSql(`
-            INSERT INTO sale_items (sale_id, invoice_no, category, product_name, price, cost_price, qty, total)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          `, [
-            saleId, invNo, it.category || category, it.name || desc,
-            parseFloat(it.price) || 0, parseFloat(it.costPrice) || 0,
-            parseFloat(it.qty) || 1, parseFloat(it.total) || 0
-          ]);
-        }
-
-        // If due > 0, insert into due_ledger table
-        if (due > 0) {
-          const entryId = `DUE-${invNo}-${Date.now()}-${i}`;
-          runSql(`
-            INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp)
-            VALUES (?, ?, ?, ?, ?, 'due_added', ?, ?, 0, ?, ?)
-          `, [
-            entryId, date, customer, phone, address, `Invoice #${invNo} - ${category}`, due, user, `${date} 12:00:00`
-          ]);
-          importedDues++;
-        }
-      });
-    }
+      if (due > 0) {
+        const entryId = `DUE-${invNo}-${Date.now()}-${i}`;
+        runSql(`
+          INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp)
+          VALUES (?, ?, ?, ?, ?, 'due_added', ?, ?, 0, ?, ?)
+        `, [
+          entryId, date, customer, phone, address || 'Paduar Bazar, Cumilla', `Invoice #${invNo} - ${category}`, due, user, `${date} 12:00:00`
+        ]);
+        importedDues++;
+      }
+    });
 
     saveDatabase();
 
     return res.json({
       status: 'success',
-      message: `গুগল শিট থেকে ডাটা সফলভাবে আপডেট করা হয়েছে! ${importedSales}টি ইনভয়েস/মেমো, ${importedCustomers} জন কাস্টমার, ${importedDues}টি বকেয়া রেকর্ড ও ${importedExpenses}টি খরচ ইমপোর্ট সম্পন্ন হয়েছে। পূর্ববর্তী সকল এন্ট্রি মুছে নতুন ডাটা দ্বারা প্রতিস্থাপিত হয়েছে।`,
+      message: `গুগল শিট থেকে ডাটা সফলভাবে আপডেট করা হয়েছে! ${importedSales}টি ইনভয়েস/মেমো, ${importedCustomers} জন কাস্টমার, ${importedDues}টি বকেয়া রেকর্ড ইমপোর্ট সম্পন্ন হয়েছে।`,
       report: {
         importedSales,
         importedCustomers,
         importedDues,
-        importedExpenses,
+        importedExpenses: 0,
         totalRows: dataRows.length,
         headersDetected: headers
       }
