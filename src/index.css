@@ -61,10 +61,10 @@
     overflow: visible !important;
   }
 
-  /* Completely hide the main application layout and background components */
-  #app-main-layout,
+  /* Hide navigation, header, sidebar and background components during printing */
   .no-print,
-  .no-print * {
+  .no-print *,
+  .print\:hidden {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
@@ -72,6 +72,17 @@
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
+  }
+
+  #app-main-layout {
+    display: block !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   /* Completely strip dark backdrops, overlays, blur, fixed bounds, and borders */

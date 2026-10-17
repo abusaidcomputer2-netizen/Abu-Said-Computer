@@ -302,7 +302,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                       <option value="">Select Stationery Product...</option>
                       {stationeryProducts.map(p => (
                         <option key={p.id} value={p.name}>
-                          {p.name} [Stock: {p.stockQty || 0}, Cost: ৳{p.costPrice}]
+                          {p.name}{p.stockQty !== null && p.stockQty !== undefined ? ` [Stock: ${p.stockQty}]` : ''}
                         </option>
                       ))}
                       <option value="__custom__">✍️ Custom Stationery Product...</option>

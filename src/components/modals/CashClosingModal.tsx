@@ -403,14 +403,9 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                 </span>
               </div>
 
-              {/* Editability Indicator */}
+              {/* Cashier & Status Indicator */}
               <div className="flex items-center gap-2 text-xs">
-                {isEditable ? (
-                  <span className="text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/30 flex items-center gap-1">
-                    <Unlock className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Editable (আজ / গতকাল)</span>
-                  </span>
-                ) : (
+                {!isEditable && (
                   <span className="text-rose-400 font-bold bg-rose-500/10 px-2.5 py-1 rounded-xl border border-rose-500/30 flex items-center gap-1">
                     <Lock className="w-3.5 h-3.5 text-rose-400" />
                     <span>Locked (Read-Only)</span>

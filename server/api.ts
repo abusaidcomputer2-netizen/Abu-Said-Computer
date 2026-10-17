@@ -160,6 +160,7 @@ apiRouter.get('/bootstrap', (req: Request, res: Response) => {
         address: c.address
       })),
       records: formattedSales,
+      sales: formattedSales,
       expenses: expenses.map(e => ({
         rowId: e.id,
         id: e.id,
@@ -393,15 +394,15 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
         parseFloat(it.qty) || 1, parseFloat(it.total) || 0
       ]);
 
-      // Deduct stationery stock
-      if (it.category === 'Stationery Products') {
-        const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = LOWER(?)', [it.name]);
-        if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
-          const newStock = Math.max(0, (prod.stock_qty || 0) - (parseFloat(it.qty) || 0));
-          runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
-        }
+      // Deduct product stock automatically across all inventory items
+      const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [it.name]);
+      if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
+        const soldQty = parseFloat(it.qty) || 1;
+        const newStock = Math.max(0, (prod.stock_qty || 0) - soldQty);
+        runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
       }
     }
+    saveDatabase();
 
     // 3. Record in Due Ledger if due > 0
     const dueVal = parseFloat(due) || 0;
@@ -701,37 +702,77 @@ apiRouter.post('/purchases', (req: Request, res: Response) => {
   }
 });
 
+function translateExpenseCategoryToBn(cat: string): string {
+  const map: Record<string, string> = {
+    'shop rent': 'দোকান ভাড়া',
+    'rent': 'দোকান ভাড়া',
+    'electricity bill': 'বিদ্যুৎ বিল',
+    'electricity': 'বিদ্যুৎ বিল',
+    'electric bill': 'বিদ্যুৎ বিল',
+    'current bill': 'বিদ্যুৎ বিল',
+    'internet bill': 'ইন্টারনেট বিল',
+    'wifi bill': 'ইন্টারনেট বিল',
+    'internet': 'ইন্টারনেট বিল',
+    'staff salary': 'কর্মচারী বেতন',
+    'salary': 'কর্মচারী বেতন',
+    'paper purchase': 'কাগজ ক্রয়',
+    'paper': 'কাগজ ক্রয়',
+    'ink / toner': 'কালি ও টোনার ক্রয়',
+    'ink and toner': 'কালি ও টোনার ক্রয়',
+    'toner': 'কালি ও টোনার ক্রয়',
+    'machine maintenance': 'মেশিন মেরামত ও সার্ভিসিং',
+    'servicing': 'মেশিন মেরামত ও সার্ভিসিং',
+    'repair': 'মেশিন মেরামত ও সার্ভিসিং',
+    'tea & snacks': 'চা ও আপ্যায়ন',
+    'tea and snacks': 'চা ও আপ্যায়ন',
+    'snacks': 'চা ও আপ্যায়ন',
+    'food': 'চা ও আপ্যায়ন',
+    'tea': 'চা ও আপ্যায়ন',
+    'stationery products purchase': 'স্টেশনারি মালামাল ক্রয়',
+    'stationery': 'স্টেশনারি মালামাল ক্রয়',
+    'photocopy paper & toner purchase': 'ফটোকপি কাগজ ও মালামাল',
+    'hardware & tools': 'হার্ডওয়্যার ও কম্পিউটার যন্ত্রাংশ',
+    'hardware': 'হার্ডওয়্যার ও কম্পিউটার যন্ত্রাংশ',
+    'computer parts': 'হার্ডওয়্যার ও কম্পিউটার যন্ত্রাংশ',
+    'conveyance': 'যাতায়াত ও পরিবহন খরচ',
+    'transport': 'যাতায়াত ও পরিবহন খরচ',
+    'travel': 'যাতায়াত ও পরিবহন খরচ',
+    'fare': 'যাতায়াত ও পরিবহন খরচ',
+    'mobile recharge': 'মোবাইল রিচার্জ ও বিল',
+    'mobile bill': 'মোবাইল রিচার্জ ও বিল',
+    'shop decoration': 'দোকান সাজসজ্জা ও সংস্কার',
+    'decoration': 'দোকান সাজসজ্জা ও সংস্কার',
+    'packaging': 'প্যাকেজিং ও অন্যান্য খরচ',
+    'others': 'অন্যান্য খরচ',
+    'general': 'অন্যান্য খরচ',
+    'shop expense': 'অন্যান্য খরচ',
+    'office expense': 'অন্যান্য খরচ'
+  };
+  const key = (cat || '').toLowerCase().trim();
+  return map[key] || cat || 'অন্যান্য খরচ';
+}
+
 apiRouter.post('/photocopy-paper', (req: Request, res: Response) => {
   try {
-    const { productName, qty, unitCost, totalCost, date, notes, user } = req.body;
+    const { productName, qty } = req.body;
     const pName = (productName || '').trim();
     if (!pName) return res.status(400).json({ status: 'error', message: 'Product name required' });
 
     const qVal = parseFloat(qty) || 1;
-    const uCost = parseFloat(unitCost) || 0;
-    const tCost = parseFloat(totalCost) || (qVal * uCost);
 
-    const now = new Date();
-    const dateStr = date || now.toISOString().split('T')[0];
-    const timestampStr = `${dateStr} ${now.toTimeString().split(' ')[0]}`;
-
-    // Deduct stock
+    // Deduct stock from products inventory
+    // Business rule: Do NOT insert into expenses because paper was already paid for upon purchase
     const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = LOWER(?)', [pName]);
     if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
       const newStock = Math.max(0, (prod.stock_qty || 0) - qVal);
       runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
+      saveDatabase();
     }
 
-    // Log expense
-    const expCount = queryOne('SELECT COUNT(*) as c FROM expenses')?.c || 0;
-    const expId = `EXP-${expCount + 1001}`;
-    const expDesc = `Photocopy paper usage: ${pName} (${qVal} Reams/Pcs)${notes ? ` [${notes.trim()}]` : ''}`;
-    runSql(`
-      INSERT INTO expenses (expense_id, timestamp, date, category, description, amount, user_name)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [expId, timestampStr, dateStr, 'Photocopy Paper & Toner Purchase', expDesc, tCost, user || 'Staff']);
-
-    return res.json({ status: 'success', message: `Paper usage recorded and ৳${tCost} logged as expense` });
+    return res.json({ 
+      status: 'success', 
+      message: `ফটোকপিতে পেপার ব্যবহারের কারণে ${qVal} রিম/পিস স্টক থেকে সফলভাবে কমানো হয়েছে। (পূর্বে ক্রয়ের সময় খরচ হিসাবভুক্ত থাকায় কোনো অতিরিক্ত খরচ যোগ করা হয়নি)` 
+    });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
   }
@@ -741,6 +782,7 @@ apiRouter.delete('/purchases/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     runSql('DELETE FROM purchases WHERE id = ?', [id]);
+    saveDatabase();
     return res.json({ status: 'success', message: 'Purchase record deleted' });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
@@ -760,12 +802,14 @@ apiRouter.post('/expenses', (req: Request, res: Response) => {
 
     const count = queryOne('SELECT COUNT(*) as c FROM expenses')?.c || 0;
     const expId = `EXP-${count + 1001}`;
+    const cleanCategory = translateExpenseCategoryToBn(category || 'অন্যান্য খরচ');
 
     runSql(`
       INSERT INTO expenses (expense_id, timestamp, date, category, description, amount, user_name)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [expId, timestampStr, dateStr, category.trim(), description ? description.trim() : '', amt, user || 'Staff']);
+    `, [expId, timestampStr, dateStr, cleanCategory, description ? description.trim() : '', amt, user || 'Staff']);
 
+    saveDatabase();
     return res.json({ status: 'success', message: 'Expense saved successfully' });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
@@ -779,10 +823,12 @@ apiRouter.put('/expenses/:id', (req: Request, res: Response) => {
     const amt = parseFloat(amount) || 0;
     if (amt <= 0) return res.status(400).json({ status: 'error', message: 'Valid amount required' });
 
+    const cleanCategory = translateExpenseCategoryToBn(category || 'অন্যান্য খরচ');
     runSql(`
       UPDATE expenses SET category = ?, description = ?, amount = ?, date = ? WHERE id = ?
-    `, [category.trim(), description ? description.trim() : '', amt, date, id]);
+    `, [cleanCategory, description ? description.trim() : '', amt, date, id]);
 
+    saveDatabase();
     return res.json({ status: 'success', message: 'Expense updated successfully' });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
@@ -829,6 +875,7 @@ apiRouter.post('/cash-closings', (req: Request, res: Response) => {
         parseFloat(difference) || 0, status, notes || '', JSON.stringify(denominations || {}),
         existing.id
       ]);
+      saveDatabase();
       return res.json({ status: 'success', message: `Cash closing updated for ${dateStr}!` });
     } else {
       const count = queryOne('SELECT COUNT(*) as c FROM cash_closings')?.c || 0;
@@ -848,6 +895,7 @@ apiRouter.post('/cash-closings', (req: Request, res: Response) => {
         parseFloat(actualCash) || 0, parseFloat(difference) || 0, status,
         notes || '', JSON.stringify(denominations || {})
       ]);
+      saveDatabase();
       return res.json({ status: 'success', message: `Cash closing saved for ${dateStr}!` });
     }
   } catch (err: any) {
@@ -997,5 +1045,398 @@ apiRouter.post('/migrate/import-sheets', (req: Request, res: Response) => {
     });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+// ---------------- GOOGLE SHEETS LIVE SYNC ----------------
+
+function extractGoogleSheetInfo(url: string): { spreadsheetId: string | null; gid?: string } {
+  if (!url) return { spreadsheetId: null };
+  const idMatch = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  const spreadsheetId = idMatch ? idMatch[1] : null;
+  const gidMatch = url.match(/[#?&]gid=([0-9]+)/);
+  const gid = gidMatch ? gidMatch[1] : undefined;
+  return { spreadsheetId, gid };
+}
+
+function parseCsv(csvText: string): string[][] {
+  const clean = csvText.replace(/^\uFEFF/, '');
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentCell = '';
+  let insideQuotes = false;
+
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean[i];
+    const nextChar = clean[i + 1];
+
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        currentCell += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === ',' && !insideQuotes) {
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+    } else if ((char === '\r' || char === '\n') && !insideQuotes) {
+      if (char === '\r' && nextChar === '\n') {
+        i++;
+      }
+      currentRow.push(currentCell.trim());
+      if (currentRow.some(c => c !== '')) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentCell = '';
+    } else {
+      currentCell += char;
+    }
+  }
+
+  if (currentCell || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some(c => c !== '')) {
+      rows.push(currentRow);
+    }
+  }
+
+  return rows;
+}
+
+function parseNumber(val: any, fallback = 0): number {
+  if (val === null || val === undefined || val === '') return fallback;
+  const str = String(val)
+    .replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d).toString())
+    .replace(/[^\d.-]/g, '');
+  const n = parseFloat(str);
+  return isNaN(n) ? fallback : n;
+}
+
+function parseDate(val: any): string {
+  if (!val) {
+    return new Date().toISOString().split('T')[0];
+  }
+  const str = String(val)
+    .replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d).toString())
+    .trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+
+  const dmyMatch = str.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0');
+    const month = dmyMatch[2].padStart(2, '0');
+    const year = dmyMatch[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  return new Date().toISOString().split('T')[0];
+}
+
+async function fetchGoogleSheetCsv(spreadsheetId: string, gid?: string, sheetName?: string): Promise<string> {
+  const urls: string[] = [];
+  if (sheetName) {
+    urls.push(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`);
+  }
+  if (gid !== undefined && gid !== '') {
+    urls.push(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`);
+    urls.push(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&gid=${gid}`);
+  }
+  urls.push(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv`);
+  urls.push(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv`);
+
+  let lastError: Error | null = null;
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+        redirect: 'follow'
+      });
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const text = await response.text();
+      if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+        if (text.includes('accounts.google.com') || text.includes('ServiceLogin')) {
+          throw new Error("গুগল শিটটি প্রাইভেট করা আছে। অনুগ্রহ করে শিটের 'Share' সেটিংসে 'Anyone with the link can view' চালু করুন।");
+        }
+        continue;
+      }
+
+      if (text && text.trim().length > 0) {
+        return text;
+      }
+    } catch (err: any) {
+      lastError = err;
+    }
+  }
+
+  if (lastError) throw lastError;
+  throw new Error("গুগল শিট থেকে ডাটা ফেচ করা যায়নি। অনুগ্রহ করে শিটের লিঙ্ক সঠিক আছে কিনা এবং 'Anyone with the link can view' এক্সেস দেওয়া আছে কিনা নিশ্চিত করুন।");
+}
+
+function findHeaderIndex(headers: string[], keywords: string[]): number {
+  return headers.findIndex(h => {
+    const clean = h.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]/g, '');
+    return keywords.some(k => clean.includes(k.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]/g, '')));
+  });
+}
+
+apiRouter.post('/google-sheets/preview', async (req: Request, res: Response) => {
+  try {
+    const { sheetUrl, tabName } = req.body;
+    if (!sheetUrl || typeof sheetUrl !== 'string' || !sheetUrl.trim()) {
+      return res.status(400).json({ status: 'error', message: 'অনুগ্রহ করে একটি বৈধ গুগল শিটের লিঙ্ক দিন।' });
+    }
+
+    const { spreadsheetId, gid } = extractGoogleSheetInfo(sheetUrl.trim());
+    if (!spreadsheetId) {
+      return res.status(400).json({ status: 'error', message: 'অবৈধ লিঙ্ক। Google Sheets URL দিন (যেমন: https://docs.google.com/spreadsheets/d/...)' });
+    }
+
+    const csvText = await fetchGoogleSheetCsv(spreadsheetId, gid, tabName);
+    const rows = parseCsv(csvText);
+
+    if (rows.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'শিটে কোনো তথ্য পাওয়া যায়নি।' });
+    }
+
+    const headers = rows[0];
+    const previewRows = rows.slice(1, 6);
+
+    return res.json({
+      status: 'success',
+      totalRows: Math.max(0, rows.length - 1),
+      headers,
+      previewRows
+    });
+  } catch (err: any) {
+    return res.status(500).json({ status: 'error', message: err.message || 'গুগল শিট ফেচ করতে সমস্যা হয়েছে।' });
+  }
+});
+
+apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
+  try {
+    const { sheetUrl, clearExisting = true, tabName } = req.body;
+    if (!sheetUrl || typeof sheetUrl !== 'string' || !sheetUrl.trim()) {
+      return res.status(400).json({ status: 'error', message: 'অনুগ্রহ করে একটি বৈধ গুগল শিটের লিঙ্ক প্রদান করুন।' });
+    }
+
+    const { spreadsheetId, gid } = extractGoogleSheetInfo(sheetUrl.trim());
+    if (!spreadsheetId) {
+      return res.status(400).json({ status: 'error', message: 'অবৈধ গুগল শিট লিঙ্ক। লিঙ্কে https://docs.google.com/spreadsheets/d/... থাকতে হবে।' });
+    }
+
+    // Fetch CSV
+    const csvText = await fetchGoogleSheetCsv(spreadsheetId, gid, tabName);
+    const rows = parseCsv(csvText);
+
+    if (rows.length < 2) {
+      return res.status(400).json({ status: 'error', message: 'গুগল শিটে কোনো তথ্য পাওয়া যায়নি (কমপক্ষে ১টি হেডার রো এবং ১টি ডাটা রো থাকতে হবে)।' });
+    }
+
+    const headers = rows[0];
+    const dataRows = rows.slice(1);
+
+    // Identify Column Indexes
+    const invIndex = findHeaderIndex(headers, ['invoice', 'inv', 'memo', 'voucher', 'মেমো', 'ভাউচার', 'ইনভয়েস', 'sl', 'নং', 'no']);
+    const dateIndex = findHeaderIndex(headers, ['date', 'তারিখ', 'time', 'সময়', 'দিন']);
+    const custIndex = findHeaderIndex(headers, ['customer', 'client', 'name', 'কাস্টমার', 'নাম', 'ক্রেতা', 'গ্রাহক', 'পার্টি']);
+    const phoneIndex = findHeaderIndex(headers, ['phone', 'mobile', 'cell', 'contact', 'মোবাইল', 'ফোন', 'নাম্বার']);
+    const addressIndex = findHeaderIndex(headers, ['address', 'location', 'ঠিকানা', 'গ্রাম']);
+    const catIndex = findHeaderIndex(headers, ['category', 'service', 'type', 'ক্যাটাগরি', 'ধরন', 'বিভাগ', 'সেবা']);
+    const descIndex = findHeaderIndex(headers, ['item', 'product', 'desc', 'description', 'details', 'বিবরণ', 'মালের নাম', 'পণ্য']);
+    const subtotalIndex = findHeaderIndex(headers, ['subtotal', 'sub_total', 'উপমোট']);
+    const discountIndex = findHeaderIndex(headers, ['discount', 'disc', 'ছাড়', 'লেস', 'কমিশন']);
+    const totalIndex = findHeaderIndex(headers, ['grand_total', 'grandtotal', 'total', 'bill', 'amount', 'সর্বমোট', 'মোট', 'টাকা', 'বিল']);
+    const paidIndex = findHeaderIndex(headers, ['paid', 'received', 'cash', 'deposit', 'নগদ', 'জমা', 'পরিশোধ', 'পেইড']);
+    const dueIndex = findHeaderIndex(headers, ['due', 'balance', 'outstanding', 'বাকি', 'বকেয়া', 'দেনা']);
+    const userIndex = findHeaderIndex(headers, ['user', 'staff', 'cashier', 'operator', 'ইউজার', 'স্টাফ', 'অপারেটর', 'এন্ট্রি']);
+    const itemsDataIndex = findHeaderIndex(headers, ['items data', 'items', 'item_data', 'items_json', 'পণ্য ডাটা', 'আইটেম']);
+
+    // Check if this sheet is Expenses sheet
+    const isExpenseSheet = totalIndex === -1 && invIndex === -1 && paidIndex === -1 && findHeaderIndex(headers, ['expense', 'খরচ', 'খরচের']) >= 0;
+
+    let importedSales = 0;
+    let importedCustomers = 0;
+    let importedExpenses = 0;
+    let importedDues = 0;
+
+    // "আর এখানে যা এট্রি আছে তা সব বাদ যাবে..."
+    if (clearExisting) {
+      runSql('DELETE FROM sales');
+      runSql('DELETE FROM sale_items');
+      runSql('DELETE FROM due_ledger');
+      runSql('DELETE FROM expenses');
+      runSql('DELETE FROM cash_closings');
+      runSql('DELETE FROM purchases');
+      runSql('DELETE FROM customers');
+    }
+
+    if (isExpenseSheet) {
+      const expAmountIdx = findHeaderIndex(headers, ['amount', 'cost', 'expense', 'খরচ', 'টাকা', 'পরিমাণ']);
+      const expDescIdx = descIndex >= 0 ? descIndex : findHeaderIndex(headers, ['purpose', 'title', 'বিবরণ', 'খাত']);
+      const expCatIdx = catIndex >= 0 ? catIndex : -1;
+
+      dataRows.forEach((row, i) => {
+        const amount = expAmountIdx >= 0 ? parseNumber(row[expAmountIdx]) : 0;
+        if (amount > 0) {
+          const desc = expDescIdx >= 0 && row[expDescIdx] ? row[expDescIdx] : 'Operating Expense';
+          const rawCat = expCatIdx >= 0 && row[expCatIdx] ? row[expCatIdx] : 'অন্যান্য খরচ';
+          const cat = translateExpenseCategoryToBn(rawCat);
+          const date = dateIndex >= 0 ? parseDate(row[dateIndex]) : new Date().toISOString().split('T')[0];
+          const user = userIndex >= 0 && row[userIndex] ? row[userIndex] : 'Admin';
+          const expId = `EXP-${Date.now()}-${i + 1}`;
+
+          runSql(`
+            INSERT INTO expenses (expense_id, timestamp, date, category, description, amount, user_name)
+            VALUES (?, datetime('now'), ?, ?, ?, ?, ?)
+          `, [expId, date, cat, desc, amount, user]);
+          importedExpenses++;
+        }
+      });
+    } else {
+      // Import Sales / Memos
+      let maxInvoiceNo = 1000;
+
+      dataRows.forEach((row, i) => {
+        // Skip empty row
+        if (!row.some(c => c && c.trim() !== '')) return;
+
+        let invNo = invIndex >= 0 ? Math.round(parseNumber(row[invIndex])) : 0;
+        if (!invNo || invNo <= 0) {
+          maxInvoiceNo++;
+          invNo = maxInvoiceNo;
+        } else {
+          maxInvoiceNo = Math.max(maxInvoiceNo, invNo);
+        }
+
+        const date = dateIndex >= 0 ? parseDate(row[dateIndex]) : new Date().toISOString().split('T')[0];
+        const customer = custIndex >= 0 && row[custIndex] ? row[custIndex].trim() : 'General Customer';
+        const phone = phoneIndex >= 0 && row[phoneIndex] ? row[phoneIndex].trim() : '';
+        const address = addressIndex >= 0 && row[addressIndex] ? row[addressIndex].trim() : '';
+        
+        let category = catIndex >= 0 && row[catIndex] ? row[catIndex].trim() : 'Photocopy';
+        const catLower = category.toLowerCase();
+        if (catLower.includes('photo') || catLower.includes('ফটোকপি') || catLower.includes('print')) {
+          category = 'Photocopy';
+        } else if (catLower.includes('online') || catLower.includes('অনলাইন') || catLower.includes('apply') || catLower.includes('form') || catLower.includes('job')) {
+          category = 'Online Application';
+        } else if (catLower.includes('station') || catLower.includes('স্টেশন') || catLower.includes('khata') || catLower.includes('pen') || catLower.includes('paper')) {
+          category = 'Stationery Products';
+        }
+
+        const desc = descIndex >= 0 && row[descIndex] ? row[descIndex].trim() : category;
+        const total = totalIndex >= 0 ? parseNumber(row[totalIndex]) : 0;
+        const subtotal = subtotalIndex >= 0 ? parseNumber(row[subtotalIndex]) : total;
+        const discount = discountIndex >= 0 ? parseNumber(row[discountIndex]) : Math.max(0, subtotal - total);
+        
+        let paid = paidIndex >= 0 ? parseNumber(row[paidIndex]) : total;
+        let due = dueIndex >= 0 ? parseNumber(row[dueIndex]) : Math.max(0, total - paid);
+
+        if (paidIndex === -1 && dueIndex >= 0) {
+          paid = Math.max(0, total - due);
+        }
+
+        const user = userIndex >= 0 && row[userIndex] ? row[userIndex].trim() : 'Staff';
+
+        // Check if customer exists in customer directory, if not create
+        if (customer && customer !== 'General Customer') {
+          const custExists = queryOne('SELECT id FROM customers WHERE LOWER(name) = LOWER(?)', [customer]);
+          if (!custExists) {
+            runSql('INSERT INTO customers (sl, name, phone, address) VALUES (?, ?, ?, ?)', [
+              importedCustomers + 1, customer, phone, address
+            ]);
+            importedCustomers++;
+          }
+        }
+
+        // Construct items JSON (or parse from Items Data column if present)
+        let items: any[] = [];
+        if (itemsDataIndex >= 0 && row[itemsDataIndex]) {
+          try {
+            const rawJson = row[itemsDataIndex].trim();
+            if (rawJson.startsWith('[') && rawJson.endsWith(']')) {
+              items = JSON.parse(rawJson);
+            }
+          } catch (e) {}
+        }
+        if (!items || items.length === 0) {
+          items = [{
+            category,
+            name: desc || category,
+            price: total,
+            costPrice: Math.round(total * 0.4),
+            qty: 1,
+            total
+          }];
+        }
+
+        // Insert into sales table using INSERT OR REPLACE to handle duplicates safely
+        runSql(`
+          INSERT OR REPLACE INTO sales (invoice_no, timestamp, date, user_name, customer_name, customer_phone, customer_address, category_summary, description, subtotal, discount, grand_total, paid, due, items_json)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          invNo, `${date} 12:00:00`, date, user, customer, phone, address, category, desc, subtotal, discount, total, paid, due, JSON.stringify(items)
+        ]);
+        importedSales++;
+
+        const createdSale = queryOne('SELECT id FROM sales WHERE invoice_no = ?', [invNo]);
+        const saleId = createdSale?.id || invNo;
+
+        // Insert into sale_items table
+        for (const it of items) {
+          runSql(`
+            INSERT INTO sale_items (sale_id, invoice_no, category, product_name, price, cost_price, qty, total)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            saleId, invNo, it.category || category, it.name || desc,
+            parseFloat(it.price) || 0, parseFloat(it.costPrice) || 0,
+            parseFloat(it.qty) || 1, parseFloat(it.total) || 0
+          ]);
+        }
+
+        // If due > 0, insert into due_ledger table
+        if (due > 0) {
+          const entryId = `DUE-${invNo}-${Date.now()}-${i}`;
+          runSql(`
+            INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp)
+            VALUES (?, ?, ?, ?, ?, 'due_added', ?, ?, 0, ?, ?)
+          `, [
+            entryId, date, customer, phone, address, `Invoice #${invNo} - ${category}`, due, user, `${date} 12:00:00`
+          ]);
+          importedDues++;
+        }
+      });
+    }
+
+    saveDatabase();
+
+    return res.json({
+      status: 'success',
+      message: `গুগল শিট থেকে ডাটা সফলভাবে আপডেট করা হয়েছে! ${importedSales}টি ইনভয়েস/মেমো, ${importedCustomers} জন কাস্টমার, ${importedDues}টি বকেয়া রেকর্ড ও ${importedExpenses}টি খরচ ইমপোর্ট সম্পন্ন হয়েছে। পূর্ববর্তী সকল এন্ট্রি মুছে নতুন ডাটা দ্বারা প্রতিস্থাপিত হয়েছে।`,
+      report: {
+        importedSales,
+        importedCustomers,
+        importedDues,
+        importedExpenses,
+        totalRows: dataRows.length,
+        headersDetected: headers
+      }
+    });
+  } catch (err: any) {
+    return res.status(500).json({ status: 'error', message: err.message || 'গুগল শিট প্রসেস করতে সমস্যা হয়েছে।' });
   }
 });

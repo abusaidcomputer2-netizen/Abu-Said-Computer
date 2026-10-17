@@ -65,7 +65,7 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
         notes,
         user: currentUser
       });
-      showToast(`Recorded ${qty} reams/units usage and logged expense!`, 'success');
+      showToast(`Recorded ${qty} reams/units paper usage and deducted from stock inventory!`, 'success');
       onClose();
     } catch (err: any) {
       showToast(err.message || 'Error recording paper usage', 'error');
@@ -91,7 +91,7 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
         </div>
 
         <p className="text-xs text-slate-400">
-          Record reams/units of paper opened for machine use. Stock will automatically be deducted and cost logged as an expense.
+          ফটোকপি মেশিনের জন্য পেপার ব্যবহারের হিসাব। স্টক থেকে পেপারের সংখ্যা স্বয়ংক্রিয়ভাবে কমে যাবে (পূর্বে ক্রয়ের সময় খরচ হিসাবভুক্ত থাকায় কোনো ডাবল খরচ যোগ হবে না)।
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">

@@ -21,7 +21,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   KeyRound,
-  LayoutDashboard
+  LayoutDashboard,
+  FileSpreadsheet
 } from 'lucide-react';
 import { User } from '../types';
 import { formatCurrency } from '../utils/helpers';
@@ -63,14 +64,30 @@ export const Layout: React.FC<LayoutProps> = ({
   children
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('as_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('as_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
   const isAdmin = currentUser.role === 'admin';
   const perms = (currentUser.permissions || '').toLowerCase();
   const hasPerm = (p: string) => isAdmin || perms === 'all' || perms.includes(p);
 
   const navItems = [
     { id: 'sales' as ActiveTab, label: 'Sales & Invoices', icon: Receipt, perm: 'memo' },
-    { id: 'dashboard' as ActiveTab, label: 'Analytics Dashboard', icon: LayoutDashboard, perm: 'memo', badge: 'PRO', badgeColor: 'bg-blue-500/20 text-cyan-300 border-blue-500/30' },
+    { id: 'dashboard' as ActiveTab, label: 'Analytics Dashboard', icon: LayoutDashboard, perm: 'memo' },
     { id: 'due' as ActiveTab, label: 'Due Ledger', icon: BookMarked, perm: 'due', badge: totalOutstandingDue > 0 ? `৳${formatCurrency(totalOutstandingDue)}` : null, badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
     { id: 'customers' as ActiveTab, label: 'Customer Directory', icon: Users, perm: 'customer' },
     { id: 'cust_sales' as ActiveTab, label: 'Customer Sales', icon: TrendingUp, perm: 'cust_sales' },
@@ -84,7 +101,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'expenses' as ActiveTab, label: 'Operating Expenses', icon: Receipt, perm: 'expense' },
     { id: 'products' as ActiveTab, label: 'Products & Services', icon: Tags, perm: 'product' },
     { id: 'users' as ActiveTab, label: 'Users & Permissions', icon: UserCog, perm: 'admin' },
-    { id: 'migration' as ActiveTab, label: 'cPanel MySQL Export', icon: Database, perm: 'admin' }
+    { id: 'migration' as ActiveTab, label: 'Google Sheets Sync', icon: FileSpreadsheet, perm: 'admin' }
   ];
 
   const currentDateDisplay = new Date().toLocaleDateString('en-GB', {
@@ -107,28 +124,28 @@ export const Layout: React.FC<LayoutProps> = ({
       case 'expenses': return 'Operating Expense Management';
       case 'products': return 'Product & Service Master Catalog';
       case 'users': return 'Staff Accounts & Granular Permissions';
-      case 'migration': return 'Database Migration & cPanel Hosting';
+      case 'migration': return 'Google Sheets Sync & Data Integration';
       default: return 'Shop Management System';
     }
   };
 
   return (
-    <div id="app-main-layout" className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row antialiased selection:bg-blue-600 selection:text-white print:hidden">
+    <div id="app-main-layout" className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row antialiased selection:bg-blue-600 selection:text-white print:bg-white print:text-black print:block print:min-h-0 print:p-0 print:m-0">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-xs transition-opacity"
+          className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-xs transition-opacity print:hidden no-print"
         />
       )}
 
       {/* Sidebar Navigation */}
       <aside
-        onDoubleClick={() => setIsSidebarCollapsed(prev => !prev)}
-        title="ডাবল ক্লিক করলে সাইডবার ছোট বা বড় হবে (Double-click to toggle collapse)"
+        onDoubleClick={toggleSidebarCollapse}
+        title="ডাবল ক্লিক করলে সাইডবার ছোট বা বড় হবে (Double-click to collapse / expand)"
         className={`fixed md:sticky top-0 left-0 h-screen ${
           isSidebarCollapsed ? 'md:w-20' : 'md:w-64'
-        } bg-slate-900 border-r border-slate-800 flex flex-col justify-between z-50 transition-all duration-300 ease-in-out ${
+        } bg-slate-900 border-r border-slate-800 flex flex-col justify-between z-50 transition-all duration-300 ease-in-out print:hidden no-print ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
@@ -138,7 +155,7 @@ export const Layout: React.FC<LayoutProps> = ({
             <div className="flex items-center gap-3">
               <div 
                 className="w-10 h-10 rounded-xl bg-slate-950 p-0.5 border border-slate-700/80 flex items-center justify-center shadow-inner overflow-hidden flex-shrink-0 cursor-pointer"
-                onClick={() => setIsSidebarCollapsed(prev => !prev)}
+                onClick={toggleSidebarCollapse}
                 title="Click or double-click to collapse / expand"
               >
                 <img 
@@ -166,7 +183,7 @@ export const Layout: React.FC<LayoutProps> = ({
             {/* Desktop Collapse Toggle Icon */}
             <button
               type="button"
-              onClick={() => setIsSidebarCollapsed(prev => !prev)}
+              onClick={toggleSidebarCollapse}
               className="hidden md:flex p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
               title={isSidebarCollapsed ? "Expand Sidebar (বড় করুন)" : "Collapse Sidebar (ছোট করুন)"}
             >
@@ -325,7 +342,7 @@ export const Layout: React.FC<LayoutProps> = ({
       {/* Main Viewport Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header Bar */}
-        <header className="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 shadow-md backdrop-blur-md">
+        <header className="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 shadow-md backdrop-blur-md print:hidden no-print">
           <div className="px-4 sm:px-6 py-2.5 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2.5">
               <button
@@ -366,12 +383,12 @@ export const Layout: React.FC<LayoutProps> = ({
         </header>
 
         {/* Content Viewport */}
-        <main className="p-4 sm:p-6 lg:p-8 flex-grow space-y-6">
+        <main className="p-4 sm:p-6 lg:p-8 flex-grow space-y-6 print:p-0 print:m-0 print:space-y-0 print:block">
           {children}
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-slate-800/80 py-3.5 px-6 text-center text-xs text-slate-500 bg-slate-950 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <footer className="border-t border-slate-800/80 py-3.5 px-6 text-center text-xs text-slate-500 bg-slate-950 flex flex-col sm:flex-row items-center justify-between gap-2 print:hidden no-print">
           <div>
             AS Computer • Paduar Bazar, Cumilla, Bangladesh • Mobile: 01904142370
           </div>

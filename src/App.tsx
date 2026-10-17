@@ -175,7 +175,7 @@ export default function App() {
             setExpenses(data.expenses && data.expenses.length > 0 ? data.expenses : FALLBACK_EXPENSES);
             setDueRecords(data.dueRecords && data.dueRecords.length > 0 ? data.dueRecords : FALLBACK_DUE_RECORDS);
             setCustomerSummaries(data.customerSummaries && data.customerSummaries.length > 0 ? data.customerSummaries : FALLBACK_CUSTOMER_SUMMARIES);
-            setDueTotals(data.dueTotals && data.dueTotals.shopTotalDue > 0 ? data.dueTotals : FALLBACK_DUE_TOTALS);
+            setDueTotals(data.dueTotals ? data.dueTotals : FALLBACK_DUE_TOTALS);
             setPurchases(data.purchases && data.purchases.length > 0 ? data.purchases : FALLBACK_PURCHASES);
             setCashClosings(data.cashClosings && data.cashClosings.length > 0 ? data.cashClosings : FALLBACK_CASH_CLOSINGS);
             localStorage.setItem('as_computer_cached_bootstrap', rawText);
@@ -595,6 +595,36 @@ export default function App() {
   };
 
   const handleSubmitCashClosing = async (payload: any) => {
+    // Immediately update local cashClosings state
+    setCashClosings(prev => {
+      const idx = prev.findIndex(c => c.date === payload.date);
+      const newRec: CashClosingRecord = {
+        id: `CC-${payload.date}`,
+        rowId: Date.now(),
+        date: payload.date,
+        closedAt: new Date().toLocaleTimeString(),
+        user: payload.user || (currentUser?.username || 'Staff'),
+        openingCash: payload.openingCash,
+        prevShortageDeducted: payload.prevShortageDeducted,
+        salesInflow: payload.salesInflow,
+        dueInflow: payload.dueInflow,
+        totalInflow: payload.totalInflow,
+        expenseOutflow: payload.expenseOutflow,
+        expectedCash: payload.expectedCash,
+        actualCash: payload.actualCash,
+        difference: payload.difference,
+        status: payload.status,
+        notes: payload.notes,
+        denominations: payload.denominations
+      };
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = newRec;
+        return copy;
+      }
+      return [newRec, ...prev];
+    });
+
     const { data } = await safeFetchJson<any>('/api/cash-closings', {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -604,7 +634,6 @@ export default function App() {
     } else {
       showToast('Daily cash closed successfully', 'success');
     }
-    setActiveTab('sales');
     await fetchBootstrapData();
   };
 
@@ -838,7 +867,8 @@ export default function App() {
       </div>
 
       {/* Active Tab Viewport: Dashboard vs Daily Sales & Memo Entry */}
-      {activeTab === 'dashboard' ? (
+      <div className="print:hidden no-print">
+        {activeTab === 'dashboard' ? (
         <DashboardView
           sales={sales}
           expenses={expenses}
@@ -945,6 +975,7 @@ export default function App() {
           </div>
         </>
       )}
+      </div>
 
       {/* Modals with automatic deselection back to 'sales' on close */}
       {invoiceModalSale && (
@@ -1230,6 +1261,7 @@ export default function App() {
             setMigrationOpen(false);
             setActiveTab('sales');
           }}
+          onSyncSuccess={fetchBootstrapData}
           showToast={showToast}
         />
       )}
