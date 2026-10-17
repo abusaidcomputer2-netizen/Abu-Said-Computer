@@ -399,7 +399,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                           >
                             {isOut
                               ? `❌ ${p.name} [Out of Stock]`
-                              : `${p.name}${hasStock ? ` [Stock: ${p.stockQty}]` : ''} — ৳${p.price}`}
+                              : `${p.name}${hasStock ? ` [Stock: ${p.stockQty}]` : ''}`}
                           </option>
                         );
                       })}

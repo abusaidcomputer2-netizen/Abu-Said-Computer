@@ -25,7 +25,8 @@ import {
   ChevronRight,
   Activity,
   PackageCheck,
-  RotateCcw
+  RotateCcw,
+  Coins
 } from 'lucide-react';
 import { SaleRecord, DueRecord, ExpenseRecord, Product, CustomerDueSummary } from '../types';
 import { formatCurrency, normalizeCategory } from '../utils/helpers';
@@ -290,22 +291,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-              <span>AS Computer • Executive Performance Hub</span>
+              <span>AS Computer</span>
             </h1>
             <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
               Comprehensive real-time reporting for turnover, cash drawer realization, debt receivables, category contributions, and stock valuation.
             </p>
           </div>
 
-          {/* Filter Controls & Primary Shortcut Button */}
+          {/* Filter Controls & Primary Shortcut Buttons */}
           <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-start lg:justify-end">
             {/* Period selector */}
             <div className="bg-slate-950/90 p-1 rounded-2xl border border-slate-800 flex items-center gap-1 shadow-inner">
               {[
-                { key: 'today' as PeriodFilter, label: 'Today (আজ)' },
+                { key: 'today' as PeriodFilter, label: 'Today' },
                 { key: 'week' as PeriodFilter, label: '7 Days' },
                 { key: 'month' as PeriodFilter, label: 'This Month' },
-                { key: 'last_month' as PeriodFilter, label: 'Last Month (গত মাস)' }
+                { key: 'last_month' as PeriodFilter, label: 'Last Month' }
               ].map(p => (
                 <button
                   key={p.key}
@@ -321,6 +322,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </button>
               ))}
             </div>
+
+            {/* Daily Cash Closing Button */}
+            <button
+              type="button"
+              onClick={onOpenCashClosing}
+              className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-2xl text-xs shadow-lg shadow-emerald-600/25 flex items-center gap-2 transition cursor-pointer active:scale-95"
+            >
+              <Coins className="w-4 h-4 text-emerald-200" />
+              <span>Daily Cash Closing</span>
+            </button>
 
             {/* Quick jump to Daily Sales & Memo Entry */}
             <button
@@ -649,7 +660,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {/* Quick Cash Flow Gauge */}
-          <div className="p-3 bg-slate-950/90 rounded-2xl border border-slate-800 space-y-1.5 mt-2">
+          <div className="p-3 bg-slate-950/90 rounded-2xl border border-slate-800 space-y-2 mt-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400 font-medium flex items-center gap-1.5">
                 <Wallet className="w-3.5 h-3.5 text-cyan-400" />
@@ -660,6 +671,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="text-[10px] text-slate-500">
               Inflow: ৳{formatCurrency(totalCashInflow)} • Outflow: ৳{formatCurrency(totalExpenseVal)}
             </div>
+            <button
+              type="button"
+              onClick={onOpenCashClosing}
+              className="w-full py-1.5 px-3 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
+            >
+              <Coins className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Drawer Reconciliation & Daily Cash Closing</span>
+            </button>
           </div>
         </div>
       </div>

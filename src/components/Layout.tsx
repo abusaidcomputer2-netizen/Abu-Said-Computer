@@ -18,6 +18,8 @@ import {
   Calendar,
   Sparkles,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   KeyRound,
   LayoutDashboard
 } from 'lucide-react';
@@ -61,6 +63,7 @@ export const Layout: React.FC<LayoutProps> = ({
   children
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const isAdmin = currentUser.role === 'admin';
   const perms = (currentUser.permissions || '').toLowerCase();
   const hasPerm = (p: string) => isAdmin || perms === 'all' || perms.includes(p);
@@ -121,15 +124,23 @@ export const Layout: React.FC<LayoutProps> = ({
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between z-50 transition-transform duration-300 ease-in-out ${
+        onDoubleClick={() => setIsSidebarCollapsed(prev => !prev)}
+        title="ডাবল ক্লিক করলে সাইডবার ছোট বা বড় হবে (Double-click to toggle collapse)"
+        className={`fixed md:sticky top-0 left-0 h-screen ${
+          isSidebarCollapsed ? 'md:w-20' : 'md:w-64'
+        } bg-slate-900 border-r border-slate-800 flex flex-col justify-between z-50 transition-all duration-300 ease-in-out ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         <div className="flex flex-col h-full overflow-y-auto">
           {/* Brand Header */}
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div className={`p-3.5 border-b border-slate-800 flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-950 p-0.5 border border-slate-700/80 flex items-center justify-center shadow-inner overflow-hidden flex-shrink-0">
+              <div 
+                className="w-10 h-10 rounded-xl bg-slate-950 p-0.5 border border-slate-700/80 flex items-center justify-center shadow-inner overflow-hidden flex-shrink-0 cursor-pointer"
+                onClick={() => setIsSidebarCollapsed(prev => !prev)}
+                title="Click or double-click to collapse / expand"
+              >
                 <img 
                   src="/logo.png" 
                   alt="AS Computer" 
@@ -139,16 +150,30 @@ export const Layout: React.FC<LayoutProps> = ({
                   }}
                 />
               </div>
-              <div>
-                <div className="flex items-center gap-1.5 leading-none">
-                  <span className="text-amber-500 font-black text-lg">AS</span>
-                  <span className="text-white font-black text-lg">Computer</span>
+              {!isSidebarCollapsed && (
+                <div>
+                  <div className="flex items-center gap-1.5 leading-none">
+                    <span className="text-amber-500 font-black text-lg">AS</span>
+                    <span className="text-white font-black text-lg">Computer</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium mt-1">
+                    Paduar Bazar, Cumilla
+                  </p>
                 </div>
-                <p className="text-[10px] text-slate-400 font-medium mt-1">
-                  Paduar Bazar, Cumilla
-                </p>
-              </div>
+              )}
             </div>
+
+            {/* Desktop Collapse Toggle Icon */}
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(prev => !prev)}
+              className="hidden md:flex p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
+              title={isSidebarCollapsed ? "Expand Sidebar (বড় করুন)" : "Collapse Sidebar (ছোট করুন)"}
+            >
+              {isSidebarCollapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
+            </button>
+
+            {/* Mobile Close Button */}
             <button
               onClick={() => setSidebarOpen(false)}
               className="md:hidden text-slate-400 hover:text-white p-1"
@@ -160,9 +185,13 @@ export const Layout: React.FC<LayoutProps> = ({
           {/* Navigation Links */}
           <div className="p-3 space-y-4 flex-grow">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-3 block mb-1.5">
-                Main Operations
-              </span>
+              {!isSidebarCollapsed ? (
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-3 block mb-1.5">
+                  Main Operations
+                </span>
+              ) : (
+                <div className="border-t border-slate-800/80 my-1.5" />
+              )}
               <nav className="space-y-1">
                 {navItems.map(item => {
                   if (!hasPerm(item.perm)) return null;
@@ -175,20 +204,26 @@ export const Layout: React.FC<LayoutProps> = ({
                         onTabChange(item.id);
                         setSidebarOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      title={item.label}
+                      className={`w-full flex items-center ${
+                        isSidebarCollapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2'
+                      } rounded-xl text-xs font-bold transition cursor-pointer relative group ${
                         isActive
                           ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                           : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                        <span>{item.label}</span>
+                        <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
+                        {!isSidebarCollapsed && <span>{item.label}</span>}
                       </div>
-                      {item.badge && (
+                      {!isSidebarCollapsed && item.badge && (
                         <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black border ${item.badgeColor || ''}`}>
                           {item.badge}
                         </span>
+                      )}
+                      {isSidebarCollapsed && item.badge && (
+                        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
                       )}
                     </button>
                   );
@@ -199,9 +234,13 @@ export const Layout: React.FC<LayoutProps> = ({
             {/* Management & Admin Section */}
             {(isAdmin || hasPerm('financial') || hasPerm('expense') || hasPerm('product')) && (
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-3 block mb-1.5">
-                  Financials & System
-                </span>
+                {!isSidebarCollapsed ? (
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-3 block mb-1.5">
+                    Financials & System
+                  </span>
+                ) : (
+                  <div className="border-t border-slate-800/80 my-2" />
+                )}
                 <nav className="space-y-1">
                   {adminItems.map(item => {
                     if (item.perm === 'admin' && !isAdmin) return null;
@@ -215,17 +254,20 @@ export const Layout: React.FC<LayoutProps> = ({
                           onTabChange(item.id);
                           setSidebarOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        title={item.label}
+                        className={`w-full flex items-center ${
+                          isSidebarCollapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2'
+                        } rounded-xl text-xs font-bold transition cursor-pointer group ${
                           isActive
                             ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                             : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
-                          <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                          <span>{item.label}</span>
+                          <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
+                          {!isSidebarCollapsed && <span>{item.label}</span>}
                         </div>
-                        <ChevronRight className="w-3 h-3 text-slate-500" />
+                        {!isSidebarCollapsed && <ChevronRight className="w-3 h-3 text-slate-500" />}
                       </button>
                     );
                   })}
@@ -236,33 +278,46 @@ export const Layout: React.FC<LayoutProps> = ({
 
           {/* Current User Card & Logout */}
           <div className="p-3 border-t border-slate-800 bg-slate-950/60">
-            <div className="flex items-center justify-between p-2.5 bg-slate-900 border border-slate-800 rounded-2xl">
-              <div>
-                <div className="text-xs font-black text-white">{currentUser.username}</div>
-                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                  {currentUser.phone || '01904142370'}
+            {!isSidebarCollapsed ? (
+              <div className="flex items-center justify-between p-2.5 bg-slate-900 border border-slate-800 rounded-2xl">
+                <div>
+                  <div className="text-xs font-black text-white">{currentUser.username}</div>
+                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                    {currentUser.phone || '01904142370'}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {onOpenChangePassword && (
+                    <button
+                      type="button"
+                      onClick={onOpenChangePassword}
+                      className="p-2 bg-slate-800 hover:bg-amber-500/20 hover:text-amber-400 text-slate-400 rounded-xl transition cursor-pointer"
+                      title="Change Password (পাসওয়ার্ড পরিবর্তন)"
+                    >
+                      <KeyRound className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={onLogout}
+                    className="p-2 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 rounded-xl transition cursor-pointer"
+                    title="Logout"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
-                {onOpenChangePassword && (
-                  <button
-                    type="button"
-                    onClick={onOpenChangePassword}
-                    className="p-2 bg-slate-800 hover:bg-amber-500/20 hover:text-amber-400 text-slate-400 rounded-xl transition cursor-pointer"
-                    title="Change Password (পাসওয়ার্ড পরিবর্তন)"
-                  >
-                    <KeyRound className="w-4 h-4" />
-                  </button>
-                )}
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-1">
                 <button
+                  type="button"
                   onClick={onLogout}
                   className="p-2 bg-slate-800 hover:bg-rose-500/20 hover:text-rose-400 text-slate-400 rounded-xl transition cursor-pointer"
-                  title="Logout"
+                  title={`Logout (${currentUser.username})`}
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </aside>

@@ -1147,10 +1147,14 @@ export default function App() {
             setCashClosingOpen(false);
             setActiveTab('sales');
           }}
-          onOpenCashClosingPrint={() => {
-            const today = new Date().toISOString().split('T')[0];
-            const found = cashClosings.find(c => c.date === today) || null;
-            setCashClosingPrintData(found);
+          onOpenCashClosingPrint={(record) => {
+            if (record) {
+              setCashClosingPrintData(record);
+            } else {
+              const today = new Date().toISOString().split('T')[0];
+              const found = cashClosings.find(c => c.date === today) || null;
+              setCashClosingPrintData(found);
+            }
             setCashClosingPrintOpen(true);
           }}
           onSubmitCashClosing={handleSubmitCashClosing}
