@@ -22,7 +22,8 @@ import {
   ChevronsRight,
   KeyRound,
   LayoutDashboard,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Cloud
 } from 'lucide-react';
 import { User } from '../types';
 import { formatCurrency } from '../utils/helpers';
@@ -40,7 +41,8 @@ export type ActiveTab =
   | 'expenses' 
   | 'products' 
   | 'users' 
-  | 'migration';
+  | 'migration'
+  | 'drive_backup';
 
 interface LayoutProps {
   currentUser: User;
@@ -50,6 +52,8 @@ interface LayoutProps {
   totalOutstandingDue: number;
   onLogout: () => void;
   onOpenChangePassword?: () => void;
+  isGoogleDriveLinked?: boolean;
+  onOpenGoogleDriveBackup?: () => void;
   children: React.ReactNode;
 }
 
@@ -61,6 +65,8 @@ export const Layout: React.FC<LayoutProps> = ({
   totalOutstandingDue,
   onLogout,
   onOpenChangePassword,
+  isGoogleDriveLinked,
+  onOpenGoogleDriveBackup,
   children
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -100,7 +106,9 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'financial' as ActiveTab, label: 'Financial Statement', icon: PieChart, perm: 'financial' },
     { id: 'expenses' as ActiveTab, label: 'Operating Expenses', icon: Receipt, perm: 'expense' },
     { id: 'products' as ActiveTab, label: 'Products & Services', icon: Tags, perm: 'product' },
-    { id: 'users' as ActiveTab, label: 'Users & Permissions', icon: UserCog, perm: 'admin' }
+    { id: 'users' as ActiveTab, label: 'Users & Permissions', icon: UserCog, perm: 'admin' },
+    { id: 'drive_backup' as ActiveTab, label: 'Google Drive Backup', icon: Cloud, perm: 'admin' },
+    { id: 'migration' as ActiveTab, label: 'Google Sheets Sync', icon: FileSpreadsheet, perm: 'admin' }
   ];
 
   const currentDateDisplay = new Date().toLocaleDateString('en-GB', {
@@ -123,6 +131,7 @@ export const Layout: React.FC<LayoutProps> = ({
       case 'expenses': return 'Operating Expense Management';
       case 'products': return 'Product & Service Master Catalog';
       case 'users': return 'Staff Accounts & Granular Permissions';
+      case 'drive_backup': return 'Google Drive Live Backup & Cloud Database';
       case 'migration': return 'Google Sheets Sync & Data Integration';
       default: return 'Shop Management System';
     }
@@ -361,6 +370,24 @@ export const Layout: React.FC<LayoutProps> = ({
 
             {/* Header Right Stats, Date & User Actions */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {onOpenGoogleDriveBackup && (
+                <button
+                  type="button"
+                  onClick={onOpenGoogleDriveBackup}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                    isGoogleDriveLinked
+                      ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60'
+                      : 'bg-blue-950/60 border-blue-500/40 text-blue-300 hover:bg-blue-900/60'
+                  }`}
+                  title="Google Drive Cloud Backup & Master Spreadsheet"
+                >
+                  <Cloud className={`w-3.5 h-3.5 ${isGoogleDriveLinked ? 'text-emerald-400' : 'text-blue-400'}`} />
+                  <span className="hidden sm:inline">
+                    {isGoogleDriveLinked ? 'Drive: Synced' : 'Drive Backup'}
+                  </span>
+                </button>
+              )}
+
               <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-300">
                 <Calendar className="w-3.5 h-3.5 text-blue-400" />
                 <span>{currentDateDisplay}</span>

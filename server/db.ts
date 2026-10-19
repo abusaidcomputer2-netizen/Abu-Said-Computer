@@ -148,6 +148,12 @@ export async function initDatabase(): Promise<Database> {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date);
     CREATE INDEX IF NOT EXISTS idx_sales_customer ON sales(customer_name);
     CREATE INDEX IF NOT EXISTS idx_due_customer ON due_ledger(customer_name);
@@ -228,7 +234,55 @@ function seedInitialData(): void {
     `);
   }
 
-  // Only seed users if completely empty
+  // Check sales
+  const salesCount = db.exec("SELECT COUNT(*) as count FROM sales")[0]?.values[0][0] as number;
+  if (salesCount === 0) {
+    const today = new Date().toISOString().split('T')[0];
+    const timestamp = new Date().toLocaleString('en-US', { hour12: true });
+
+    db.run(`
+      INSERT INTO sales (
+        invoice_no, timestamp, date, user_name, customer_id, customer_name, customer_phone, customer_address,
+        category_summary, description, subtotal, discount, grand_total, paid, due, items_json
+      ) VALUES
+      (4001, '12-Oct-2026 10:30:15 AM', '2026-10-12', 'Md Abu Said', 1, 'Al Aqsa Qiraatul Quran Madrasa', '01819234567', 'Paduar Bazar, Cumilla',
+       'Photocopy, Stationery Products', 'Question papers print & paper reams', 1850, 50, 1800, 1000, 800,
+       '[{"category":"Photocopy","name":"A4 B/W Photocopy (Single)","price":3,"costPrice":1,"qty":200,"total":600},{"category":"Stationery Products","name":"Bashundhara A4 Paper 80GSM (Ream)","price":380,"costPrice":320,"qty":2,"total":760},{"category":"Photocopy","name":"Lamination A4","price":20,"costPrice":7,"qty":24,"total":480}]'
+      ),
+      (4002, '13-Oct-2026 02:15:40 PM', '2026-10-13', 'Md Sujon', 2, 'Hasan Trading Corporation', '01711223344', 'Kazi Para, Sadar Dakshin, Cumilla',
+       'Online Application', 'Trade license renewal & online tax filing', 950, 0, 950, 950, 0,
+       '[{"category":"Online Application","name":"Job Application Form Fillup","price":150,"costPrice":0,"qty":3,"total":450},{"category":"Online Application","name":"Birth Registration / Shonod","price":100,"costPrice":0,"qty":5,"total":500}]'
+      ),
+      (4003, '14-Oct-2026 09:45:00 AM', '${today}', 'Md Abu Said', 3, 'Noorani Muallim Training Center', '01912345678', 'Paduar Bazar, Cumilla',
+       'Photocopy, Stationery Products', 'Syllabus printing and binding files', 1250, 50, 1200, 700, 500,
+       '[{"category":"Photocopy","name":"A4 B/W Photocopy (Double)","price":5,"costPrice":1.8,"qty":150,"total":750},{"category":"Stationery Products","name":"Clear Plastic Document File","price":15,"costPrice":8,"qty":20,"total":300},{"category":"Photocopy","name":"Spiral Binding Sheet A4","price":8,"costPrice":4,"qty":25,"total":200}]'
+      );
+    `);
+
+    // Insert corresponding due ledger entries
+    db.run(`
+      INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp) VALUES
+      ('INV-4001', '2026-10-12', 'Al Aqsa Qiraatul Quran Madrasa', '01819234567', 'Paduar Bazar, Cumilla', 'Memo / Bill', 'Memo #4001 [Question papers print & paper reams]', 800, 0, 'Md Abu Said', '2026-10-12 10:30:15'),
+      ('INV-4003', '${today}', 'Noorani Muallim Training Center', '01912345678', 'Paduar Bazar, Cumilla', 'Memo / Bill', 'Memo #4003 [Syllabus printing and binding files]', 500, 0, 'Md Abu Said', '${today} 09:45:00'),
+      ('PAY-1001', '2026-10-13', 'Al Aqsa Qiraatul Quran Madrasa', '01819234567', 'Paduar Bazar, Cumilla', 'Payment Received', 'Cash payment at counter', 0, 300, 'Md Sujon', '2026-10-13 16:20:00');
+    `);
+
+    // Insert sample expenses
+    db.run(`
+      INSERT INTO expenses (expense_id, timestamp, date, category, description, amount, user_name) VALUES
+      ('EXP-1001', '2026-10-10 11:00:00', '2026-10-10', 'Shop Rent', 'Shop monthly advance rent part', 3000, 'Md Abu Said'),
+      ('EXP-1002', '2026-10-11 14:30:00', '2026-10-11', 'Electricity Bill', 'Palli Bidyut September bill', 1850, 'Md Abu Said'),
+      ('EXP-1003', '2026-10-12 17:15:00', '2026-10-12', 'Tea & Snacks', 'Staff afternoon tea & guest hospitality', 120, 'Md Sujon'),
+      ('EXP-1004', '2026-10-14 10:00:00', '${today}', 'Machine Maintenance', 'Photocopy drum cleaning & roller lube', 350, 'Md Abu Said');
+    `);
+
+    // Insert sample purchases
+    db.run(`
+      INSERT INTO purchases (purchase_id, date, timestamp, product_name, category, qty, unit_cost, total_cost, supplier, notes, user_name) VALUES
+      ('PUR-1001', '2026-10-11', '2026-10-11 12:00:00', 'Bashundhara A4 Paper 80GSM (Ream)', 'Stationery Products', 20, 320, 6400, 'Dhaka Paper Mart', 'Stock replenishment invoice #982', 'Md Abu Said'),
+      ('PUR-1002', '2026-10-13', '2026-10-13 15:30:00', 'Matador Ball Pen (Black/Blue)', 'Stationery Products', 100, 3.8, 380, 'Cumilla Stationers', 'Pen box delivery', 'Md Abu Said');
+    `);
+  }
 }
 
 export function getDb(): Database {

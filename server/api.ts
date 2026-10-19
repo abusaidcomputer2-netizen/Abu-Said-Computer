@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getDb, saveDatabase } from './db.js';
+import { createAndSyncSpreadsheet, appendSaleToSpreadsheet, appendPaymentToSpreadsheet } from './googleDriveService.js';
 
 export const apiRouter = Router();
 
@@ -224,7 +225,12 @@ apiRouter.get('/bootstrap', (req: Request, res: Response) => {
         status: c.status,
         notes: c.notes,
         denominations: JSON.parse(c.denominations_json || '{}')
-      }))
+      })),
+      googleDriveBackup: {
+        linkedSheetId: queryOne("SELECT value FROM app_settings WHERE key = 'linked_spreadsheet_id'")?.value || '',
+        linkedSheetUrl: queryOne("SELECT value FROM app_settings WHERE key = 'linked_spreadsheet_url'")?.value || '',
+        lastBackupTime: queryOne("SELECT value FROM app_settings WHERE key = 'last_backup_time'")?.value || ''
+      }
     });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
@@ -439,6 +445,13 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
       items
     };
 
+    // Real-time automatic background backup to Google Sheet
+    const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    const linkedSetting = queryOne("SELECT value FROM app_settings WHERE key = 'linked_spreadsheet_id'");
+    if (token && linkedSetting?.value) {
+      appendSaleToSpreadsheet(linkedSetting.value, token, responseRecord).catch(e => console.error('Sheet append error:', e));
+    }
+
     return res.json({
       status: 'success',
       message: `Invoice #${invoiceNo} created successfully!`,
@@ -632,6 +645,22 @@ apiRouter.post('/due-ledger/payment', (req: Request, res: Response) => {
       entryId, dateStr, customer.trim(), phone ? phone.trim() : '', address ? address.trim() : 'Paduar Bazar, Cumilla',
       'Payment Received', desc ? desc.trim() : 'Cash / bKash Payment', 0, amt, user || 'Staff', timestampStr
     ]);
+
+    // Real-time automatic background backup to Google Sheet
+    const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    const linkedSetting = queryOne("SELECT value FROM app_settings WHERE key = 'linked_spreadsheet_id'");
+    if (token && linkedSetting?.value) {
+      appendPaymentToSpreadsheet(linkedSetting.value, token, {
+        entryId,
+        date: dateStr,
+        customer: customer.trim(),
+        phone: phone ? phone.trim() : '',
+        desc: desc ? desc.trim() : 'Cash / bKash Payment',
+        amount: amt,
+        user: user || 'Staff',
+        timestamp: timestampStr
+      }).catch(e => console.error('Sheet payment append error:', e));
+    }
 
     return res.json({ status: 'success', message: 'Payment recorded successfully' });
   } catch (err: any) {
@@ -1616,3 +1645,70 @@ apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
     return res.status(500).json({ status: 'error', message: err.message || 'গুগল শিট প্রসেস করতে সমস্যা হয়েছে।' });
   }
 });
+
+// ---------------- GOOGLE DRIVE AUTOMATIC BACKUP & SYNC ----------------
+
+apiRouter.post('/google-drive/create-and-sync', async (req: Request, res: Response) => {
+  try {
+    const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    if (!token) {
+      return res.status(401).json({ status: 'error', message: 'Google authentication token missing. Please sign in with Google.' });
+    }
+
+    const db = getDb();
+    const report = await createAndSyncSpreadsheet(db, token);
+    saveDatabase();
+
+    return res.json({
+      status: 'success',
+      message: 'আপনার গুগল ড্রাইভে নতুন মাস্টার স্প্রেডশিট সফলভাবে তৈরি এবং সমস্ত ডাটা ব্যাকআপ সম্পন্ন হয়েছে!',
+      report
+    });
+  } catch (err: any) {
+    console.error('Create and sync spreadsheet error:', err);
+    return res.status(500).json({ status: 'error', message: err.message || 'গুগল শিট ব্যাকআপ করতে সমস্যা হয়েছে।' });
+  }
+});
+
+apiRouter.post('/google-drive/sync-now', async (req: Request, res: Response) => {
+  try {
+    const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    if (!token) {
+      return res.status(401).json({ status: 'error', message: 'Google authentication token missing. Please sign in with Google.' });
+    }
+
+    const db = getDb();
+    const linkedSetting = queryOne("SELECT value FROM app_settings WHERE key = 'linked_spreadsheet_id'");
+    const report = await createAndSyncSpreadsheet(db, token, linkedSetting?.value);
+    saveDatabase();
+
+    return res.json({
+      status: 'success',
+      message: 'গুগল ড্রাইভে লিঙ্ক করা শিটে সমস্ত ডাটা সফলভাবে সিঙ্ক ও ব্যাকআপ করা হয়েছে!',
+      report
+    });
+  } catch (err: any) {
+    console.error('Sync now error:', err);
+    return res.status(500).json({ status: 'error', message: err.message || 'গুগল শিট আপডেট করতে সমস্যা হয়েছে।' });
+  }
+});
+
+apiRouter.get('/google-drive/status', (_req: Request, res: Response) => {
+  const linkedSheetId = queryOne("SELECT value FROM app_settings WHERE key = 'linked_spreadsheet_id'")?.value || '';
+  const linkedSheetUrl = queryOne("SELECT value FROM app_settings WHERE key = 'linked_spreadsheet_url'")?.value || '';
+  const lastBackupTime = queryOne("SELECT value FROM app_settings WHERE key = 'last_backup_time'")?.value || '';
+
+  return res.json({
+    status: 'success',
+    linkedSheetId,
+    linkedSheetUrl,
+    lastBackupTime
+  });
+});
+
+apiRouter.post('/google-drive/unlink', (_req: Request, res: Response) => {
+  runSql("DELETE FROM app_settings WHERE key IN ('linked_spreadsheet_id', 'linked_spreadsheet_url', 'last_backup_time')");
+  saveDatabase();
+  return res.json({ status: 'success', message: 'Google Sheet unlinked successfully' });
+});
+

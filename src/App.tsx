@@ -49,6 +49,9 @@ import { UserModal } from './components/modals/UserModal';
 import { DeleteMemoModal } from './components/modals/DeleteMemoModal';
 import { MigrationModal } from './components/modals/MigrationModal';
 import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
+import { GoogleDriveBackupModal } from './components/modals/GoogleDriveBackupModal';
+import { initGoogleAuth, setCachedAccessToken } from './services/googleAuth';
+import { User as GoogleUser } from 'firebase/auth';
 import { normalizeCategory } from './utils/helpers';
 import { 
   FALLBACK_USERS, 
@@ -145,6 +148,12 @@ export default function App() {
   const [userOpen, setUserOpen] = useState(false);
   const [deleteMemoSale, setDeleteMemoSale] = useState<SaleRecord | null>(null);
   const [migrationOpen, setMigrationOpen] = useState(false);
+  const [driveBackupOpen, setDriveBackupOpen] = useState(false);
+  const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
+  const [googleToken, setGoogleToken] = useState<string | null>(null);
+  const [linkedSheetId, setLinkedSheetId] = useState('');
+  const [linkedSheetUrl, setLinkedSheetUrl] = useState('');
+  const [lastBackupTime, setLastBackupTime] = useState('');
 
   // Toast Notifications
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -214,6 +223,35 @@ export default function App() {
       setIsLoading(false);
     }
   };
+
+  const fetchGoogleDriveStatus = async () => {
+    try {
+      const { data } = await safeFetchJson<any>('/api/google-drive/status');
+      if (data && data.status === 'success') {
+        setLinkedSheetId(data.linkedSheetId || '');
+        setLinkedSheetUrl(data.linkedSheetUrl || '');
+        setLastBackupTime(data.lastBackupTime || '');
+      }
+    } catch (err) {
+      console.warn('Google Drive status check warning:', err);
+    }
+  };
+
+  useEffect(() => {
+    initGoogleAuth(
+      (user, token) => {
+        setGoogleUser(user);
+        setGoogleToken(token);
+        setCachedAccessToken(token);
+      },
+      () => {
+        setGoogleUser(null);
+        setGoogleToken(null);
+        setCachedAccessToken(null);
+      }
+    );
+    fetchGoogleDriveStatus();
+  }, []);
 
   useEffect(() => {
     if (currentUser) {
@@ -358,6 +396,7 @@ export default function App() {
     else if (tab === 'products') setProductOpen(true);
     else if (tab === 'users') setUserOpen(true);
     else if (tab === 'migration') setMigrationOpen(true);
+    else if (tab === 'drive_backup') setDriveBackupOpen(true);
   };
 
   // Filtered sales records for table & stats
@@ -837,6 +876,8 @@ export default function App() {
       totalOutstandingDue={dueTotals.netDue}
       onLogout={handleLogout}
       onOpenChangePassword={() => setChangePasswordOpen(true)}
+      isGoogleDriveLinked={!!linkedSheetId}
+      onOpenGoogleDriveBackup={() => setDriveBackupOpen(true)}
     >
       {/* Toast Notification Container */}
       <div className="fixed top-6 right-6 z-[999999] flex flex-col gap-2 pointer-events-none">
@@ -1278,6 +1319,30 @@ export default function App() {
           showToast={showToast}
         />
       )}
+
+      <GoogleDriveBackupModal
+        isOpen={driveBackupOpen}
+        onClose={() => {
+          setDriveBackupOpen(false);
+          setActiveTab('sales');
+        }}
+        googleUser={googleUser}
+        googleToken={googleToken}
+        onGoogleAuthChange={(user, token) => {
+          setGoogleUser(user);
+          setGoogleToken(token);
+          setCachedAccessToken(token);
+        }}
+        linkedSheetId={linkedSheetId}
+        linkedSheetUrl={linkedSheetUrl}
+        lastBackupTime={lastBackupTime}
+        onBackupSuccess={(sheetId, sheetUrl, backupTime) => {
+          setLinkedSheetId(sheetId);
+          setLinkedSheetUrl(sheetUrl);
+          setLastBackupTime(backupTime);
+        }}
+        showToast={showToast}
+      />
     </Layout>
   );
 }

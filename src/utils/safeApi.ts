@@ -1,3 +1,5 @@
+import { getCachedAccessToken } from '../services/googleAuth';
+
 /**
  * Safe API request helper that parses JSON reliably and never crashes on empty responses
  */
@@ -6,10 +8,12 @@ export async function safeFetchJson<T = any>(
   options: RequestInit = {}
 ): Promise<{ ok: boolean; status: number; data: T | null; error?: string }> {
   try {
+    const token = getCachedAccessToken();
     const res = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers || {})
       }
     });
