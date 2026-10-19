@@ -59,8 +59,8 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
     return `${yr}-${mo}-${da}`;
   }, []);
 
-  // Daily cash closing is fully accessible and editable for any selected date
-  const isEditable = true;
+  // Strict Business Rule: Only today and yesterday can be edited. Any earlier dates are locked/read-only.
+  const isEditable = closingDate === todayStr || closingDate === yesterdayStr;
 
   const [denoms, setDenoms] = useState<DenominationCounts>({
     n1000: 0,
@@ -225,7 +225,7 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
 
   const handleSave = async () => {
     if (!isEditable) {
-      showToast('আগের কোন দিনের তথ্য এডিট করা যাবে না! শুধু আজকের ও গতকালের তথ্য এডিট করা সম্ভব।', 'warning');
+      showToast('Past records cannot be edited. Only today and yesterday records can be modified.', 'warning');
       return;
     }
     setIsSubmitting(true);
@@ -268,7 +268,7 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                 <span>Daily Cash Closing & Drawer Reconciliation</span>
               </h3>
               <p className="text-[11px] text-slate-400">
-                দৈনিক ক্যাশ ক্লোজিং, ড্রয়ার মিল এবং বিস্তারিত হিসাব রেকর্ড
+                Daily counter cash reconciliation, notes count, and drawer balance record
               </p>
             </div>
           </div>
@@ -403,13 +403,29 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                 </span>
               </div>
 
-              {/* Cashier Indicator */}
+              {/* Cashier & Status Indicator */}
               <div className="flex items-center gap-2 text-xs">
-                <div className="text-slate-400 font-semibold pl-2 hidden sm:block">
+                {!isEditable && (
+                  <span className="text-rose-400 font-bold bg-rose-500/10 px-2.5 py-1 rounded-xl border border-rose-500/30 flex items-center gap-1">
+                    <Lock className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Locked (Read-Only)</span>
+                  </span>
+                )}
+                <div className="text-slate-400 font-semibold pl-2 border-l border-slate-800 hidden sm:block">
                   Cashier: <span className="font-bold text-white">{currentUser}</span>
                 </div>
               </div>
             </div>
+
+            {/* Lock Notice if date is older than yesterday */}
+            {!isEditable && (
+              <div className="p-3 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-2xl text-xs font-bold flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                <span>
+                  According to store rules, only today's and yesterday's cash closings can be edited. Records for {closingDate} and earlier are locked (Read-Only).
+                </span>
+              </div>
+            )}
 
             {/* 2-Column Split: System Drawer on Left, Physical Denominations on Right */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -695,7 +711,7 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                       disabled={!isEditable}
                       value={notes}
                       onChange={e => setNotes(e.target.value)}
-                      placeholder={isEditable ? "e.g. Drawer balanced, shortage noted..." : "লক করা (Read-Only)"}
+                      placeholder={isEditable ? "e.g. Drawer balanced, shortage noted..." : "Locked (Read-Only)"}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
@@ -710,7 +726,7 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                     <span>
                       {isEditable 
                         ? 'Save & Complete Daily Cash Closing' 
-                        : 'আগের দিনের তথ্য এডিট করা যাবে না (লক করা)'}
+                        : 'Past Records Cannot be Edited (Locked)'}
                     </span>
                   </button>
                 </div>
@@ -725,7 +741,7 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                 <span className="font-bold text-white">{cashClosings.length}</span> total daily closing records found in system.
               </div>
               <span className="text-[11px] text-amber-400 font-semibold">
-                * শুধুমাত্র আজ এবং গতকালের রেকর্ড এডিটযোগ্য, পূর্ববর্তী সকল রেকর্ড লক করা (Read-Only)।
+                * Only today and yesterday records are editable; all previous dates are locked (Read-Only).
               </span>
             </div>
 

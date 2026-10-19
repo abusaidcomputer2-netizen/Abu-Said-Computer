@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getDb, saveDatabase } from './db.js';
-import { createAndSyncSpreadsheet, appendSaleToSpreadsheet, appendPaymentToSpreadsheet } from './googleDriveService.js';
+import { createAndSyncSpreadsheet, appendSaleToSpreadsheet, appendPaymentToSpreadsheet, sendToAppsScript, PERMANENT_APPS_SCRIPT_URL } from './googleDriveService.js';
 
 export const apiRouter = Router();
 
@@ -445,7 +445,12 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
       items
     };
 
-    // Real-time automatic background backup to Google Sheet
+    // Real-time automatic background backup to Google Apps Script & Google Sheet
+    sendToAppsScript({
+      action: 'add_sale',
+      ...responseRecord
+    }).catch(e => console.error('Apps Script sale dispatch error:', e));
+
     const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
     const linkedSetting = queryOne("SELECT value FROM app_settings WHERE key = 'linked_spreadsheet_id'");
     if (token && linkedSetting?.value) {
@@ -646,7 +651,19 @@ apiRouter.post('/due-ledger/payment', (req: Request, res: Response) => {
       'Payment Received', desc ? desc.trim() : 'Cash / bKash Payment', 0, amt, user || 'Staff', timestampStr
     ]);
 
-    // Real-time automatic background backup to Google Sheet
+    // Real-time automatic background backup to Google Apps Script & Google Sheet
+    sendToAppsScript({
+      action: 'add_payment',
+      entryId,
+      date: dateStr,
+      customer: customer.trim(),
+      phone: phone ? phone.trim() : '',
+      desc: desc ? desc.trim() : 'Cash / bKash Payment',
+      amount: amt,
+      user: user || 'Staff',
+      timestamp: timestampStr
+    }).catch(e => console.error('Apps Script payment dispatch error:', e));
+
     const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
     const linkedSetting = queryOne("SELECT value FROM app_settings WHERE key = 'linked_spreadsheet_id'");
     if (token && linkedSetting?.value) {
@@ -839,6 +856,19 @@ apiRouter.post('/expenses', (req: Request, res: Response) => {
     `, [expId, timestampStr, dateStr, cleanCategory, description ? description.trim() : '', amt, user || 'Staff']);
 
     saveDatabase();
+
+    // Dispatch to Permanent Google Apps Script Web App
+    sendToAppsScript({
+      action: 'add_expense',
+      expenseId: expId,
+      timestamp: timestampStr,
+      date: dateStr,
+      category: cleanCategory,
+      description: description || '',
+      amount: amt,
+      user: user || 'Staff'
+    }).catch(e => console.error('Apps Script expense dispatch error:', e));
+
     return res.json({ status: 'success', message: 'Expense saved successfully' });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
@@ -925,6 +955,22 @@ apiRouter.post('/cash-closings', (req: Request, res: Response) => {
         notes || '', JSON.stringify(denominations || {})
       ]);
       saveDatabase();
+
+      // Dispatch to Permanent Google Apps Script Web App
+      sendToAppsScript({
+        action: 'add_cash_closing',
+        closingId,
+        date: dateStr,
+        closedAt,
+        user: user || 'Staff',
+        totalInflow: parseFloat(totalInflow) || 0,
+        expenseOutflow: parseFloat(expenseOutflow) || 0,
+        expectedCash: parseFloat(expectedCash) || 0,
+        actualCash: parseFloat(actualCash) || 0,
+        difference: parseFloat(difference) || 0,
+        status
+      }).catch(e => console.error('Apps Script cash closing dispatch error:', e));
+
       return res.json({ status: 'success', message: `Cash closing saved for ${dateStr}!` });
     }
   } catch (err: any) {
@@ -1661,12 +1707,12 @@ apiRouter.post('/google-drive/create-and-sync', async (req: Request, res: Respon
 
     return res.json({
       status: 'success',
-      message: 'আপনার গুগল ড্রাইভে নতুন মাস্টার স্প্রেডশিট সফলভাবে তৈরি এবং সমস্ত ডাটা ব্যাকআপ সম্পন্ন হয়েছে!',
+      message: 'Master Google Spreadsheet created and synced successfully!',
       report
     });
   } catch (err: any) {
     console.error('Create and sync spreadsheet error:', err);
-    return res.status(500).json({ status: 'error', message: err.message || 'গুগল শিট ব্যাকআপ করতে সমস্যা হয়েছে।' });
+    return res.status(500).json({ status: 'error', message: err.message || 'Failed to backup to Google Sheets.' });
   }
 });
 
@@ -1684,12 +1730,50 @@ apiRouter.post('/google-drive/sync-now', async (req: Request, res: Response) => 
 
     return res.json({
       status: 'success',
-      message: 'গুগল ড্রাইভে লিঙ্ক করা শিটে সমস্ত ডাটা সফলভাবে সিঙ্ক ও ব্যাকআপ করা হয়েছে!',
+      message: 'Linked Google Spreadsheet updated and synchronized successfully!',
       report
     });
   } catch (err: any) {
     console.error('Sync now error:', err);
-    return res.status(500).json({ status: 'error', message: err.message || 'গুগল শিট আপডেট করতে সমস্যা হয়েছে।' });
+    return res.status(500).json({ status: 'error', message: err.message || 'Failed to update Google Sheet.' });
+  }
+});
+
+apiRouter.post('/google-drive/link-sheet', async (req: Request, res: Response) => {
+  try {
+    const { sheetUrlOrId } = req.body;
+    if (!sheetUrlOrId || !sheetUrlOrId.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Please provide a valid Google Sheet URL or ID' });
+    }
+
+    const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    const cleanId = sheetUrlOrId.trim().match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)?.[1] || sheetUrlOrId.trim();
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${cleanId}/edit`;
+
+    const now = new Date().toISOString();
+    runSql("INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES ('linked_spreadsheet_id', ?, ?)", [cleanId, now]);
+    runSql("INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES ('linked_spreadsheet_url', ?, ?)", [sheetUrl, now]);
+    saveDatabase();
+
+    let report = null;
+    if (token) {
+      const db = getDb();
+      try {
+        report = await createAndSyncSpreadsheet(db, token, cleanId);
+      } catch (syncErr: any) {
+        console.warn('Sync on link warning:', syncErr.message);
+      }
+    }
+
+    return res.json({
+      status: 'success',
+      message: 'Google Spreadsheet successfully linked to system!',
+      linkedSheetId: cleanId,
+      linkedSheetUrl: sheetUrl,
+      report
+    });
+  } catch (err: any) {
+    return res.status(500).json({ status: 'error', message: err.message || 'Failed to link spreadsheet' });
   }
 });
 
@@ -1711,4 +1795,83 @@ apiRouter.post('/google-drive/unlink', (_req: Request, res: Response) => {
   saveDatabase();
   return res.json({ status: 'success', message: 'Google Sheet unlinked successfully' });
 });
+
+// ---------------- DATABASE MANAGEMENT (CLEAR ALL DATA) ----------------
+apiRouter.post('/database/clear-all', async (req: Request, res: Response) => {
+  try {
+    const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
+    const db = getDb();
+
+    // Wipe all transactional, inventory and customer records
+    db.run(`
+      DELETE FROM sales;
+      DELETE FROM sale_items;
+      DELETE FROM due_ledger;
+      DELETE FROM expenses;
+      DELETE FROM purchases;
+      DELETE FROM cash_closings;
+      DELETE FROM customers;
+      DELETE FROM products;
+      DELETE FROM sqlite_sequence WHERE name IN ('sales', 'sale_items', 'due_ledger', 'expenses', 'purchases', 'cash_closings', 'customers', 'products');
+    `);
+    saveDatabase();
+
+    // Also clear linked Google Sheet rows if connected
+    const linkedSetting = queryOne("SELECT value FROM app_settings WHERE key = 'linked_spreadsheet_id'");
+    if (linkedSetting?.value && token) {
+      try {
+        const { clearSpreadsheetData } = await import('./googleDriveService.js');
+        await clearSpreadsheetData(linkedSetting.value, token);
+      } catch (sheetClearErr) {
+        console.warn('Clearing Google Sheet warning:', sheetClearErr);
+      }
+    }
+
+    return res.json({
+      status: 'success',
+      message: 'All site data and linked sheet records have been completely cleared.'
+    });
+  } catch (err: any) {
+    console.error('Clear all error:', err);
+    return res.status(500).json({ status: 'error', message: err.message || 'Failed to clear database' });
+  }
+});
+
+// ---------------- APPS SCRIPT PERMANENT SYNC ----------------
+apiRouter.get('/apps-script/info', (_req: Request, res: Response) => {
+  return res.json({
+    status: 'success',
+    scriptUrl: PERMANENT_APPS_SCRIPT_URL
+  });
+});
+
+apiRouter.post('/apps-script/sync', async (_req: Request, res: Response) => {
+  try {
+    const sales = queryAll('SELECT * FROM sales ORDER BY id DESC');
+    const dues = queryAll('SELECT * FROM due_ledger ORDER BY id DESC');
+    const products = queryAll('SELECT * FROM products ORDER BY id ASC');
+    const customers = queryAll('SELECT * FROM customers ORDER BY id ASC');
+    const expenses = queryAll('SELECT * FROM expenses ORDER BY id DESC');
+    const cashClosings = queryAll('SELECT * FROM cash_closings ORDER BY id DESC');
+
+    const result = await sendToAppsScript({
+      action: 'sync_all',
+      sales,
+      dues,
+      products,
+      customers,
+      expenses,
+      cashClosings
+    });
+
+    return res.json({
+      status: 'success',
+      message: 'All records synced to permanent Google Apps Script web app successfully!',
+      result
+    });
+  } catch (err: any) {
+    return res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
 

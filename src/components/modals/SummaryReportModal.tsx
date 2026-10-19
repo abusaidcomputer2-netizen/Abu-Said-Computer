@@ -142,7 +142,7 @@ export const SummaryReportModal: React.FC<SummaryReportModalProps> = ({
                 <div className="w-14 h-14 flex items-center justify-center flex-shrink-0 bg-transparent">
                   <img 
                     src="/logo.png" 
-                    alt="AS Computer" 
+                    alt="Abu Said Computer" 
                     className="w-full h-full object-contain filter-none"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = "https://lh3.googleusercontent.com/d/1OXthEw7eAn6SkWLFzlW9G8MItn3ARvFM";
@@ -151,7 +151,7 @@ export const SummaryReportModal: React.FC<SummaryReportModalProps> = ({
                 </div>
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                    <span className="text-amber-500">AS</span> Computer
+                    <span className="text-amber-500">Abu Said</span> Computer
                   </h2>
                   <p className="text-xs font-bold text-slate-700 tracking-wide mt-1">
                     Sales & Due Summary Report
@@ -287,7 +287,7 @@ export const SummaryReportModal: React.FC<SummaryReportModalProps> = ({
             </div>
             <div>
               <div className="border-t border-slate-800 w-48 pt-1 font-black text-slate-900 text-[10px] uppercase">
-                For : AS Computer
+                For : Abu Said Computer
               </div>
             </div>
           </div>

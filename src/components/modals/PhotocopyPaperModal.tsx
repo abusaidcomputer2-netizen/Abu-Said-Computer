@@ -91,7 +91,7 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
         </div>
 
         <p className="text-xs text-slate-400">
-          ফটোকপি মেশিনের জন্য পেপার ব্যবহারের হিসাব। স্টক থেকে পেপারের সংখ্যা স্বয়ংক্রিয়ভাবে কমে যাবে (পূর্বে ক্রয়ের সময় খরচ হিসাবভুক্ত থাকায় কোনো ডাবল খরচ যোগ হবে না)।
+          Record photocopy machine paper usage. Paper stock quantities will automatically be deducted from inventory without duplicate expense entries.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">

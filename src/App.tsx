@@ -177,16 +177,16 @@ export default function App() {
         if (rawText && rawText.trim().startsWith('{')) {
           const data = JSON.parse(rawText);
           if (data.status === 'success') {
-            setUsers(data.users && data.users.length > 0 ? data.users : FALLBACK_USERS);
-            setProducts(data.products && data.products.length > 0 ? data.products : FALLBACK_PRODUCTS);
-            setCustomers(data.customers && data.customers.length > 0 ? data.customers : FALLBACK_CUSTOMERS);
-            setSales(data.records && data.records.length > 0 ? data.records : FALLBACK_SALES);
-            setExpenses(data.expenses && data.expenses.length > 0 ? data.expenses : FALLBACK_EXPENSES);
-            setDueRecords(data.dueRecords && data.dueRecords.length > 0 ? data.dueRecords : FALLBACK_DUE_RECORDS);
-            setCustomerSummaries(data.customerSummaries && data.customerSummaries.length > 0 ? data.customerSummaries : FALLBACK_CUSTOMER_SUMMARIES);
-            setDueTotals(data.dueTotals ? data.dueTotals : FALLBACK_DUE_TOTALS);
-            setPurchases(data.purchases && data.purchases.length > 0 ? data.purchases : FALLBACK_PURCHASES);
-            setCashClosings(data.cashClosings && data.cashClosings.length > 0 ? data.cashClosings : FALLBACK_CASH_CLOSINGS);
+            setUsers(data.users || FALLBACK_USERS);
+            setProducts(data.products || []);
+            setCustomers(data.customers || []);
+            setSales(data.records || []);
+            setExpenses(data.expenses || []);
+            setDueRecords(data.dueRecords || []);
+            setCustomerSummaries(data.customerSummaries || []);
+            setDueTotals(data.dueTotals || { shopTotalDue: 0, shopTotalPaid: 0, netDue: 0 });
+            setPurchases(data.purchases || []);
+            setCashClosings(data.cashClosings || []);
             localStorage.setItem('as_computer_cached_bootstrap', rawText);
             isLoaded = true;
           }
@@ -206,16 +206,16 @@ export default function App() {
           }
         }
 
-        setUsers(cached?.users && cached.users.length > 0 ? cached.users : FALLBACK_USERS);
-        setProducts(cached?.products && cached.products.length > 0 ? cached.products : FALLBACK_PRODUCTS);
-        setCustomers(cached?.customers && cached.customers.length > 0 ? cached.customers : FALLBACK_CUSTOMERS);
-        setSales(cached?.records && cached.records.length > 0 ? cached.records : FALLBACK_SALES);
-        setExpenses(cached?.expenses && cached.expenses.length > 0 ? cached.expenses : FALLBACK_EXPENSES);
-        setDueRecords(cached?.dueRecords && cached.dueRecords.length > 0 ? cached.dueRecords : FALLBACK_DUE_RECORDS);
-        setCustomerSummaries(cached?.customerSummaries && cached.customerSummaries.length > 0 ? cached.customerSummaries : FALLBACK_CUSTOMER_SUMMARIES);
-        setDueTotals(cached?.dueTotals && cached.dueTotals.shopTotalDue > 0 ? cached.dueTotals : FALLBACK_DUE_TOTALS);
-        setPurchases(cached?.purchases && cached.purchases.length > 0 ? cached.purchases : FALLBACK_PURCHASES);
-        setCashClosings(cached?.cashClosings && cached.cashClosings.length > 0 ? cached.cashClosings : FALLBACK_CASH_CLOSINGS);
+        setUsers(cached?.users || FALLBACK_USERS);
+        setProducts(cached?.products || []);
+        setCustomers(cached?.customers || []);
+        setSales(cached?.records || []);
+        setExpenses(cached?.expenses || []);
+        setDueRecords(cached?.dueRecords || []);
+        setCustomerSummaries(cached?.customerSummaries || []);
+        setDueTotals(cached?.dueTotals || { shopTotalDue: 0, shopTotalPaid: 0, netDue: 0 });
+        setPurchases(cached?.purchases || []);
+        setCashClosings(cached?.cashClosings || []);
       }
     } catch (err: any) {
       console.warn('Bootstrap data load warning:', err);
@@ -772,7 +772,7 @@ export default function App() {
             <div className="w-16 h-16 mx-auto mb-3 bg-slate-950 p-1.5 rounded-2xl border border-slate-700/80 flex items-center justify-center shadow-lg overflow-hidden">
               <img 
                 src="/logo.png" 
-                alt="AS Computer Logo" 
+                alt="Abu Said Computer Logo" 
                 className="w-full h-full object-contain"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = "https://lh3.googleusercontent.com/d/1OXthEw7eAn6SkWLFzlW9G8MItn3ARvFM";
@@ -780,7 +780,7 @@ export default function App() {
               />
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
-              <span className="text-amber-500">AS</span> Computer
+              <span className="text-amber-500">Abu Said</span> Computer
             </h1>
             <p className="text-xs text-blue-400 font-bold tracking-wider uppercase mt-1">
               Online Service & IT Point • Cumilla

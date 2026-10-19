@@ -82,7 +82,7 @@ export const UserModal: React.FC<UserModalProps> = ({
       return;
     }
     if (!password.trim()) {
-      showToast('পাসওয়ার্ড প্রদান বাধ্যতামূলক (Password is mandatory)!', 'warning');
+      showToast('Password is required!', 'warning');
       return;
     }
 
@@ -195,7 +195,7 @@ export const UserModal: React.FC<UserModalProps> = ({
 
             <div>
               <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                Password * (বাধ্যতামূলক)
+                Password * (Required)
               </label>
               <input
                 type="password"

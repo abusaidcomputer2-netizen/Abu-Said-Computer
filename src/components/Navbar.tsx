@@ -64,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="w-10 h-10 rounded-xl bg-slate-950 p-1 border border-slate-700/80 flex items-center justify-center shadow-inner overflow-hidden flex-shrink-0">
             <img 
               src="/logo.png" 
-              alt="AS Computer" 
+              alt="Abu Said Computer" 
               className="w-full h-full object-contain"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = "https://lh3.googleusercontent.com/d/1OXthEw7eAn6SkWLFzlW9G8MItn3ARvFM";
@@ -73,7 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-amber-500 font-black text-lg tracking-tight">AS</span>
+              <span className="text-amber-500 font-black text-lg tracking-tight">Abu Said</span>
               <span className="text-white font-black text-lg tracking-tight">Computer</span>
               <span className="text-[10px] uppercase font-black px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
                 PRO
@@ -222,7 +222,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={onOpenChangePassword}
                 className="p-2 bg-slate-800/80 hover:bg-amber-500/20 hover:text-amber-400 text-slate-400 rounded-xl border border-slate-700 transition cursor-pointer"
-                title="Change Password (পাসওয়ার্ড পরিবর্তন)"
+                title="Change Password"
               >
                 <KeyRound className="w-3.5 h-3.5" />
               </button>

@@ -13,7 +13,9 @@ import {
   LogOut,
   FolderSync,
   Unlink,
-  HelpCircle
+  Link as LinkIcon,
+  Code2,
+  Trash2
 } from 'lucide-react';
 import { googleSignIn, googleLogout } from '../../services/googleAuth';
 import { User } from 'firebase/auth';
@@ -45,9 +47,12 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [scriptCopied, setScriptCopied] = useState(false);
+  const [manualSheetInput, setManualSheetInput] = useState('');
+  const [showAppsScript, setShowAppsScript] = useState(false);
   const [lastReport, setLastReport] = useState<any>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
-    type: 'create' | 'sync' | 'unlink';
+    type: 'create' | 'sync' | 'unlink' | 'clear_all';
     title: string;
     description: string;
   } | null>(null);
@@ -60,11 +65,11 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
       const res = await googleSignIn();
       if (res) {
         onGoogleAuthChange(res.user, res.accessToken);
-        showToast(`গুগল অ্যাকাউন্ট (${res.user.email}) সফলভাবে যুক্ত হয়েছে!`, 'success');
+        showToast(`Google Account (${res.user.email}) connected successfully!`, 'success');
       }
     } catch (err: any) {
       console.error(err);
-      showToast(err.message || 'গুগল সাইন-ইন সম্পন্ন করা যায়নি।', 'error');
+      showToast(err.message || 'Google sign-in could not be completed.', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -73,12 +78,12 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
   const handleSignOut = async () => {
     await googleLogout();
     onGoogleAuthChange(null, null);
-    showToast('গুগল অ্যাকাউন্ট সাইন-আউট করা হয়েছে।', 'info');
+    showToast('Google account disconnected.', 'info');
   };
 
   const executeCreateAndSync = async () => {
     if (!googleToken) {
-      showToast('প্রথমে গুগল দিয়ে সাইন-ইন করুন।', 'warning');
+      showToast('Please sign in with Google first.', 'warning');
       return;
     }
 
@@ -97,12 +102,12 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
       if (data.status === 'success') {
         setLastReport(data.report);
         onBackupSuccess(data.report.spreadsheetId, data.report.spreadsheetUrl, data.report.syncedAt);
-        showToast(data.message, 'success');
+        showToast(data.message || 'Spreadsheet created and synced successfully!', 'success');
       } else {
-        showToast(data.message || 'গুগল শিট তৈরি করা যায়নি।', 'error');
+        showToast(data.message || 'Failed to create Google Spreadsheet.', 'error');
       }
     } catch (err: any) {
-      showToast(err.message || 'সার্ভার এরর। শিট তৈরি ব্যর্থ হয়েছে।', 'error');
+      showToast(err.message || 'Network error while creating spreadsheet.', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -110,7 +115,7 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
 
   const executeSyncNow = async () => {
     if (!googleToken) {
-      showToast('প্রথমে গুগল দিয়ে সাইন-ইন করুন।', 'warning');
+      showToast('Please sign in with Google first.', 'warning');
       return;
     }
 
@@ -128,12 +133,12 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
       if (data.status === 'success') {
         setLastReport(data.report);
         onBackupSuccess(data.report.spreadsheetId, data.report.spreadsheetUrl, data.report.syncedAt);
-        showToast(data.message, 'success');
+        showToast(data.message || 'Spreadsheet synced successfully!', 'success');
       } else {
-        showToast(data.message || 'সিঙ্ক করা যায়নি।', 'error');
+        showToast(data.message || 'Failed to sync spreadsheet.', 'error');
       }
     } catch (err: any) {
-      showToast(err.message || 'সিঙ্ক ব্যর্থ হয়েছে।', 'error');
+      showToast(err.message || 'Sync failed.', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -147,10 +152,75 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
       const data = await res.json();
       if (data.status === 'success') {
         onBackupSuccess('', '', '');
-        showToast('গুগল ড্রাইভ শিট লিঙ্ক সফলভাবে বিচ্ছিন্ন করা হয়েছে।', 'info');
+        showToast('Google Sheet unlinked successfully.', 'info');
       }
     } catch (err: any) {
-      showToast(err.message || 'লিঙ্ক বিচ্ছিন্ন করা যায়নি।', 'error');
+      showToast(err.message || 'Failed to unlink spreadsheet.', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleLinkExistingSheet = async () => {
+    if (!manualSheetInput.trim()) {
+      showToast('Please enter a Google Sheet URL or ID.', 'warning');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const headers: any = { 'Content-Type': 'application/json' };
+      if (googleToken) {
+        headers['Authorization'] = `Bearer ${googleToken}`;
+      }
+
+      const res = await fetch('/api/google-drive/link-sheet', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ sheetUrlOrId: manualSheetInput.trim() })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        onBackupSuccess(data.linkedSheetId, data.linkedSheetUrl, new Date().toISOString());
+        if (data.report) setLastReport(data.report);
+        setManualSheetInput('');
+        showToast('Google Sheet linked and verified successfully!', 'success');
+      } else {
+        showToast(data.message || 'Failed to link Google Sheet.', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Error linking sheet.', 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const executeClearAllData = async () => {
+    setConfirmDialog(null);
+    setIsProcessing(true);
+    try {
+      const headers: any = { 'Content-Type': 'application/json' };
+      if (googleToken) {
+        headers['Authorization'] = `Bearer ${googleToken}`;
+      }
+
+      const res = await fetch('/api/database/clear-all', {
+        method: 'POST',
+        headers
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        localStorage.removeItem('as_computer_cached_bootstrap');
+        showToast('All site and sheet records successfully cleared!', 'success');
+        // Refresh page state
+        setTimeout(() => {
+          window.location.reload();
+        }, 800);
+      } else {
+        showToast(data.message || 'Failed to clear data.', 'error');
+      }
+    } catch (err: any) {
+      showToast(err.message || 'Error executing data clear.', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -161,7 +231,42 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
     navigator.clipboard.writeText(linkedSheetUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    showToast('গুগল শিটের লিঙ্ক কপি করা হয়েছে!', 'success');
+    showToast('Google Sheet link copied to clipboard!', 'success');
+  };
+
+  const copyAppsScript = () => {
+    const code = `// Google Apps Script for AS Computer
+// 1. Open Google Sheet > Extensions > Apps Script
+// 2. Paste this code and deploy as Web App (Execute as: Me, Access: Anyone)
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet();
+    var payload = JSON.parse(e.postData.contents);
+    if (payload.action === 'add_sale') {
+      var salesSheet = sheet.getSheetByName('Sales Record') || sheet.insertSheet('Sales Record');
+      salesSheet.appendRow([
+        payload.invoiceNo, payload.timestamp, payload.date, payload.user,
+        payload.customer, payload.phone, payload.category, payload.desc,
+        payload.subtotal, payload.discount, payload.grandTotal, payload.paid,
+        payload.due, JSON.stringify(payload.items || [])
+      ]);
+    } else if (payload.action === 'add_payment') {
+      var dueSheet = sheet.getSheetByName('Due Ledger') || sheet.insertSheet('Due Ledger');
+      dueSheet.appendRow([
+        payload.entryId, payload.date, payload.customer, payload.phone,
+        'Payment Received', payload.desc, 0, payload.amount,
+        payload.user, payload.timestamp
+      ]);
+    }
+    return ContentService.createTextOutput(JSON.stringify({ status: 'success' })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+    navigator.clipboard.writeText(code);
+    setScriptCopied(true);
+    setTimeout(() => setScriptCopied(false), 2000);
+    showToast('Google Apps Script code copied to clipboard!', 'success');
   };
 
   return (
@@ -178,7 +283,7 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
                 <span>Google Drive Live Backup & Sync</span>
               </h3>
               <p className="text-[11px] text-slate-400">
-                আপনার গুগল ড্রাইভে স্বয়ংক্রিয় ক্লাউড ব্যাকআপ ও গুগল শিট ইন্টিগ্রেশন
+                Automated Cloud Backup & Live Google Sheets Integration
               </p>
             </div>
           </div>
@@ -190,7 +295,7 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
           </button>
         </div>
 
-        {/* Confirmation Modal Overlay (User Confirmation for Workspace API Operations) */}
+        {/* Confirmation Modal Overlay */}
         {confirmDialog && (
           <div className="absolute inset-0 bg-slate-950/95 z-20 rounded-3xl p-6 flex flex-col justify-center items-center text-center space-y-4 backdrop-blur-sm">
             <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
@@ -206,7 +311,7 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
                 onClick={() => setConfirmDialog(null)}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
               >
-                বাতিল (Cancel)
+                Cancel
               </button>
               <button
                 type="button"
@@ -214,10 +319,15 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
                   if (confirmDialog.type === 'create') executeCreateAndSync();
                   else if (confirmDialog.type === 'sync') executeSyncNow();
                   else if (confirmDialog.type === 'unlink') executeUnlink();
+                  else if (confirmDialog.type === 'clear_all') executeClearAllData();
                 }}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition shadow-lg cursor-pointer"
+                className={`px-5 py-2 ${
+                  confirmDialog.type === 'clear_all'
+                    ? 'bg-rose-600 hover:bg-rose-500'
+                    : 'bg-blue-600 hover:bg-blue-500'
+                } text-white text-xs font-bold rounded-xl transition shadow-lg cursor-pointer`}
               >
-                নিশ্চিত করুন (Confirm & Proceed)
+                Confirm & Proceed
               </button>
             </div>
           </div>
@@ -230,9 +340,9 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-sm font-bold text-white">গুগল অ্যাকাউন্ট সংযুক্ত করুন</h4>
+              <h4 className="text-sm font-bold text-white">Connect Google Account</h4>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                আপনার গুগল ড্রাইভে স্বয়ংক্রিয়ভাবে একটি সুরক্ষিত মাস্টার স্প্রেডশিট তৈরি করতে ও রিয়েল-টাইম ব্যাকআপ রাখতে সাইন-ইন করুন।
+                Sign in with Google to automatically create a master spreadsheet in your Google Drive and enable real-time cloud sync.
               </p>
             </div>
 
@@ -250,7 +360,7 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
                   <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
                   <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
                 </svg>
-                <span>{isProcessing ? 'সাইন-ইন হচ্ছে...' : 'Sign in with Google'}</span>
+                <span>{isProcessing ? 'Connecting...' : 'Sign in with Google'}</span>
               </button>
             </div>
           </div>
@@ -292,10 +402,10 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>গুগল ড্রাইভে মাস্টার স্প্রেডশিট লিঙ্ক করা আছে</span>
+                    <span>Master Spreadsheet is Linked in Google Drive</span>
                   </div>
                   <span className="text-[10px] text-emerald-300 bg-emerald-900/40 px-2 py-0.5 rounded-full border border-emerald-500/30 font-medium">
-                    রিয়েল-টাইম অটো ব্যাকআপ সক্রিয়
+                    Real-time Auto Sync Active
                   </span>
                 </div>
 
@@ -321,7 +431,7 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
                       rel="noopener noreferrer"
                       className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-xs cursor-pointer"
                     >
-                      <span>গুগল ড্রাইভে দেখুন</span>
+                      <span>Open in Drive</span>
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                   </div>
@@ -329,8 +439,8 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
 
                 {lastBackupTime && (
                   <div className="text-[10px] text-slate-400 flex items-center justify-between">
-                    <span>সর্বশেষ ব্যাকআপ: {new Date(lastBackupTime).toLocaleString('bn-BD')}</span>
-                    <span className="text-slate-500">স্বয়ংক্রিয় ক্লাউড সিঙ্ক</span>
+                    <span>Last Synced: {new Date(lastBackupTime).toLocaleString('en-US')}</span>
+                    <span className="text-slate-500">Auto Cloud Sync</span>
                   </div>
                 )}
 
@@ -341,15 +451,15 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
                     onClick={() => {
                       setConfirmDialog({
                         type: 'sync',
-                        title: 'গুগল শিট ডাটা সিঙ্ক নিশ্চিতকরণ',
-                        description: 'আপনার গুগল ড্রাইভে অবস্থিত "AS Computer - Shop Master Database" শিটে বর্তমান সমস্ত ডাটা (বিক্রয় খাতা, বাকির খাতা, স্টক, ইউজার) আপডেট করা হবে। আপনি কি এগিয়ে যেতে চান?'
+                        title: 'Confirm Google Sheet Sync',
+                        description: 'Current shop data (Sales, Due Ledger, Stock, Users, Customers, Expenses) will be synchronized with large spacious rows to your Google Spreadsheet. Continue?'
                       });
                     }}
                     disabled={isProcessing}
                     className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isProcessing ? 'animate-spin' : ''}`} />
-                    <span>{isProcessing ? 'সিঙ্ক হচ্ছে...' : 'এখনই সমস্ত তথ্য শিটে সিঙ্ক করুন (Sync All Now)'}</span>
+                    <span>{isProcessing ? 'Syncing...' : 'Sync All Data to Sheet Now'}</span>
                   </button>
 
                   <button
@@ -357,8 +467,8 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
                     onClick={() => {
                       setConfirmDialog({
                         type: 'unlink',
-                        title: 'শিট লিঙ্ক বিচ্ছিন্ন করার নিশ্চিতকরণ',
-                        description: 'আপনি কি নিশ্চিত যে গুগল ড্রাইভের সাথে এই স্প্রেডশিটের সংযোগ বিচ্ছিন্ন করতে চান? ড্রাইভে থাকা শিটটি মুছে যাবে না, তবে স্বয়ংক্রিয় সিঙ্ক বন্ধ হবে।'
+                        title: 'Confirm Unlink Spreadsheet',
+                        description: 'Are you sure you want to unlink this spreadsheet from the app? The sheet in Google Drive will remain intact, but automatic sync will stop.'
                       });
                     }}
                     disabled={isProcessing}
@@ -375,28 +485,36 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
                   <FileSpreadsheet className="w-6 h-6" />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white">গুগল ড্রাইভে নতুন মাস্টার স্প্রেডশিট তৈরি করুন</h4>
+                  <h4 className="text-sm font-bold text-white">Create Master Spreadsheet in Google Drive</h4>
                   <p className="text-xs text-slate-400 max-w-md mx-auto">
-                    আপনার গুগল ড্রাইভে সফটওয়্যারের সকল টেবিল (বিক্রয় খাতা, বাকির খাতা, স্টক, ইউজার ও কাস্টমার তালিকা) নিয়ে একটি স্বয়ংসম্পূর্ণ স্প্রেডশিট তৈরি ও ব্যাকআপ হবে।
+                    A comprehensive spreadsheet with individual sheets (Sales Record, Due Ledger, Stock Inventory, Customers, Staff Users, Expenses) formatted with large spacious rows will be created in your Google Drive.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-left text-[11px] pt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-left text-[11px] pt-1">
                   <div className="p-2 bg-slate-950 rounded-xl border border-slate-800">
-                    <span className="font-bold text-white block">১. বিক্রয় খাতা</span>
-                    <span className="text-[10px] text-slate-400">সকল ইনভয়েস ও মেমো</span>
+                    <span className="font-bold text-white block">1. Sales Record</span>
+                    <span className="text-[10px] text-slate-400">All memos & items</span>
                   </div>
                   <div className="p-2 bg-slate-950 rounded-xl border border-slate-800">
-                    <span className="font-bold text-white block">২. বাকির খাতা</span>
-                    <span className="text-[10px] text-slate-400">কাস্টমার নামসহ দেনা-পাওনা</span>
+                    <span className="font-bold text-white block">2. Due Ledger</span>
+                    <span className="text-[10px] text-slate-400">Customer dues & credits</span>
                   </div>
                   <div className="p-2 bg-slate-950 rounded-xl border border-slate-800">
-                    <span className="font-bold text-white block">৩. স্টক তালিকা</span>
-                    <span className="text-[10px] text-slate-400">মালের নাম, দাম ও সংখ্যা</span>
+                    <span className="font-bold text-white block">3. Stock Inventory</span>
+                    <span className="text-[10px] text-slate-400">Products, prices, stock</span>
                   </div>
                   <div className="p-2 bg-slate-950 rounded-xl border border-slate-800">
-                    <span className="font-bold text-white block">৪. ইউজার তালিকা</span>
-                    <span className="text-[10px] text-slate-400">স্টাফ অ্যাকাউন্ট ও তথ্য</span>
+                    <span className="font-bold text-white block">4. Customers</span>
+                    <span className="text-[10px] text-slate-400">Names, phones, addresses</span>
+                  </div>
+                  <div className="p-2 bg-slate-950 rounded-xl border border-slate-800">
+                    <span className="font-bold text-white block">5. Staff Users</span>
+                    <span className="text-[10px] text-slate-400">Accounts & permissions</span>
+                  </div>
+                  <div className="p-2 bg-slate-950 rounded-xl border border-slate-800">
+                    <span className="font-bold text-white block">6. Expenses</span>
+                    <span className="text-[10px] text-slate-400">Shop expense records</span>
                   </div>
                 </div>
 
@@ -405,45 +523,116 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
                   onClick={() => {
                     setConfirmDialog({
                       type: 'create',
-                      title: 'গুগল ড্রাইভে মাস্টার স্প্রেডশিট তৈরির নিশ্চিতকরণ',
-                      description: 'আপনার গুগল ড্রাইভের সাথে যুক্ত করে একটি নতুন স্প্রেডশিট তৈরি করা হবে এবং বর্তমান সকল বিক্রয়, বাকি, স্টক এবং ইউজার তথ্য ব্যাকআপ হিসেবে আপলোড করা হবে। আপনি কি সম্মতি দিচ্ছেন?'
+                      title: 'Confirm Create Master Spreadsheet',
+                      description: 'A new Master Spreadsheet will be created in your Google Drive and linked for real-time backup with large, clear rows. Proceed?'
                     });
                   }}
                   disabled={isProcessing}
                   className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black py-3 px-4 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-lg disabled:opacity-50"
                 >
                   <FolderSync className={`w-4 h-4 ${isProcessing ? 'animate-spin' : ''}`} />
-                  <span>{isProcessing ? 'প্রসেসিং হচ্ছে...' : 'গুগল ড্রাইভে স্প্রেডশিট তৈরি ও সম্পূর্ণ ব্যাকআপ নিন'}</span>
+                  <span>{isProcessing ? 'Processing...' : 'Create Master Spreadsheet in Google Drive'}</span>
                 </button>
               </div>
             )}
+
+            {/* Manual Link Existing Spreadsheet */}
+            <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-2xl space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
+                <LinkIcon className="w-3.5 h-3.5 text-blue-400" />
+                <span>Or Link Existing Google Sheet (Paste URL or ID)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="https://docs.google.com/spreadsheets/d/your-sheet-id/edit"
+                  value={manualSheetInput}
+                  onChange={(e) => setManualSheetInput(e.target.value)}
+                  className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-hidden focus:border-blue-500 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={handleLinkExistingSheet}
+                  disabled={isProcessing || !manualSheetInput.trim()}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition cursor-pointer flex-shrink-0"
+                >
+                  Link Sheet
+                </button>
+              </div>
+            </div>
 
             {/* Last Report summary if any */}
             {lastReport && (
               <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs space-y-1.5">
                 <span className="text-emerald-400 font-bold flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>সর্বশেষ ব্যাকআপ রিপোর্ট:</span>
+                  <span>Latest Sync Report:</span>
                 </span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-slate-300">
-                  <div>বিক্রয় খাতা: <strong className="text-white">{lastReport.salesCount}টি</strong></div>
-                  <div>বাকির খাতা: <strong className="text-white">{lastReport.duesCount}টি</strong></div>
-                  <div>স্টক আইটেম: <strong className="text-white">{lastReport.productsCount}টি</strong></div>
-                  <div>কাস্টমার: <strong className="text-white">{lastReport.customersCount} জন</strong></div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-slate-300">
+                  <div>Sales: <strong className="text-white">{lastReport.salesCount}</strong></div>
+                  <div>Dues: <strong className="text-white">{lastReport.duesCount}</strong></div>
+                  <div>Products: <strong className="text-white">{lastReport.productsCount}</strong></div>
+                  <div>Customers: <strong className="text-white">{lastReport.customersCount}</strong></div>
+                  <div>Expenses: <strong className="text-white">{lastReport.expensesCount || 0}</strong></div>
+                  <div>Staff: <strong className="text-white">{lastReport.usersCount}</strong></div>
                 </div>
               </div>
             )}
           </div>
         )}
 
+        {/* Google Apps Script Option */}
+        <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950">
+          <button
+            type="button"
+            onClick={() => setShowAppsScript(!showAppsScript)}
+            className="w-full px-4 py-2.5 flex items-center justify-between text-xs text-slate-300 hover:text-white hover:bg-slate-900/50 transition cursor-pointer"
+          >
+            <div className="flex items-center gap-2 font-bold">
+              <Code2 className="w-4 h-4 text-amber-400" />
+              <span>Google Apps Script Integration (Optional Webhook)</span>
+            </div>
+            <span className="text-[10px] text-blue-400">{showAppsScript ? 'Hide Script' : 'View Script'}</span>
+          </button>
+          {showAppsScript && (
+            <div className="p-4 border-t border-slate-800 space-y-3 text-[11px] text-slate-300 bg-slate-950">
+              <div className="p-2.5 bg-blue-950/40 border border-blue-500/30 rounded-xl space-y-1">
+                <div className="font-bold text-blue-300 text-xs flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Permanent Google Apps Script Webhook Active</span>
+                </div>
+                <div className="text-[10.5px] font-mono text-slate-400 break-all select-all bg-slate-900 p-2 rounded-lg border border-slate-800">
+                  https://script.google.com/macros/s/AKfycbxpPzExy1dxtfFNivYU4rVuNGQLCSD8DQEnMGFYugplvK_i4NCZ4GuGYuIUZtbjhUyp4g/exec
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  All memo entries, due payments, and daily operations automatically sync to this script in the background.
+                </p>
+              </div>
+
+              <p className="text-slate-400">
+                To update or redeploy Google Apps Script in your spreadsheet, open <strong>Extensions &gt; Apps Script</strong>:
+              </p>
+              <button
+                type="button"
+                onClick={copyAppsScript}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              >
+                {scriptCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{scriptCopied ? 'Copied!' : 'Copy Google Apps Script Code'}</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Feature Highlights */}
         <div className="p-3.5 bg-slate-950/60 border border-slate-800/80 rounded-2xl text-[11px] text-slate-400 space-y-1 leading-relaxed">
           <div className="font-bold text-slate-300 flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>স্বয়ংক্রিয় ক্লাউড সিঙ্কের সুবিধা:</span>
+            <span>Cloud Sync Highlights:</span>
           </div>
-          <div>• নতুন কোনো মেমো তৈরি করলে বা বাকি পরিশোধ হলে তা সাথে সাথে গুগল শিটের সংশ্লিষ্ট পাতায় জমা হবে।</div>
-          <div>• গুগল ড্রাইভের এই স্প্রেডশিট থেকে আপনি যেকোনো সময় এক্সেল ফাইল ডাউনলোড করতে পারবেন বা মোবাইল থেকেও দেখতে পারবেন।</div>
+          <div>• Every new sale or payment receipt immediately updates the respective Google Sheet tab.</div>
+          <div>• Spreadsheet row heights are formatted tall and spacious (36px data, 44px header) for effortless readability.</div>
+          <div>• Download as Excel (.xlsx), PDF, or view from your mobile anytime via Google Drive.</div>
         </div>
       </div>
     </div>

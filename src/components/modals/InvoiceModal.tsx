@@ -25,7 +25,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
         <div className="no-print bg-slate-50 px-4 sm:px-6 py-2.5 sm:py-3 border-b border-slate-200 flex justify-between items-center">
           <span className="text-xs font-black text-slate-700 uppercase flex items-center gap-1.5">
             <Building2 className="w-4 h-4 text-blue-600" />
-            <span>Sales Invoice Preview (ক্যাশ মেমো)</span>
+            <span>Sales Invoice Preview</span>
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -34,7 +34,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               <Printer className="w-4 h-4 text-amber-300" />
-              <span>Print / PDF (প্রিন্ট করুন)</span>
+              <span>Print / PDF</span>
             </button>
             <button
               type="button"
@@ -55,7 +55,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                 <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 bg-transparent">
                   <img 
                     src="/logo.png" 
-                    alt="AS Computer" 
+                    alt="Abu Said Computer" 
                     className="w-full h-full object-contain filter-none"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = "https://lh3.googleusercontent.com/d/1OXthEw7eAn6SkWLFzlW9G8MItn3ARvFM";
@@ -64,7 +64,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                 </div>
                 <div>
                   <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-none">
-                    <span className="text-amber-500">AS</span> Computer
+                    <span className="text-amber-500">Abu Said</span> Computer
                   </h2>
                   <p className="text-[11px] sm:text-xs font-bold text-slate-700 tracking-wide mt-0.5">
                     Online Service & IT Point

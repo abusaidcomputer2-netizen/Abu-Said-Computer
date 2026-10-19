@@ -291,7 +291,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-              <span>AS Computer</span>
+              <span>Abu Said Computer</span>
             </h1>
             <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
               Comprehensive real-time reporting for turnover, cash drawer realization, debt receivables, category contributions, and stock valuation.

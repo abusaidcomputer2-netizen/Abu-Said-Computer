@@ -106,9 +106,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'financial' as ActiveTab, label: 'Financial Statement', icon: PieChart, perm: 'financial' },
     { id: 'expenses' as ActiveTab, label: 'Operating Expenses', icon: Receipt, perm: 'expense' },
     { id: 'products' as ActiveTab, label: 'Products & Services', icon: Tags, perm: 'product' },
-    { id: 'users' as ActiveTab, label: 'Users & Permissions', icon: UserCog, perm: 'admin' },
-    { id: 'drive_backup' as ActiveTab, label: 'Google Drive Backup', icon: Cloud, perm: 'admin' },
-    { id: 'migration' as ActiveTab, label: 'Google Sheets Sync', icon: FileSpreadsheet, perm: 'admin' }
+    { id: 'users' as ActiveTab, label: 'Users & Permissions', icon: UserCog, perm: 'admin' }
   ];
 
   const currentDateDisplay = new Date().toLocaleDateString('en-GB', {
@@ -131,8 +129,6 @@ export const Layout: React.FC<LayoutProps> = ({
       case 'expenses': return 'Operating Expense Management';
       case 'products': return 'Product & Service Master Catalog';
       case 'users': return 'Staff Accounts & Granular Permissions';
-      case 'drive_backup': return 'Google Drive Live Backup & Cloud Database';
-      case 'migration': return 'Google Sheets Sync & Data Integration';
       default: return 'Shop Management System';
     }
   };
@@ -150,7 +146,7 @@ export const Layout: React.FC<LayoutProps> = ({
       {/* Sidebar Navigation */}
       <aside
         onDoubleClick={toggleSidebarCollapse}
-        title="ডাবল ক্লিক করলে সাইডবার ছোট বা বড় হবে (Double-click to collapse / expand)"
+        title="Double-click to collapse / expand sidebar"
         className={`fixed md:sticky top-0 left-0 h-screen ${
           isSidebarCollapsed ? 'md:w-20' : 'md:w-64'
         } bg-slate-900 border-r border-slate-800 flex flex-col justify-between z-50 transition-all duration-300 ease-in-out print:hidden no-print ${
@@ -168,7 +164,7 @@ export const Layout: React.FC<LayoutProps> = ({
               >
                 <img 
                   src="/logo.png" 
-                  alt="AS Computer" 
+                  alt="Abu Said Computer" 
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "https://lh3.googleusercontent.com/d/1OXthEw7eAn6SkWLFzlW9G8MItn3ARvFM";
@@ -178,7 +174,7 @@ export const Layout: React.FC<LayoutProps> = ({
               {!isSidebarCollapsed && (
                 <div>
                   <div className="flex items-center gap-1.5 leading-none">
-                    <span className="text-amber-500 font-black text-lg">AS</span>
+                    <span className="text-amber-500 font-black text-lg">Abu Said</span>
                     <span className="text-white font-black text-lg">Computer</span>
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium mt-1">
@@ -193,7 +189,7 @@ export const Layout: React.FC<LayoutProps> = ({
               type="button"
               onClick={toggleSidebarCollapse}
               className="hidden md:flex p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer"
-              title={isSidebarCollapsed ? "Expand Sidebar (বড় করুন)" : "Collapse Sidebar (ছোট করুন)"}
+              title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             >
               {isSidebarCollapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
             </button>
@@ -317,7 +313,7 @@ export const Layout: React.FC<LayoutProps> = ({
                       type="button"
                       onClick={onOpenChangePassword}
                       className="p-2 bg-slate-800 hover:bg-amber-500/20 hover:text-amber-400 text-slate-400 rounded-xl transition cursor-pointer"
-                      title="Change Password (পাসওয়ার্ড পরিবর্তন)"
+                      title="Change Password"
                     >
                       <KeyRound className="w-4 h-4" />
                     </button>
@@ -361,7 +357,7 @@ export const Layout: React.FC<LayoutProps> = ({
               </button>
               <div>
                 <div className="text-xs text-slate-400 flex items-center gap-1 font-medium">
-                  <span>AS Computer</span>
+                  <span>Abu Said Computer</span>
                   <span>/</span>
                   <span className="text-blue-400 font-semibold">{getSectionTitle()}</span>
                 </div>
@@ -370,24 +366,6 @@ export const Layout: React.FC<LayoutProps> = ({
 
             {/* Header Right Stats, Date & User Actions */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {onOpenGoogleDriveBackup && (
-                <button
-                  type="button"
-                  onClick={onOpenGoogleDriveBackup}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer border ${
-                    isGoogleDriveLinked
-                      ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60'
-                      : 'bg-blue-950/60 border-blue-500/40 text-blue-300 hover:bg-blue-900/60'
-                  }`}
-                  title="Google Drive Cloud Backup & Master Spreadsheet"
-                >
-                  <Cloud className={`w-3.5 h-3.5 ${isGoogleDriveLinked ? 'text-emerald-400' : 'text-blue-400'}`} />
-                  <span className="hidden sm:inline">
-                    {isGoogleDriveLinked ? 'Drive: Synced' : 'Drive Backup'}
-                  </span>
-                </button>
-              )}
-
               <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-300">
                 <Calendar className="w-3.5 h-3.5 text-blue-400" />
                 <span>{currentDateDisplay}</span>
@@ -416,7 +394,7 @@ export const Layout: React.FC<LayoutProps> = ({
         {/* Footer */}
         <footer className="border-t border-slate-800/80 py-3.5 px-6 text-center text-xs text-slate-500 bg-slate-950 flex flex-col sm:flex-row items-center justify-between gap-2 print:hidden no-print">
           <div>
-            AS Computer • Paduar Bazar, Cumilla, Bangladesh • Mobile: 01904142370
+            Abu Said Computer • Paduar Bazar, Cumilla, Bangladesh • Mobile: 01904142370
           </div>
           <div className="text-[11px] text-slate-600 font-mono">
             Fast Relational Database Engine • v2.0
