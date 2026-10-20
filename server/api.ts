@@ -4,12 +4,17 @@ import { createAndSyncSpreadsheet, appendSaleToSpreadsheet, appendPaymentToSprea
 
 export const apiRouter = Router();
 
+function cleanParams(params: any[] = []): any[] {
+  return params.map(p => (p === undefined ? null : p));
+}
+
 // Helper to execute SQL with parameters and return array of objects
 function queryAll<T = any>(sql: string, params: any[] = []): T[] {
   const db = getDb();
+  const cleaned = cleanParams(params);
   const stmt = db.prepare(sql);
-  if (params.length > 0) {
-    stmt.bind(params);
+  if (cleaned.length > 0) {
+    stmt.bind(cleaned);
   }
   const results: T[] = [];
   while (stmt.step()) {
@@ -26,7 +31,8 @@ function queryOne<T = any>(sql: string, params: any[] = []): T | null {
 
 function runSql(sql: string, params: any[] = []): void {
   const db = getDb();
-  db.run(sql, params);
+  const cleaned = cleanParams(params);
+  db.run(sql, cleaned);
   saveDatabase();
 }
 
@@ -241,25 +247,51 @@ apiRouter.get('/bootstrap', (req: Request, res: Response) => {
 apiRouter.post('/products', (req: Request, res: Response) => {
   try {
     const { sl, category, name, price, costPrice, stockQty, lowStockLimit } = req.body;
-    if (!name) return res.status(400).json({ status: 'error', message: 'Product name required' });
+    if (!name || !name.trim()) return res.status(400).json({ status: 'error', message: 'Product name required' });
 
+    const cat = category || 'Photocopy';
     let finalSl = parseInt(sl, 10);
+    const maxSlObj = queryOne('SELECT MAX(sl) as m FROM products WHERE category = ?', [cat]);
+    const maxSl = maxSlObj?.m || 0;
+
     if (!finalSl || finalSl <= 0) {
-      const maxSlObj = queryOne('SELECT MAX(sl) as m FROM products WHERE category = ?', [category]);
-      finalSl = (maxSlObj?.m || 0) + 1;
+      finalSl = maxSl + 1;
     } else {
-      const existing = queryOne('SELECT id FROM products WHERE category = ? AND sl = ?', [category, finalSl]);
+      const existing = queryOne('SELECT id FROM products WHERE category = ? AND sl = ?', [cat, finalSl]);
       if (existing) {
-        return res.status(400).json({ status: 'error', message: `Serial No (${finalSl}) already exists in ${category}` });
+        finalSl = maxSl + 1;
       }
     }
 
     runSql(
       'INSERT INTO products (sl, category, name, selling_price, cost_price, stock_qty, low_stock_limit) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [finalSl, category, name.trim(), parseFloat(price) || 0, parseFloat(costPrice) || 0, stockQty !== '' && stockQty !== null && stockQty !== undefined ? parseFloat(stockQty) : null, parseFloat(lowStockLimit) || 5]
+      [finalSl, cat, name.trim(), parseFloat(price) || 0, parseFloat(costPrice) || 0, stockQty !== '' && stockQty !== null && stockQty !== undefined ? parseFloat(stockQty) : null, parseFloat(lowStockLimit) || 5]
     );
 
-    return res.json({ status: 'success', message: 'Product added successfully' });
+    const inserted = queryOne('SELECT id FROM products WHERE category = ? AND sl = ? ORDER BY id DESC', [cat, finalSl]);
+    const productRecord = {
+      id: inserted?.id || Date.now(),
+      rowId: inserted?.id || Date.now(),
+      sl: finalSl,
+      category: cat,
+      name: name.trim(),
+      price: parseFloat(price) || 0,
+      costPrice: parseFloat(costPrice) || 0,
+      stockQty: stockQty !== '' && stockQty !== null && stockQty !== undefined ? parseFloat(stockQty) : null,
+      lowStockLimit: parseFloat(lowStockLimit) || 5
+    };
+
+    // Real-time automatic background backup to Google Apps Script
+    sendToAppsScript({
+      action: 'add_product',
+      ...productRecord
+    }).catch(e => console.error('Apps Script product dispatch error:', e));
+
+    return res.json({
+      status: 'success',
+      message: 'Product added successfully',
+      product: productRecord
+    });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
   }
@@ -269,18 +301,33 @@ apiRouter.put('/products/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { sl, category, name, price, costPrice, stockQty, lowStockLimit } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ status: 'error', message: 'Product name required' });
 
-    const existing = queryOne('SELECT id FROM products WHERE category = ? AND sl = ? AND id != ?', [category, sl, id]);
-    if (existing) {
-      return res.status(400).json({ status: 'error', message: `Serial No (${sl}) already exists in ${category}` });
-    }
+    const cat = category || 'Photocopy';
+    let finalSl = parseInt(sl, 10) || 1;
 
     runSql(
       'UPDATE products SET sl = ?, category = ?, name = ?, selling_price = ?, cost_price = ?, stock_qty = ?, low_stock_limit = ? WHERE id = ?',
-      [sl, category, name.trim(), parseFloat(price) || 0, parseFloat(costPrice) || 0, stockQty !== '' && stockQty !== null && stockQty !== undefined ? parseFloat(stockQty) : null, parseFloat(lowStockLimit) || 5, id]
+      [finalSl, cat, name.trim(), parseFloat(price) || 0, parseFloat(costPrice) || 0, stockQty !== '' && stockQty !== null && stockQty !== undefined ? parseFloat(stockQty) : null, parseFloat(lowStockLimit) || 5, id]
     );
 
-    return res.json({ status: 'success', message: 'Product updated successfully' });
+    const updatedRecord = {
+      id,
+      rowId: id,
+      sl: finalSl,
+      category: cat,
+      name: name.trim(),
+      price: parseFloat(price) || 0,
+      costPrice: parseFloat(costPrice) || 0,
+      stockQty: stockQty !== '' && stockQty !== null && stockQty !== undefined ? parseFloat(stockQty) : null,
+      lowStockLimit: parseFloat(lowStockLimit) || 5
+    };
+
+    return res.json({
+      status: 'success',
+      message: 'Product updated successfully',
+      product: updatedRecord
+    });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
   }
@@ -290,7 +337,7 @@ apiRouter.delete('/products/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     runSql('DELETE FROM products WHERE id = ?', [id]);
-    return res.json({ status: 'success', message: 'Product deleted successfully' });
+    return res.json({ status: 'success', message: 'Product deleted successfully', id });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
   }
@@ -300,20 +347,41 @@ apiRouter.delete('/products/:id', (req: Request, res: Response) => {
 apiRouter.post('/customers', (req: Request, res: Response) => {
   try {
     const { sl, name, phone, address } = req.body;
-    if (!name) return res.status(400).json({ status: 'error', message: 'Customer name required' });
+    if (!name || !name.trim()) return res.status(400).json({ status: 'error', message: 'Customer name required' });
 
     let finalSl = parseInt(sl, 10);
+    const maxSlObj = queryOne('SELECT MAX(sl) as m FROM customers');
+    const maxSl = maxSlObj?.m || 0;
     if (!finalSl || finalSl <= 0) {
-      const maxSlObj = queryOne('SELECT MAX(sl) as m FROM customers');
-      finalSl = (maxSlObj?.m || 0) + 1;
+      finalSl = maxSl + 1;
     }
 
     runSql(
       'INSERT INTO customers (sl, name, phone, address) VALUES (?, ?, ?, ?)',
-      [finalSl, name.trim(), phone ? phone.trim() : '', address ? address.trim() : '']
+      [finalSl, name.trim(), phone ? phone.trim() : '', address ? address.trim() : 'Paduar Bazar, Cumilla']
     );
 
-    return res.json({ status: 'success', message: 'Customer saved successfully' });
+    const inserted = queryOne('SELECT id FROM customers WHERE name = ? ORDER BY id DESC', [name.trim()]);
+    const customerRecord = {
+      id: inserted?.id || Date.now(),
+      rowId: inserted?.id || Date.now(),
+      sl: finalSl,
+      name: name.trim(),
+      phone: phone ? phone.trim() : '',
+      address: address ? address.trim() : 'Paduar Bazar, Cumilla'
+    };
+
+    // Real-time automatic background backup to Google Apps Script
+    sendToAppsScript({
+      action: 'add_customer',
+      ...customerRecord
+    }).catch(e => console.error('Apps Script customer dispatch error:', e));
+
+    return res.json({
+      status: 'success',
+      message: 'Customer saved successfully',
+      customer: customerRecord
+    });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
   }
@@ -323,13 +391,29 @@ apiRouter.put('/customers/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     const { sl, name, phone, address } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ status: 'error', message: 'Customer name required' });
+
+    let finalSl = parseInt(sl, 10) || 1;
 
     runSql(
       'UPDATE customers SET sl = ?, name = ?, phone = ?, address = ? WHERE id = ?',
-      [sl, name.trim(), phone ? phone.trim() : '', address ? address.trim() : '', id]
+      [finalSl, name.trim(), phone ? phone.trim() : '', address ? address.trim() : 'Paduar Bazar, Cumilla', id]
     );
 
-    return res.json({ status: 'success', message: 'Customer updated successfully' });
+    const updatedCustomer = {
+      id,
+      rowId: id,
+      sl: finalSl,
+      name: name.trim(),
+      phone: phone ? phone.trim() : '',
+      address: address ? address.trim() : 'Paduar Bazar, Cumilla'
+    };
+
+    return res.json({
+      status: 'success',
+      message: 'Customer updated successfully',
+      customer: updatedCustomer
+    });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
   }
@@ -339,7 +423,7 @@ apiRouter.delete('/customers/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     runSql('DELETE FROM customers WHERE id = ?', [id]);
-    return res.json({ status: 'success', message: 'Customer deleted successfully' });
+    return res.json({ status: 'success', message: 'Customer deleted successfully', id });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
   }
@@ -388,6 +472,22 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
 
     const createdSale = queryOne('SELECT id FROM sales WHERE invoice_no = ?', [invoiceNo]);
     const saleId = createdSale?.id || 0;
+
+    // Auto-save customer into customers database if not already exists
+    const trimmedCustomer = (customer || '').trim();
+    if (trimmedCustomer && trimmedCustomer.toLowerCase() !== 'general customer') {
+      const existingCust = queryOne('SELECT id, phone, address FROM customers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [trimmedCustomer]);
+      if (!existingCust) {
+        const maxCustObj = queryOne('SELECT MAX(sl) as m FROM customers');
+        const nextCustSl = (maxCustObj?.m || 0) + 1;
+        runSql(
+          'INSERT INTO customers (sl, name, phone, address) VALUES (?, ?, ?, ?)',
+          [nextCustSl, trimmedCustomer, phone ? phone.trim() : '', address ? address.trim() : 'Paduar Bazar, Cumilla']
+        );
+      } else if (phone && !existingCust.phone) {
+        runSql('UPDATE customers SET phone = ?, address = ? WHERE id = ?', [phone.trim(), address ? address.trim() : existingCust.address, existingCust.id]);
+      }
+    }
 
     // 2. Insert items and automatically deduct stationery stock
     for (const it of items) {
@@ -748,54 +848,54 @@ apiRouter.post('/purchases', (req: Request, res: Response) => {
   }
 });
 
-function translateExpenseCategoryToBn(cat: string): string {
+function cleanExpenseCategory(cat: string): string {
   const map: Record<string, string> = {
-    'shop rent': 'দোকান ভাড়া',
-    'rent': 'দোকান ভাড়া',
-    'electricity bill': 'বিদ্যুৎ বিল',
-    'electricity': 'বিদ্যুৎ বিল',
-    'electric bill': 'বিদ্যুৎ বিল',
-    'current bill': 'বিদ্যুৎ বিল',
-    'internet bill': 'ইন্টারনেট বিল',
-    'wifi bill': 'ইন্টারনেট বিল',
-    'internet': 'ইন্টারনেট বিল',
-    'staff salary': 'কর্মচারী বেতন',
-    'salary': 'কর্মচারী বেতন',
-    'paper purchase': 'কাগজ ক্রয়',
-    'paper': 'কাগজ ক্রয়',
-    'ink / toner': 'কালি ও টোনার ক্রয়',
-    'ink and toner': 'কালি ও টোনার ক্রয়',
-    'toner': 'কালি ও টোনার ক্রয়',
-    'machine maintenance': 'মেশিন মেরামত ও সার্ভিসিং',
-    'servicing': 'মেশিন মেরামত ও সার্ভিসিং',
-    'repair': 'মেশিন মেরামত ও সার্ভিসিং',
-    'tea & snacks': 'চা ও আপ্যায়ন',
-    'tea and snacks': 'চা ও আপ্যায়ন',
-    'snacks': 'চা ও আপ্যায়ন',
-    'food': 'চা ও আপ্যায়ন',
-    'tea': 'চা ও আপ্যায়ন',
-    'stationery products purchase': 'স্টেশনারি মালামাল ক্রয়',
-    'stationery': 'স্টেশনারি মালামাল ক্রয়',
-    'photocopy paper & toner purchase': 'ফটোকপি কাগজ ও মালামাল',
-    'hardware & tools': 'হার্ডওয়্যার ও কম্পিউটার যন্ত্রাংশ',
-    'hardware': 'হার্ডওয়্যার ও কম্পিউটার যন্ত্রাংশ',
-    'computer parts': 'হার্ডওয়্যার ও কম্পিউটার যন্ত্রাংশ',
-    'conveyance': 'যাতায়াত ও পরিবহন খরচ',
-    'transport': 'যাতায়াত ও পরিবহন খরচ',
-    'travel': 'যাতায়াত ও পরিবহন খরচ',
-    'fare': 'যাতায়াত ও পরিবহন খরচ',
-    'mobile recharge': 'মোবাইল রিচার্জ ও বিল',
-    'mobile bill': 'মোবাইল রিচার্জ ও বিল',
-    'shop decoration': 'দোকান সাজসজ্জা ও সংস্কার',
-    'decoration': 'দোকান সাজসজ্জা ও সংস্কার',
-    'packaging': 'প্যাকেজিং ও অন্যান্য খরচ',
-    'others': 'অন্যান্য খরচ',
-    'general': 'অন্যান্য খরচ',
-    'shop expense': 'অন্যান্য খরচ',
-    'office expense': 'অন্যান্য খরচ'
+    'shop rent': 'Shop Rent',
+    'rent': 'Shop Rent',
+    'electricity bill': 'Electricity Bill',
+    'electricity': 'Electricity Bill',
+    'electric bill': 'Electricity Bill',
+    'current bill': 'Electricity Bill',
+    'internet bill': 'Internet Bill',
+    'wifi bill': 'Internet Bill',
+    'internet': 'Internet Bill',
+    'staff salary': 'Staff Salary',
+    'salary': 'Staff Salary',
+    'paper purchase': 'Paper Purchase',
+    'paper': 'Paper Purchase',
+    'ink / toner': 'Ink & Toner',
+    'ink and toner': 'Ink & Toner',
+    'toner': 'Ink & Toner',
+    'machine maintenance': 'Machine Repair & Servicing',
+    'servicing': 'Machine Repair & Servicing',
+    'repair': 'Machine Repair & Servicing',
+    'tea & snacks': 'Tea & Entertainment',
+    'tea and snacks': 'Tea & Entertainment',
+    'snacks': 'Tea & Entertainment',
+    'food': 'Tea & Entertainment',
+    'tea': 'Tea & Entertainment',
+    'stationery products purchase': 'Stationery Supplies',
+    'stationery': 'Stationery Supplies',
+    'photocopy paper & toner purchase': 'Photocopy Consumables',
+    'hardware & tools': 'Hardware & Parts',
+    'hardware': 'Hardware & Parts',
+    'computer parts': 'Hardware & Parts',
+    'conveyance': 'Conveyance & Transport',
+    'transport': 'Conveyance & Transport',
+    'travel': 'Conveyance & Transport',
+    'fare': 'Conveyance & Transport',
+    'mobile recharge': 'Mobile Bill & Recharge',
+    'mobile bill': 'Mobile Bill & Recharge',
+    'shop decoration': 'Shop Renovation',
+    'decoration': 'Shop Renovation',
+    'packaging': 'Packaging & Supplies',
+    'others': 'Other Expenses',
+    'general': 'Other Expenses',
+    'shop expense': 'Other Expenses',
+    'office expense': 'Other Expenses'
   };
   const key = (cat || '').toLowerCase().trim();
-  return map[key] || cat || 'অন্যান্য খরচ';
+  return map[key] || cat || 'Other Expenses';
 }
 
 apiRouter.post('/photocopy-paper', (req: Request, res: Response) => {
@@ -807,7 +907,6 @@ apiRouter.post('/photocopy-paper', (req: Request, res: Response) => {
     const qVal = parseFloat(qty) || 1;
 
     // Deduct stock from products inventory
-    // Business rule: Do NOT insert into expenses because paper was already paid for upon purchase
     const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = LOWER(?)', [pName]);
     if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
       const newStock = Math.max(0, (prod.stock_qty || 0) - qVal);
@@ -817,7 +916,7 @@ apiRouter.post('/photocopy-paper', (req: Request, res: Response) => {
 
     return res.json({ 
       status: 'success', 
-      message: `ফটোকপিতে পেপার ব্যবহারের কারণে ${qVal} রিম/পিস স্টক থেকে সফলভাবে কমানো হয়েছে। (পূর্বে ক্রয়ের সময় খরচ হিসাবভুক্ত থাকায় কোনো অতিরিক্ত খরচ যোগ করা হয়নি)` 
+      message: `Deducted ${qVal} unit(s) from paper stock for photocopy usage.` 
     });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
@@ -848,7 +947,7 @@ apiRouter.post('/expenses', (req: Request, res: Response) => {
 
     const count = queryOne('SELECT COUNT(*) as c FROM expenses')?.c || 0;
     const expId = `EXP-${count + 1001}`;
-    const cleanCategory = translateExpenseCategoryToBn(category || 'অন্যান্য খরচ');
+    const cleanCategory = cleanExpenseCategory(category || 'Other Expenses');
 
     runSql(`
       INSERT INTO expenses (expense_id, timestamp, date, category, description, amount, user_name)
@@ -882,7 +981,7 @@ apiRouter.put('/expenses/:id', (req: Request, res: Response) => {
     const amt = parseFloat(amount) || 0;
     if (amt <= 0) return res.status(400).json({ status: 'error', message: 'Valid amount required' });
 
-    const cleanCategory = translateExpenseCategoryToBn(category || 'অন্যান্য খরচ');
+    const cleanCategory = cleanExpenseCategory(category || 'Other Expenses');
     runSql(`
       UPDATE expenses SET category = ?, description = ?, amount = ?, date = ? WHERE id = ?
     `, [cleanCategory, description ? description.trim() : '', amt, date, id]);
@@ -1245,7 +1344,7 @@ async function fetchGoogleSheetCsv(spreadsheetId: string, gid?: string, sheetNam
       const text = await response.text();
       if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
         if (text.includes('accounts.google.com') || text.includes('ServiceLogin')) {
-          throw new Error("গুগল শিটটি প্রাইভেট করা আছে। অনুগ্রহ করে শিটের 'Share' সেটিংসে 'Anyone with the link can view' চালু করুন।");
+          throw new Error("The Google Sheet is private. Please set sheet Share settings to 'Anyone with the link can view'.");
         }
         continue;
       }
@@ -1259,13 +1358,13 @@ async function fetchGoogleSheetCsv(spreadsheetId: string, gid?: string, sheetNam
   }
 
   if (lastError) throw lastError;
-  throw new Error("গুগল শিট থেকে ডাটা ফেচ করা যায়নি। অনুগ্রহ করে শিটের লিঙ্ক সঠিক আছে কিনা এবং 'Anyone with the link can view' এক্সেস দেওয়া আছে কিনা নিশ্চিত করুন।");
+  throw new Error("Unable to fetch data from Google Sheets. Please ensure the link is correct and set to 'Anyone with the link can view'.");
 }
 
 function findHeaderIndex(headers: string[], keywords: string[]): number {
   return headers.findIndex(h => {
-    const clean = h.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]/g, '');
-    return keywords.some(k => clean.includes(k.toLowerCase().replace(/[^a-z0-9\u0980-\u09FF]/g, '')));
+    const clean = h.toLowerCase().replace(/[^a-z0-9]/g, '');
+    return keywords.some(k => clean.includes(k.toLowerCase().replace(/[^a-z0-9]/g, '')));
   });
 }
 
@@ -1273,19 +1372,19 @@ apiRouter.post('/google-sheets/preview', async (req: Request, res: Response) => 
   try {
     const { sheetUrl, tabName } = req.body;
     if (!sheetUrl || typeof sheetUrl !== 'string' || !sheetUrl.trim()) {
-      return res.status(400).json({ status: 'error', message: 'অনুগ্রহ করে একটি বৈধ গুগল শিটের লিঙ্ক দিন।' });
+      return res.status(400).json({ status: 'error', message: 'Please provide a valid Google Sheet URL.' });
     }
 
     const { spreadsheetId, gid } = extractGoogleSheetInfo(sheetUrl.trim());
     if (!spreadsheetId) {
-      return res.status(400).json({ status: 'error', message: 'অবৈধ লিঙ্ক। Google Sheets URL দিন (যেমন: https://docs.google.com/spreadsheets/d/...)' });
+      return res.status(400).json({ status: 'error', message: 'Invalid URL. Please enter a valid Google Sheets URL (e.g. https://docs.google.com/spreadsheets/d/...)' });
     }
 
     const csvText = await fetchGoogleSheetCsv(spreadsheetId, gid, tabName);
     const rows = parseCsv(csvText);
 
     if (rows.length === 0) {
-      return res.status(400).json({ status: 'error', message: 'শিটে কোনো তথ্য পাওয়া যায়নি।' });
+      return res.status(400).json({ status: 'error', message: 'No data found in the specified sheet.' });
     }
 
     const headers = rows[0];
@@ -1298,7 +1397,7 @@ apiRouter.post('/google-sheets/preview', async (req: Request, res: Response) => 
       previewRows
     });
   } catch (err: any) {
-    return res.status(500).json({ status: 'error', message: err.message || 'গুগল শিট ফেচ করতে সমস্যা হয়েছে।' });
+    return res.status(500).json({ status: 'error', message: err.message || 'Error fetching Google Sheet.' });
   }
 });
 
@@ -1306,12 +1405,12 @@ apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
   try {
     const { sheetUrl, clearExisting = true, tabName } = req.body;
     if (!sheetUrl || typeof sheetUrl !== 'string' || !sheetUrl.trim()) {
-      return res.status(400).json({ status: 'error', message: 'অনুগ্রহ করে একটি বৈধ গুগল শিটের লিঙ্ক প্রদান করুন।' });
+      return res.status(400).json({ status: 'error', message: 'Please provide a valid Google Sheet URL.' });
     }
 
     const { spreadsheetId, gid } = extractGoogleSheetInfo(sheetUrl.trim());
     if (!spreadsheetId) {
-      return res.status(400).json({ status: 'error', message: 'অবৈধ গুগল শিট লিঙ্ক। লিঙ্কে https://docs.google.com/spreadsheets/d/... থাকতে হবে।' });
+      return res.status(400).json({ status: 'error', message: 'Invalid Google Sheet URL. It must contain https://docs.google.com/spreadsheets/d/...' });
     }
 
     // Check if this is the multi-tab AS Computer sheet or if specific tab requested
@@ -1410,7 +1509,7 @@ apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
         }
       }
 
-      // 3. Sync Due Ledger (GID 1770443700 - কাস্টমারের আসল বকেয়া খাতা)
+      // 3. Sync Due Ledger
       let importedDues = 0;
       if (dueCsv) {
         const dRows = parseCsv(dueCsv).slice(1);
@@ -1421,7 +1520,7 @@ apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
           const date = parseDate(r[1]);
           const custName = r[2].trim();
           const phone = r[3] ? r[3].trim() : '';
-          const transType = r[4] ? r[4].trim() : 'মেমো / বিল';
+          const transType = r[4] ? r[4].trim() : 'Memo / Bill';
           const desc = r[5] ? r[5].trim() : '';
           const dueDr = parseNumber(r[6], 0);
           const paidCr = parseNumber(r[7], 0);
@@ -1515,7 +1614,7 @@ apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
 
       return res.json({
         status: 'success',
-        message: `গুগল শিট থেকে চাহিদামতো সফলভাবে এন্ট্রি সম্পন্ন হয়েছে! বিক্রয় খাতা: ${importedSales}টি মেমো, বাকির খাতা: ${importedDues}টি রেকর্ড (সঠিক কাস্টমার নামসহ), স্টক: ${importedProducts}টি পণ্য, এবং ইউজার: ${importedUsers} জন স্টাফ অ্যাকাউন্ট।`,
+        message: `Google Sheet synchronized successfully! Imported ${importedSales} memos, ${importedDues} due records, ${importedProducts} stock products, and ${importedUsers} user accounts.`,
         report: {
           importedSales,
           importedDues,
@@ -1532,7 +1631,7 @@ apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
     const rows = parseCsv(csvText);
 
     if (rows.length < 2) {
-      return res.status(400).json({ status: 'error', message: 'গুগল শিটে কোনো তথ্য পাওয়া যায়নি (কমপক্ষে ১টি হেডার রো এবং ১টি ডাটা রো থাকতে হবে)।' });
+      return res.status(400).json({ status: 'error', message: 'No data rows found in Google Sheet (at least 1 header and 1 data row required).' });
     }
 
     const headers = rows[0];
@@ -1677,7 +1776,7 @@ apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
 
     return res.json({
       status: 'success',
-      message: `গুগল শিট থেকে ডাটা সফলভাবে আপডেট করা হয়েছে! ${importedSales}টি ইনভয়েস/মেমো, ${importedCustomers} জন কাস্টমার, ${importedDues}টি বকেয়া রেকর্ড ইমপোর্ট সম্পন্ন হয়েছে।`,
+      message: `Google Sheet updated successfully! Imported ${importedSales} invoices/memos, ${importedCustomers} customers, and ${importedDues} due ledger records.`,
       report: {
         importedSales,
         importedCustomers,
@@ -1688,7 +1787,7 @@ apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
       }
     });
   } catch (err: any) {
-    return res.status(500).json({ status: 'error', message: err.message || 'গুগল শিট প্রসেস করতে সমস্যা হয়েছে।' });
+    return res.status(500).json({ status: 'error', message: err.message || 'Error processing Google Sheet data.' });
   }
 });
 

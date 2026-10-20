@@ -81,7 +81,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         stockQty: stockQty !== '' ? parseFloat(stockQty) : null,
         lowStockLimit: parseFloat(lowStockLimit) || 5
       });
-      showToast(editingId ? 'Product updated!' : 'Product saved successfully!', 'success');
+      setFilterCat(category);
       resetForm();
     } catch (err: any) {
       showToast(err.message || 'Error saving product', 'error');
@@ -90,10 +90,20 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     }
   };
 
+  React.useEffect(() => {
+    if (!editingId) {
+      suggestSl(category);
+    }
+  }, [category, products, editingId]);
+
   const filteredProducts = products.filter(p => {
     if (filterCat !== 'ALL' && normalizeCategory(p.category) !== filterCat) return false;
     return true;
   });
+
+  const countPhotocopy = products.filter(p => normalizeCategory(p.category) === 'Photocopy').length;
+  const countOnline = products.filter(p => normalizeCategory(p.category) === 'Online Application').length;
+  const countStationery = products.filter(p => normalizeCategory(p.category) === 'Stationery Products').length;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
@@ -124,10 +134,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                 onChange={e => setFilterCat(e.target.value)}
                 className="bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-emerald-400 font-bold focus:outline-none"
               >
-                <option value="ALL">All Categories</option>
-                <option value="Photocopy">Photocopy</option>
-                <option value="Online Application">Online Application</option>
-                <option value="Stationery Products">Stationery Products</option>
+                <option value="ALL">All Categories ({products.length})</option>
+                <option value="Photocopy">Photocopy ({countPhotocopy})</option>
+                <option value="Online Application">Online Application ({countOnline})</option>
+                <option value="Stationery Products">Stationery Products ({countStationery})</option>
               </select>
             </div>
           </div>
@@ -162,9 +172,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                         </span>
                       </td>
                       <td className="p-3 font-bold text-white text-xs sm:text-sm">{p.name}</td>
-                      <td className="p-3 text-right text-slate-400 font-tabular">৳ {formatCurrency(p.costPrice)}</td>
+                      <td className="p-3 text-right text-slate-400 font-tabular">Tk {formatCurrency(p.costPrice)}</td>
                       <td className="p-3 text-right font-black text-emerald-400 font-tabular">
-                        ৳ {formatCurrency(p.price)}
+                        Tk {formatCurrency(p.price)}
                       </td>
                       <td className="p-3 text-center font-bold text-blue-300 font-tabular">
                         {p.stockQty !== null && p.stockQty !== undefined ? p.stockQty : '∞'}
@@ -253,7 +263,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             </div>
 
             <div className="sm:col-span-3">
-              <label className="block text-[11px] font-bold text-slate-400 mb-1">Cost Price (৳)</label>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">Cost Price (Tk )</label>
               <input
                 type="number"
                 step="any"
@@ -266,7 +276,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             </div>
 
             <div className="sm:col-span-3">
-              <label className="block text-[11px] font-bold text-emerald-400 mb-1">Selling Price (৳) *</label>
+              <label className="block text-[11px] font-bold text-emerald-400 mb-1">Selling Price (Tk ) *</label>
               <input
                 type="number"
                 step="any"

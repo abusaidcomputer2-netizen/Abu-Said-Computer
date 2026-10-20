@@ -108,7 +108,7 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
               <option value="">Select Paper Product...</option>
               {paperProducts.map(p => (
                 <option key={p.id} value={p.name}>
-                  {p.name} (Stock: {p.stockQty || 0}, Cost: ৳{p.costPrice})
+                  {p.name} (Stock: {p.stockQty || 0}, Cost: Tk {p.costPrice})
                 </option>
               ))}
             </select>
@@ -136,7 +136,7 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                Cost per Unit (৳)
+                Cost per Unit (Tk )
               </label>
               <input
                 type="number"
@@ -153,7 +153,7 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
           <div className="bg-slate-950 border border-blue-500/30 p-3 rounded-xl flex justify-between items-center text-xs">
             <span className="font-bold text-slate-300">Total Recorded Expense:</span>
             <span className="text-base font-black text-emerald-400 font-tabular">
-              ৳ {formatCurrency(totalCost)}
+              Tk {formatCurrency(totalCost)}
             </span>
           </div>
 

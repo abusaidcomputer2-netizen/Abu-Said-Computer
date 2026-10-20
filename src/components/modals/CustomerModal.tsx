@@ -22,6 +22,13 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
     const max = customers.reduce((m, c) => Math.max(m, c.sl || 0), 0);
     return max + 1;
   });
+
+  React.useEffect(() => {
+    if (!editingId) {
+      const max = customers.reduce((m, c) => Math.max(m, c.sl || 0), 0);
+      setSl(max + 1);
+    }
+  }, [customers, editingId]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('Paduar Bazar, Cumilla');
@@ -60,7 +67,6 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
         phone: phone.trim(),
         address: address.trim()
       });
-      showToast(editingId ? 'Customer updated!' : 'Customer saved!', 'success');
       resetForm();
     } catch (err: any) {
       showToast(err.message || 'Error saving customer', 'error');

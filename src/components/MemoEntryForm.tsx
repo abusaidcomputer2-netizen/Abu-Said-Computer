@@ -441,7 +441,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                       className="w-12 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center text-white font-bold font-tabular"
                     />
                     <span className="flex-grow text-right text-xs font-black text-emerald-400 font-tabular">
-                      ৳ {formatCurrency(it.total)}
+                      Tk {formatCurrency(it.total)}
                     </span>
                     <button
                       type="button"
@@ -477,7 +477,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
           <div className="flex justify-between items-center text-slate-300 font-bold">
             <span>Subtotal:</span>
             <span className="font-black text-white text-sm sm:text-base font-tabular">
-              ৳ {formatCurrency(subtotal)}
+              Tk {formatCurrency(subtotal)}
             </span>
           </div>
 
@@ -497,7 +497,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
           <div className="flex justify-between items-center pt-2 border-t border-slate-800 bg-blue-600/10 p-2.5 rounded-xl border border-blue-500/20">
             <span className="font-black text-xs sm:text-sm text-blue-300">Grand Total:</span>
             <span className="font-black text-white text-lg sm:text-xl font-tabular">
-              ৳ {formatCurrency(grandTotal)}
+              Tk {formatCurrency(grandTotal)}
             </span>
           </div>
 
@@ -527,7 +527,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                   dueVal > 0 ? 'text-rose-400' : 'text-emerald-400'
                 }`}
               >
-                ৳ {formatCurrency(dueVal)}
+                Tk {formatCurrency(dueVal)}
               </span>
               <span className={`text-[9px] text-right font-medium ${dueVal > 0 ? 'text-rose-400' : 'text-slate-400'}`}>
                 {dueVal > 0 ? 'Auto logged to Due Ledger' : 'Fully Paid (No Due)'}

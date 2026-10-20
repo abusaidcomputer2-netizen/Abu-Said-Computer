@@ -152,6 +152,8 @@
     margin: 0 auto !important;
     padding: 0 !important;
     box-sizing: border-box !important;
+    height: auto !important;
+    min-height: 0 !important;
   }
 
   .print-content-body {

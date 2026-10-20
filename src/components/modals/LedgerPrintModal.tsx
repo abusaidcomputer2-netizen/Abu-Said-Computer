@@ -123,7 +123,7 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
                 </div>
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                    <span className="text-amber-500">Abu Said</span> Computer
+                    <span className="text-[#0062cc]">Abu Said</span> Computer
                   </h2>
                   <p className="text-xs font-bold text-slate-700 tracking-wide mt-1">
                     {isSingle ? 'Customer Due Ledger Statement' : 'Consolidated Customer Due Statement'}
@@ -168,16 +168,16 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
                 <div className="col-span-5 bg-white p-3 rounded-xl border border-slate-200 text-right space-y-1 shadow-sm">
                   <div className="text-xs font-semibold text-slate-600 flex justify-between">
                     <span>Total Due Billed (Dr):</span>
-                    <span className="font-black text-slate-900 font-tabular">৳ {formatCurrency(totalBilled)}</span>
+                    <span className="font-black text-slate-900 font-tabular">Tk {formatCurrency(totalBilled)}</span>
                   </div>
                   <div className="text-xs font-semibold text-slate-600 flex justify-between">
                     <span>Total Paid (Cr):</span>
-                    <span className="font-black text-emerald-700 font-tabular">৳ {formatCurrency(totalPaid)}</span>
+                    <span className="font-black text-emerald-700 font-tabular">Tk {formatCurrency(totalPaid)}</span>
                   </div>
                   <div className="text-sm font-black text-rose-700 pt-1.5 border-t border-slate-200 flex justify-between items-center">
                     <span>Net Outstanding:</span>
                     <span className="text-lg font-black text-rose-800 font-tabular underline">
-                      ৳ {formatCurrency(netDue)}
+                      Tk {formatCurrency(netDue)}
                     </span>
                   </div>
                 </div>
@@ -199,16 +199,16 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
                 <div className="col-span-5 text-right space-y-1">
                   <div className="text-xs font-semibold text-slate-600 flex justify-between">
                     <span>Total Billed:</span>
-                    <span className="font-black text-slate-900 font-tabular">৳ {formatCurrency(totalBilled)}</span>
+                    <span className="font-black text-slate-900 font-tabular">Tk {formatCurrency(totalBilled)}</span>
                   </div>
                   <div className="text-xs font-semibold text-slate-600 flex justify-between">
                     <span>Total Paid:</span>
-                    <span className="font-black text-emerald-700 font-tabular">৳ {formatCurrency(totalPaid)}</span>
+                    <span className="font-black text-emerald-700 font-tabular">Tk {formatCurrency(totalPaid)}</span>
                   </div>
                   <div className="text-base font-black text-rose-700 pt-1.5 border-t-2 border-slate-300 flex justify-between items-center">
                     <span>Net Due:</span>
                     <span className="text-xl font-black text-rose-800 underline font-tabular">
-                      ৳ {formatCurrency(netDue)}
+                      Tk {formatCurrency(netDue)}
                     </span>
                   </div>
                 </div>
@@ -257,10 +257,10 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
                         {r.desc || '--'}
                       </td>
                       <td className="py-1.5 px-3 text-right border-r border-slate-200 text-rose-700 font-bold font-tabular">
-                        {r.due > 0 ? `৳ ${formatCurrency(r.due)}` : '-'}
+                        {r.due > 0 ? `Tk ${formatCurrency(r.due)}` : '-'}
                       </td>
                       <td className="py-1.5 px-3 text-right text-emerald-700 font-bold font-tabular">
-                        {r.paid > 0 ? `৳ ${formatCurrency(r.paid)}` : '-'}
+                        {r.paid > 0 ? `Tk ${formatCurrency(r.paid)}` : '-'}
                       </td>
                     </tr>
                   ))
@@ -272,10 +272,10 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
                     Total:
                   </td>
                   <td className="py-2.5 px-3 text-right text-rose-700 border-r border-slate-200 font-tabular">
-                    ৳ {formatCurrency(totalBilled)}
+                    Tk {formatCurrency(totalBilled)}
                   </td>
                   <td className="py-2.5 px-3 text-right text-emerald-700 font-tabular">
-                    ৳ {formatCurrency(totalPaid)}
+                    Tk {formatCurrency(totalPaid)}
                   </td>
                 </tr>
               </tfoot>

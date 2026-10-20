@@ -238,14 +238,14 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
           <div className="bg-slate-950 border border-emerald-500/30 p-3 rounded-2xl">
             <span className="text-[10px] font-bold text-emerald-400 uppercase block">Total Purchased</span>
             <div className="text-lg sm:text-xl font-black text-emerald-400 font-tabular">
-              ৳ {formatCurrency(totalSales)}
+              Tk {formatCurrency(totalSales)}
             </div>
           </div>
           <div className="bg-slate-950 border border-amber-500/30 p-3 rounded-2xl">
             <span className="text-[10px] font-bold text-amber-400 uppercase block">Paid / Due</span>
             <div className="text-xs sm:text-sm font-black text-white mt-1 font-tabular">
-              <span className="text-emerald-400">৳ {formatCurrency(totalPaid)}</span> /{' '}
-              <span className="text-rose-400">৳ {formatCurrency(totalDue)}</span>
+              <span className="text-emerald-400">Tk {formatCurrency(totalPaid)}</span> /{' '}
+              <span className="text-rose-400">Tk {formatCurrency(totalDue)}</span>
             </div>
           </div>
         </div>
@@ -312,11 +312,11 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
                         </td>
                         <td className="p-3 text-center font-bold text-blue-300 font-tabular">{c.memoCount} Memos</td>
                         <td className="p-3 text-right font-black text-emerald-400 font-tabular">
-                          ৳ {formatCurrency(c.totalPurchased)}
+                          Tk {formatCurrency(c.totalPurchased)}
                         </td>
-                        <td className="p-3 text-right text-emerald-300 font-tabular">৳ {formatCurrency(c.totalPaid)}</td>
+                        <td className="p-3 text-right text-emerald-300 font-tabular">Tk {formatCurrency(c.totalPaid)}</td>
                         <td className={`p-3 text-right font-tabular ${c.totalDue > 0 ? 'text-rose-400 font-bold' : 'text-slate-400'}`}>
-                          ৳ {formatCurrency(c.totalDue)}
+                          Tk {formatCurrency(c.totalDue)}
                         </td>
                         <td className="p-3 text-center text-slate-400 whitespace-nowrap">
                           {formatDateDisplay(c.lastPurchaseDate)}
@@ -377,11 +377,11 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
                           {s.desc && <div className="text-[10px] text-slate-400 mt-0.5">{s.desc}</div>}
                         </td>
                         <td className="p-3 text-right font-black text-emerald-400 font-tabular">
-                          ৳ {formatCurrency(s.grandTotal)}
+                          Tk {formatCurrency(s.grandTotal)}
                         </td>
-                        <td className="p-3 text-right text-emerald-300 font-tabular">৳ {formatCurrency(s.paid)}</td>
+                        <td className="p-3 text-right text-emerald-300 font-tabular">Tk {formatCurrency(s.paid)}</td>
                         <td className={`p-3 text-right font-tabular ${s.due > 0 ? 'text-rose-400 font-bold' : 'text-slate-400'}`}>
-                          ৳ {formatCurrency(s.due)}
+                          Tk {formatCurrency(s.due)}
                         </td>
                         <td className="p-3 text-center">
                           <button

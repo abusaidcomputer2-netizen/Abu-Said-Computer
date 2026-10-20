@@ -50,6 +50,7 @@ import { DeleteMemoModal } from './components/modals/DeleteMemoModal';
 import { MigrationModal } from './components/modals/MigrationModal';
 import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
 import { GoogleDriveBackupModal } from './components/modals/GoogleDriveBackupModal';
+import { DataSheetModal } from './components/modals/DataSheetModal';
 import { initGoogleAuth, setCachedAccessToken } from './services/googleAuth';
 import { User as GoogleUser } from 'firebase/auth';
 import { normalizeCategory } from './utils/helpers';
@@ -149,6 +150,7 @@ export default function App() {
   const [deleteMemoSale, setDeleteMemoSale] = useState<SaleRecord | null>(null);
   const [migrationOpen, setMigrationOpen] = useState(false);
   const [driveBackupOpen, setDriveBackupOpen] = useState(false);
+  const [dataSheetOpen, setDataSheetOpen] = useState(false);
   const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [linkedSheetId, setLinkedSheetId] = useState('');
@@ -166,28 +168,69 @@ export default function App() {
     }, 3800);
   };
 
-  // Bootstrap data fetch
+  // Resilient Dual-Layer Cache Updater
+  const updateCachedBootstrap = (updater: (prev: any) => any) => {
+    try {
+      const cachedStr = localStorage.getItem('as_computer_cached_bootstrap');
+      let curr = cachedStr ? JSON.parse(cachedStr) : {};
+      const updated = updater(curr);
+      localStorage.setItem('as_computer_cached_bootstrap', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to update cached bootstrap', e);
+    }
+  };
+
+  // Bootstrap data fetch with intelligent merge so state is never lost
   const fetchBootstrapData = async () => {
     setIsLoading(true);
     try {
       let isLoaded = false;
+      const cachedStr = localStorage.getItem('as_computer_cached_bootstrap');
+      let cached: any = null;
+      if (cachedStr) {
+        try {
+          cached = JSON.parse(cachedStr);
+        } catch (e) {
+          console.error('Error parsing cached data', e);
+        }
+      }
+
       try {
         const res = await fetch('/api/bootstrap');
         const rawText = await res.text();
         if (rawText && rawText.trim().startsWith('{')) {
           const data = JSON.parse(rawText);
           if (data.status === 'success') {
+            const mergedProducts = (data.products && data.products.length > 0)
+              ? data.products
+              : (cached?.products || []);
+
+            const mergedCustomers = (data.customers && data.customers.length > 0)
+              ? data.customers
+              : (cached?.customers || []);
+
+            const mergedSales = (data.records && data.records.length > 0)
+              ? data.records
+              : (cached?.records || []);
+
             setUsers(data.users || FALLBACK_USERS);
-            setProducts(data.products || []);
-            setCustomers(data.customers || []);
-            setSales(data.records || []);
-            setExpenses(data.expenses || []);
-            setDueRecords(data.dueRecords || []);
-            setCustomerSummaries(data.customerSummaries || []);
-            setDueTotals(data.dueTotals || { shopTotalDue: 0, shopTotalPaid: 0, netDue: 0 });
-            setPurchases(data.purchases || []);
-            setCashClosings(data.cashClosings || []);
-            localStorage.setItem('as_computer_cached_bootstrap', rawText);
+            setProducts(mergedProducts);
+            setCustomers(mergedCustomers);
+            setSales(mergedSales);
+            setExpenses(data.expenses || cached?.expenses || []);
+            setDueRecords(data.dueRecords || cached?.dueRecords || []);
+            setCustomerSummaries(data.customerSummaries || cached?.customerSummaries || []);
+            setDueTotals(data.dueTotals || cached?.dueTotals || { shopTotalDue: 0, shopTotalPaid: 0, netDue: 0 });
+            setPurchases(data.purchases || cached?.purchases || []);
+            setCashClosings(data.cashClosings || cached?.cashClosings || []);
+
+            const mergedToSave = {
+              ...data,
+              products: mergedProducts,
+              customers: mergedCustomers,
+              records: mergedSales
+            };
+            localStorage.setItem('as_computer_cached_bootstrap', JSON.stringify(mergedToSave));
             isLoaded = true;
           }
         }
@@ -195,27 +238,17 @@ export default function App() {
         console.warn('Backend API /api/bootstrap not available, using local cache or default seeds...', err);
       }
 
-      if (!isLoaded) {
-        const cachedStr = localStorage.getItem('as_computer_cached_bootstrap');
-        let cached: any = null;
-        if (cachedStr) {
-          try {
-            cached = JSON.parse(cachedStr);
-          } catch (e) {
-            console.error('Error parsing cached data', e);
-          }
-        }
-
-        setUsers(cached?.users || FALLBACK_USERS);
-        setProducts(cached?.products || []);
-        setCustomers(cached?.customers || []);
-        setSales(cached?.records || []);
-        setExpenses(cached?.expenses || []);
-        setDueRecords(cached?.dueRecords || []);
-        setCustomerSummaries(cached?.customerSummaries || []);
-        setDueTotals(cached?.dueTotals || { shopTotalDue: 0, shopTotalPaid: 0, netDue: 0 });
-        setPurchases(cached?.purchases || []);
-        setCashClosings(cached?.cashClosings || []);
+      if (!isLoaded && cached) {
+        setUsers(cached.users || FALLBACK_USERS);
+        setProducts(cached.products || []);
+        setCustomers(cached.customers || []);
+        setSales(cached.records || cached.sales || []);
+        setExpenses(cached.expenses || []);
+        setDueRecords(cached.dueRecords || []);
+        setCustomerSummaries(cached.customerSummaries || []);
+        setDueTotals(cached.dueTotals || { shopTotalDue: 0, shopTotalPaid: 0, netDue: 0 });
+        setPurchases(cached.purchases || []);
+        setCashClosings(cached.cashClosings || []);
       }
     } catch (err: any) {
       console.warn('Bootstrap data load warning:', err);
@@ -491,76 +524,167 @@ export default function App() {
   // API Handlers
   const handleSubmitSale = async (payload: any) => {
     const isEdit = !!payload.id;
+    const now = new Date();
+    const invoiceNo = payload.id || (sales.length > 0 ? Math.max(...sales.map(s => s.invoiceNo)) + 1 : 4001);
+    const newRecord: SaleRecord = {
+      rowId: invoiceNo,
+      id: invoiceNo,
+      invoiceNo,
+      timestamp: `${now.toLocaleDateString('en-GB')} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      rawDate: now.toISOString().split('T')[0],
+      date: now.toISOString().split('T')[0],
+      user: payload.user || currentUser?.username || 'Md Abu Said',
+      customer: payload.customer || 'General Customer',
+      phone: payload.phone || '',
+      address: payload.address || 'Paduar Bazar, Cumilla',
+      category: payload.items?.map((i: any) => i.category).join(', ') || 'Photocopy',
+      desc: payload.desc || '',
+      subtotal: payload.subtotal || 0,
+      discount: payload.discount || 0,
+      grandTotal: payload.grandTotal || 0,
+      paid: payload.paid || 0,
+      due: payload.due || 0,
+      items: payload.items || []
+    };
+
+    // 1. Immediately update React state
+    setSales(prev => isEdit ? prev.map(s => s.id === payload.id ? newRecord : s) : [newRecord, ...prev]);
+
+    // 2. Immediately update LocalStorage cache
+    updateCachedBootstrap(prev => {
+      const list = prev.records || prev.sales || [];
+      const updated = isEdit ? list.map((s: any) => s.id === payload.id ? newRecord : s) : [newRecord, ...list];
+      return { ...prev, records: updated, sales: updated };
+    });
+
+    // 3. Auto-save customer in Customer Directory if not exists
+    const custName = (payload.customer || '').trim();
+    if (custName && custName.toLowerCase() !== 'general customer') {
+      const exists = customers.some(c => c.name.toLowerCase() === custName.toLowerCase());
+      if (!exists) {
+        const nextCust: Customer = {
+          id: Date.now(),
+          rowId: Date.now(),
+          sl: customers.length + 1,
+          name: custName,
+          phone: payload.phone || '',
+          address: payload.address || 'Paduar Bazar, Cumilla'
+        };
+        setCustomers(prev => [...prev, nextCust]);
+        updateCachedBootstrap(prev => ({
+          ...prev,
+          customers: [...(prev.customers || []), nextCust]
+        }));
+      }
+    }
+
+    // 4. Update stock locally for stationery items
+    if (payload.items && payload.items.length > 0) {
+      setProducts(prev => {
+        const updatedProds = prev.map(prod => {
+          const match = payload.items.find((it: any) => it.name.toLowerCase() === prod.name.toLowerCase());
+          if (match && prod.stockQty !== null && prod.stockQty !== undefined) {
+            const newQty = Math.max(0, (prod.stockQty || 0) - (match.qty || 1));
+            return { ...prod, stockQty: newQty };
+          }
+          return prod;
+        });
+        updateCachedBootstrap(c => ({ ...c, products: updatedProds }));
+        return updatedProds;
+      });
+    }
+
+    setEditingSale(null);
+    setActiveTab('sales');
+    setInvoiceModalSale(newRecord);
+
+    // 5. Send to Backend API
     const url = isEdit ? `/api/sales/${payload.id}` : '/api/sales';
     const method = isEdit ? 'PUT' : 'POST';
 
-    const { data } = await safeFetchJson<any>(url, {
-      method,
-      body: JSON.stringify(payload)
-    });
+    try {
+      const { data } = await safeFetchJson<any>(url, {
+        method,
+        body: JSON.stringify(payload)
+      });
 
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-      setEditingSale(null);
-      setActiveTab('sales');
-      await fetchBootstrapData();
-      if (data.invoiceData) {
-        setInvoiceModalSale(data.invoiceData);
+      if (data && data.status === 'success') {
+        showToast(data.message, 'success');
+        if (data.invoiceData) {
+          setInvoiceModalSale(data.invoiceData);
+          setSales(prev => prev.map(s => s.id === newRecord.id ? data.invoiceData : s));
+          updateCachedBootstrap(prev => {
+            const list = prev.records || prev.sales || [];
+            return {
+              ...prev,
+              records: list.map((s: any) => s.id === newRecord.id ? data.invoiceData : s),
+              sales: list.map((s: any) => s.id === newRecord.id ? data.invoiceData : s)
+            };
+          });
+        }
+      } else {
+        showToast(isEdit ? 'Invoice updated!' : 'Invoice generated successfully!', 'success');
       }
-    } else {
-      // Fallback for static hosting (Cloudflare Pages) / offline
-      const now = new Date();
-      const invoiceNo = payload.id || (sales.length > 0 ? Math.max(...sales.map(s => s.invoiceNo)) + 1 : 1001);
-      const newRecord: SaleRecord = {
-        rowId: invoiceNo,
-        id: invoiceNo,
-        invoiceNo,
-        timestamp: `${now.toLocaleDateString('en-GB')} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-        rawDate: now.toISOString().split('T')[0],
-        date: now.toISOString().split('T')[0],
-        user: payload.user || currentUser?.username || 'Md Abu Said',
-        customer: payload.customer,
-        phone: payload.phone || '',
-        address: payload.address || '',
-        category: payload.items?.map((i: any) => i.category).join(', ') || 'General',
-        desc: payload.desc || '',
-        subtotal: payload.subtotal || 0,
-        discount: payload.discount || 0,
-        grandTotal: payload.grandTotal || 0,
-        paid: payload.paid || 0,
-        due: payload.due || 0,
-        items: payload.items || []
-      };
-
-      setSales(prev => isEdit ? prev.map(s => s.id === payload.id ? newRecord : s) : [newRecord, ...prev]);
-      setEditingSale(null);
-      setActiveTab('sales');
-      setInvoiceModalSale(newRecord);
+    } catch {
       showToast(isEdit ? 'Invoice updated!' : 'Invoice generated successfully!', 'success');
     }
   };
 
   const handleDeleteSale = async (saleId: number) => {
-    const { data } = await safeFetchJson<any>(`/api/sales/${saleId}`, { method: 'DELETE' });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    } else {
-      showToast('Memo deleted locally', 'success');
-    }
     setSales(prev => prev.filter(s => s.id !== saleId));
+    updateCachedBootstrap(prev => ({
+      ...prev,
+      records: (prev.records || []).filter((s: any) => s.id !== saleId),
+      sales: (prev.sales || []).filter((s: any) => s.id !== saleId)
+    }));
     setDeleteMemoSale(null);
     setActiveTab('sales');
-    await fetchBootstrapData();
+
+    try {
+      const { data } = await safeFetchJson<any>(`/api/sales/${saleId}`, { method: 'DELETE' });
+      if (data && data.status === 'success') {
+        showToast(data.message, 'success');
+      } else {
+        showToast('Memo deleted', 'info');
+      }
+    } catch {
+      showToast('Memo deleted', 'info');
+    }
   };
 
   const handleSubmitPayment = async (payload: any) => {
-    const { data } = await safeFetchJson<any>('/api/due-ledger/payment', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    } else {
+    const newDueRec = {
+      rowId: Date.now(),
+      id: `PAY-${Date.now()}`,
+      date: payload.date || new Date().toISOString().split('T')[0],
+      customer: payload.customer,
+      phone: payload.phone || '',
+      address: payload.address || '',
+      type: 'Payment',
+      desc: payload.desc || 'Due Collection',
+      due: 0,
+      paid: parseFloat(payload.amount) || 0,
+      user: payload.user || currentUser?.username || 'Staff',
+      timestamp: new Date().toISOString()
+    };
+
+    setDueRecords(prev => [newDueRec, ...prev]);
+    updateCachedBootstrap(prev => ({
+      ...prev,
+      dueRecords: [newDueRec, ...(prev.dueRecords || [])]
+    }));
+
+    try {
+      const { data } = await safeFetchJson<any>('/api/due-ledger/payment', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      if (data && data.status === 'success') {
+        showToast(data.message, 'success');
+      } else {
+        showToast('Payment collected successfully', 'success');
+      }
+    } catch {
       showToast('Payment collected successfully', 'success');
     }
     setActiveTab('sales');
@@ -568,27 +692,59 @@ export default function App() {
   };
 
   const handleSubmitPurchase = async (payload: any) => {
-    const { data } = await safeFetchJson<any>('/api/purchases', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    } else {
+    const newPur = {
+      rowId: Date.now(),
+      id: `PUR-${Date.now()}`,
+      date: payload.date || new Date().toISOString().split('T')[0],
+      timestamp: new Date().toISOString(),
+      product: payload.product,
+      category: payload.category || 'Stationery Products',
+      qty: parseFloat(payload.qty) || 1,
+      unitCost: parseFloat(payload.unitCost) || 0,
+      totalCost: (parseFloat(payload.qty) || 1) * (parseFloat(payload.unitCost) || 0),
+      supplier: payload.supplier || '',
+      notes: payload.notes || '',
+      user: payload.user || currentUser?.username || 'Staff'
+    };
+
+    setPurchases(prev => [newPur, ...prev]);
+    updateCachedBootstrap(prev => ({
+      ...prev,
+      purchases: [newPur, ...(prev.purchases || [])]
+    }));
+
+    try {
+      const { data } = await safeFetchJson<any>('/api/purchases', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      if (data && data.status === 'success') {
+        showToast(data.message, 'success');
+      } else {
+        showToast('Purchase recorded successfully', 'success');
+      }
+    } catch {
       showToast('Purchase recorded successfully', 'success');
     }
     setActiveTab('sales');
-    await fetchBootstrapData();
   };
 
   const handleDeletePurchase = async (id: string | number) => {
-    const { data } = await safeFetchJson<any>(`/api/purchases/${id}`, { method: 'DELETE' });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    }
     setPurchases(prev => prev.filter(p => String(p.id) !== String(id)));
+    updateCachedBootstrap(prev => ({
+      ...prev,
+      purchases: (prev.purchases || []).filter((p: any) => String(p.id) !== String(id))
+    }));
+
+    try {
+      const { data } = await safeFetchJson<any>(`/api/purchases/${id}`, { method: 'DELETE' });
+      if (data && data.status === 'success') {
+        showToast(data.message, 'success');
+      }
+    } catch {
+      // local delete already applied
+    }
     setActiveTab('sales');
-    await fetchBootstrapData();
   };
 
   const handleSubmitPaperUsage = async (payload: any) => {
@@ -602,60 +758,90 @@ export default function App() {
       showToast('Paper usage logged', 'success');
     }
     setActiveTab('sales');
-    await fetchBootstrapData();
   };
 
   const handleSubmitExpense = async (payload: any) => {
     const isEdit = !!payload.id;
+    const expId = payload.id || Date.now();
+    const newExp = {
+      rowId: expId,
+      id: expId,
+      expId: `EXP-${expId}`,
+      timestamp: new Date().toISOString(),
+      date: payload.date || new Date().toISOString().split('T')[0],
+      category: payload.category,
+      desc: payload.desc || '',
+      amount: parseFloat(payload.amount) || 0,
+      user: payload.user || currentUser?.username || 'Staff'
+    };
+
+    setExpenses(prev => isEdit ? prev.map(e => e.id === expId ? newExp : e) : [newExp, ...prev]);
+    updateCachedBootstrap(prev => {
+      const list = prev.expenses || [];
+      const updated = isEdit ? list.map((e: any) => e.id === expId ? newExp : e) : [newExp, ...list];
+      return { ...prev, expenses: updated };
+    });
+
     const url = isEdit ? `/api/expenses/${payload.id}` : '/api/expenses';
     const method = isEdit ? 'PUT' : 'POST';
 
-    const { data } = await safeFetchJson<any>(url, {
-      method,
-      body: JSON.stringify(payload)
-    });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    } else {
+    try {
+      const { data } = await safeFetchJson<any>(url, {
+        method,
+        body: JSON.stringify(payload)
+      });
+      if (data && data.status === 'success') {
+        showToast(data.message, 'success');
+      } else {
+        showToast(isEdit ? 'Expense updated' : 'Expense recorded', 'success');
+      }
+    } catch {
       showToast(isEdit ? 'Expense updated' : 'Expense recorded', 'success');
     }
     setActiveTab('sales');
-    await fetchBootstrapData();
   };
 
   const handleDeleteExpense = async (id: number) => {
-    const { data } = await safeFetchJson<any>(`/api/expenses/${id}`, { method: 'DELETE' });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    }
     setExpenses(prev => prev.filter(e => e.id !== id));
+    updateCachedBootstrap(prev => ({
+      ...prev,
+      expenses: (prev.expenses || []).filter((e: any) => e.id !== id)
+    }));
+
+    try {
+      const { data } = await safeFetchJson<any>(`/api/expenses/${id}`, { method: 'DELETE' });
+      if (data && data.status === 'success') {
+        showToast(data.message, 'success');
+      }
+    } catch {
+      // local delete already applied
+    }
     setActiveTab('sales');
-    await fetchBootstrapData();
   };
 
   const handleSubmitCashClosing = async (payload: any) => {
-    // Immediately update local cashClosings state
+    const newRec: CashClosingRecord = {
+      id: `CC-${payload.date}`,
+      rowId: Date.now(),
+      date: payload.date,
+      closedAt: new Date().toLocaleTimeString(),
+      user: payload.user || (currentUser?.username || 'Staff'),
+      openingCash: payload.openingCash,
+      prevShortageDeducted: payload.prevShortageDeducted,
+      salesInflow: payload.salesInflow,
+      dueInflow: payload.dueInflow,
+      totalInflow: payload.totalInflow,
+      expenseOutflow: payload.expenseOutflow,
+      expectedCash: payload.expectedCash,
+      actualCash: payload.actualCash,
+      difference: payload.difference,
+      status: payload.status,
+      notes: payload.notes,
+      denominations: payload.denominations
+    };
+
     setCashClosings(prev => {
       const idx = prev.findIndex(c => c.date === payload.date);
-      const newRec: CashClosingRecord = {
-        id: `CC-${payload.date}`,
-        rowId: Date.now(),
-        date: payload.date,
-        closedAt: new Date().toLocaleTimeString(),
-        user: payload.user || (currentUser?.username || 'Staff'),
-        openingCash: payload.openingCash,
-        prevShortageDeducted: payload.prevShortageDeducted,
-        salesInflow: payload.salesInflow,
-        dueInflow: payload.dueInflow,
-        totalInflow: payload.totalInflow,
-        expenseOutflow: payload.expenseOutflow,
-        expectedCash: payload.expectedCash,
-        actualCash: payload.actualCash,
-        difference: payload.difference,
-        status: payload.status,
-        notes: payload.notes,
-        denominations: payload.denominations
-      };
       if (idx >= 0) {
         const copy = [...prev];
         copy[idx] = newRec;
@@ -664,72 +850,181 @@ export default function App() {
       return [newRec, ...prev];
     });
 
-    const { data } = await safeFetchJson<any>('/api/cash-closings', {
-      method: 'POST',
-      body: JSON.stringify(payload)
+    updateCachedBootstrap(prev => {
+      const list = prev.cashClosings || [];
+      const idx = list.findIndex((c: any) => c.date === payload.date);
+      if (idx >= 0) {
+        const copy = [...list];
+        copy[idx] = newRec;
+        return { ...prev, cashClosings: copy };
+      }
+      return { ...prev, cashClosings: [newRec, ...list] };
     });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    } else {
+
+    try {
+      const { data } = await safeFetchJson<any>('/api/cash-closings', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      if (data && data.status === 'success') {
+        showToast(data.message, 'success');
+      } else {
+        showToast('Daily cash closed successfully', 'success');
+      }
+    } catch {
       showToast('Daily cash closed successfully', 'success');
     }
-    await fetchBootstrapData();
   };
 
   const handleSubmitCustomer = async (payload: any) => {
     const isEdit = !!payload.id;
+    const cid = payload.id || Date.now();
+    const custRecord: Customer = {
+      id: cid,
+      rowId: cid,
+      sl: payload.sl || (customers.length + 1),
+      name: payload.name.trim(),
+      phone: payload.phone ? payload.phone.trim() : '',
+      address: payload.address ? payload.address.trim() : 'Paduar Bazar, Cumilla'
+    };
+
+    // 1. Immediately save to React State
+    setCustomers(prev => {
+      const exists = prev.some(c => c.id === cid);
+      if (isEdit || exists) {
+        return prev.map(c => c.id === cid ? custRecord : c);
+      }
+      return [...prev, custRecord];
+    });
+
+    // 2. Immediately save to LocalStorage
+    updateCachedBootstrap(prev => {
+      const list = prev.customers || [];
+      const updatedList = isEdit
+        ? list.map((c: any) => c.id === cid ? custRecord : c)
+        : [...list.filter((c: any) => c.id !== cid), custRecord];
+      return { ...prev, customers: updatedList };
+    });
+
+    // 3. Persist to Backend API
     const url = isEdit ? `/api/customers/${payload.id}` : '/api/customers';
     const method = isEdit ? 'PUT' : 'POST';
-
-    const { data } = await safeFetchJson<any>(url, {
-      method,
-      body: JSON.stringify(payload)
-    });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    } else {
-      showToast(isEdit ? 'Customer updated' : 'Customer added', 'success');
+    try {
+      const { data } = await safeFetchJson<any>(url, {
+        method,
+        body: JSON.stringify(payload)
+      });
+      if (data && data.status === 'success') {
+        showToast(data.message || (isEdit ? 'Customer updated!' : 'Customer saved!'), 'success');
+        if (data.customer) {
+          setCustomers(prev => prev.map(c => c.id === cid ? data.customer : c));
+          updateCachedBootstrap(prev => ({
+            ...prev,
+            customers: (prev.customers || []).map((c: any) => c.id === cid ? data.customer : c)
+          }));
+        }
+      } else {
+        showToast(isEdit ? 'Customer updated!' : 'Customer saved!', 'success');
+      }
+    } catch {
+      showToast(isEdit ? 'Customer updated!' : 'Customer saved!', 'success');
     }
-    setActiveTab('sales');
-    await fetchBootstrapData();
   };
 
   const handleDeleteCustomer = async (id: number) => {
-    const { data } = await safeFetchJson<any>(`/api/customers/${id}`, { method: 'DELETE' });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    }
     setCustomers(prev => prev.filter(c => c.id !== id));
-    setActiveTab('sales');
-    await fetchBootstrapData();
+    updateCachedBootstrap(prev => ({
+      ...prev,
+      customers: (prev.customers || []).filter((c: any) => c.id !== id)
+    }));
+
+    try {
+      const { data } = await safeFetchJson<any>(`/api/customers/${id}`, { method: 'DELETE' });
+      if (data && data.status === 'success') {
+        showToast(data.message, 'success');
+      } else {
+        showToast('Customer deleted', 'info');
+      }
+    } catch {
+      showToast('Customer deleted', 'info');
+    }
   };
 
   const handleSubmitProduct = async (payload: any) => {
     const isEdit = !!payload.id;
+    const pid = payload.id || Date.now();
+    const prodRecord: Product = {
+      id: pid,
+      rowId: pid,
+      sl: payload.sl || 1,
+      category: payload.category || 'Photocopy',
+      name: payload.name.trim(),
+      price: parseFloat(payload.price) || 0,
+      costPrice: parseFloat(payload.costPrice) || 0,
+      stockQty: payload.stockQty !== '' && payload.stockQty !== null && payload.stockQty !== undefined ? parseFloat(payload.stockQty) : null,
+      lowStockLimit: parseFloat(payload.lowStockLimit) || 5
+    };
+
+    // 1. Immediately save to React State
+    setProducts(prev => {
+      const exists = prev.some(p => p.id === pid);
+      if (isEdit || exists) {
+        return prev.map(p => p.id === pid ? prodRecord : p);
+      }
+      return [...prev, prodRecord];
+    });
+
+    // 2. Immediately save to LocalStorage
+    updateCachedBootstrap(prev => {
+      const list = prev.products || [];
+      const updatedList = isEdit
+        ? list.map((p: any) => p.id === pid ? prodRecord : p)
+        : [...list.filter((p: any) => p.id !== pid), prodRecord];
+      return { ...prev, products: updatedList };
+    });
+
+    // 3. Persist to Backend API
     const url = isEdit ? `/api/products/${payload.id}` : '/api/products';
     const method = isEdit ? 'PUT' : 'POST';
-
-    const { data } = await safeFetchJson<any>(url, {
-      method,
-      body: JSON.stringify(payload)
-    });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    } else {
-      showToast(isEdit ? 'Product updated' : 'Product saved', 'success');
+    try {
+      const { data } = await safeFetchJson<any>(url, {
+        method,
+        body: JSON.stringify(payload)
+      });
+      if (data && data.status === 'success') {
+        showToast(data.message || (isEdit ? 'Product updated!' : 'Product saved!'), 'success');
+        if (data.product) {
+          setProducts(prev => prev.map(p => p.id === pid ? data.product : p));
+          updateCachedBootstrap(prev => ({
+            ...prev,
+            products: (prev.products || []).map((p: any) => p.id === pid ? data.product : p)
+          }));
+        }
+      } else {
+        showToast(isEdit ? 'Product updated!' : 'Product saved!', 'success');
+      }
+    } catch {
+      showToast(isEdit ? 'Product updated!' : 'Product saved!', 'success');
     }
-    setActiveTab('sales');
-    await fetchBootstrapData();
   };
 
   const handleDeleteProduct = async (id: number) => {
-    const { data } = await safeFetchJson<any>(`/api/products/${id}`, { method: 'DELETE' });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    }
     setProducts(prev => prev.filter(p => p.id !== id));
-    setActiveTab('sales');
-    await fetchBootstrapData();
+    updateCachedBootstrap(prev => ({
+      ...prev,
+      products: (prev.products || []).filter((p: any) => p.id !== id)
+    }));
+
+    try {
+      const { data } = await safeFetchJson<any>(`/api/products/${id}`, { method: 'DELETE' });
+      if (data && data.status === 'success') {
+        showToast(data.message, 'success');
+      } else {
+        showToast('Product deleted', 'info');
+      }
+    } catch {
+      showToast('Product deleted', 'info');
+    }
   };
 
   const handleSubmitUser = async (payload: any) => {
@@ -780,7 +1075,7 @@ export default function App() {
               />
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
-              <span className="text-amber-500">Abu Said</span> Computer
+              <span className="text-[#0062cc]">Abu Said</span> Computer
             </h1>
             <p className="text-xs text-blue-400 font-bold tracking-wider uppercase mt-1">
               Online Service & IT Point • Cumilla
@@ -878,6 +1173,7 @@ export default function App() {
       onOpenChangePassword={() => setChangePasswordOpen(true)}
       isGoogleDriveLinked={!!linkedSheetId}
       onOpenGoogleDriveBackup={() => setDriveBackupOpen(true)}
+      onOpenDataSheet={() => setDataSheetOpen(true)}
     >
       {/* Toast Notification Container */}
       <div className="fixed top-6 right-6 z-[999999] flex flex-col gap-2 pointer-events-none">
@@ -1009,6 +1305,7 @@ export default function App() {
                 onReload={fetchBootstrapData}
                 onPrintInvoice={sale => setInvoiceModalSale(sale)}
                 onOpenSummaryReport={() => setSummaryReportOpen(true)}
+                onOpenDataSheet={() => setDataSheetOpen(true)}
                 onEditSale={sale => setEditingSale(sale)}
                 onDeleteSale={sale => setDeleteMemoSale(sale)}
               />
@@ -1341,6 +1638,23 @@ export default function App() {
           setLinkedSheetUrl(sheetUrl);
           setLastBackupTime(backupTime);
         }}
+        showToast={showToast}
+      />
+
+      <DataSheetModal
+        isOpen={dataSheetOpen}
+        onClose={() => setDataSheetOpen(false)}
+        sales={sales}
+        customers={customers}
+        products={products}
+        expenses={expenses}
+        dueLedger={dueRecords}
+        linkedSheetUrl={linkedSheetUrl}
+        onOpenGoogleDriveBackup={() => {
+          setDataSheetOpen(false);
+          setDriveBackupOpen(true);
+        }}
+        onReload={fetchBootstrapData}
         showToast={showToast}
       />
     </Layout>

@@ -188,6 +188,44 @@ function seedInitialData(): void {
     `);
   }
 
+  // Ensure default products exist for Abu Said Computer
+  const prodCount = db.exec("SELECT COUNT(*) as count FROM products")[0]?.values[0][0] as number;
+  if (prodCount === 0) {
+    db.run(`
+      INSERT INTO products (sl, category, name, selling_price, cost_price, stock_qty, low_stock_limit) VALUES
+      (1, 'Photocopy', 'A4 Normal Photocopy', 5, 2, NULL, 5),
+      (2, 'Photocopy', 'A4 Both Side Photocopy', 8, 3, NULL, 5),
+      (3, 'Photocopy', 'Legal Size Photocopy', 8, 3, NULL, 5),
+      (4, 'Photocopy', 'A4 Color Print', 20, 8, NULL, 5),
+      (5, 'Photocopy', 'Photo Print (Glossy 4R)', 30, 12, NULL, 5),
+      (6, 'Photocopy', 'Lamination (A4)', 25, 10, NULL, 5),
+      (1, 'Online Application', 'Job Online Application', 100, 0, NULL, 5),
+      (2, 'Online Application', 'University Admission Form', 150, 0, NULL, 5),
+      (3, 'Online Application', 'NID Correction / Download', 100, 0, NULL, 5),
+      (4, 'Online Application', 'Passport Online Application', 250, 0, NULL, 5),
+      (5, 'Online Application', 'Birth Certificate Application', 100, 0, NULL, 5),
+      (6, 'Online Application', 'Driving License / BRTA Service', 300, 0, NULL, 5),
+      (1, 'Stationery Products', 'Paper Ream A4 (80 GSM)', 480, 420, 35, 5),
+      (2, 'Stationery Products', 'Paper Ream A4 (70 GSM)', 420, 370, 25, 5),
+      (3, 'Stationery Products', 'Paper Ream Legal (80 GSM)', 550, 480, 15, 5),
+      (4, 'Stationery Products', 'Ballpen (Matador All-Time)', 6, 4.5, 120, 20),
+      (5, 'Stationery Products', 'Spiral Binding Ring', 40, 20, 50, 10),
+      (6, 'Stationery Products', 'Plastic File Folder', 25, 15, 60, 15);
+    `);
+  }
+
+  // Ensure default customer accounts exist
+  const custCount = db.exec("SELECT COUNT(*) as count FROM customers")[0]?.values[0][0] as number;
+  if (custCount === 0) {
+    db.run(`
+      INSERT INTO customers (sl, name, phone, address) VALUES
+      (1, 'Md Abu Said', '01904142370', 'Paduar Bazar, Cumilla'),
+      (2, 'Md Sujon', '01812345678', 'Paduar Bazar, Cumilla'),
+      (3, 'Al-Amin Traders', '01711223344', 'Paduar Bazar Biswa Road, Cumilla'),
+      (4, 'General Customer', '01900000000', 'Cumilla Sadar South');
+    `);
+  }
+
   // Set permanent Google Apps Script webhook URL
   db.run(`
     INSERT OR REPLACE INTO app_settings (key, value)

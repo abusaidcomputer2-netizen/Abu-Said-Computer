@@ -178,7 +178,7 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
                 </div>
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                    <span className="text-amber-500">AS</span> Computer
+                    <span className="text-[#0062cc]">Abu Said</span> Computer
                   </h2>
                   <p className="text-xs font-bold text-slate-700 tracking-wide mt-1">
                     {isSingle ? 'Customer Sales & Due Statement' : 'Customer Sales Record & Purchase History'}
@@ -227,16 +227,16 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
                   </div>
                   <div className="text-xs font-semibold text-slate-600 flex justify-between">
                     <span>Total Purchased:</span>
-                    <span className="font-black text-slate-900 font-tabular">৳ {formatCurrency(targetCust.totalPurchased)}</span>
+                    <span className="font-black text-slate-900 font-tabular">Tk {formatCurrency(targetCust.totalPurchased)}</span>
                   </div>
                   <div className="text-xs font-semibold text-slate-600 flex justify-between">
                     <span>Total Paid:</span>
-                    <span className="font-black text-emerald-700 font-tabular">৳ {formatCurrency(targetCust.totalPaid)}</span>
+                    <span className="font-black text-emerald-700 font-tabular">Tk {formatCurrency(targetCust.totalPaid)}</span>
                   </div>
                   <div className="text-sm font-black text-rose-700 pt-1.5 border-t border-slate-200 flex justify-between items-center">
                     <span>Current Due:</span>
                     <span className="text-lg font-black text-rose-800 underline font-tabular">
-                      ৳ {formatCurrency(targetCust.totalDue)}
+                      Tk {formatCurrency(targetCust.totalDue)}
                     </span>
                   </div>
                 </div>
@@ -253,12 +253,12 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
                 </div>
                 <div className="border-r border-slate-200 pr-1">
                   <span className="text-[10px] font-bold text-emerald-700 uppercase block">Total Sales</span>
-                  <span className="text-sm font-black text-emerald-700 font-tabular">৳ {formatCurrency(totalSales)}</span>
+                  <span className="text-sm font-black text-emerald-700 font-tabular">Tk {formatCurrency(totalSales)}</span>
                 </div>
                 <div className="bg-amber-50 py-1 rounded-xl border border-amber-200">
                   <span className="text-[10px] font-bold text-amber-900 uppercase block">Paid / Due</span>
                   <span className="text-xs font-black text-slate-900 font-tabular">
-                    ৳ {formatCurrency(totalPaid)} / <span className="text-rose-700">৳ {formatCurrency(totalDue)}</span>
+                    Tk {formatCurrency(totalPaid)} / <span className="text-rose-700">Tk {formatCurrency(totalDue)}</span>
                   </span>
                 </div>
               </div>
@@ -292,13 +292,13 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
                         {c.memoCount}
                       </td>
                       <td className="py-1.5 px-3 text-right border-r border-slate-200 font-black text-emerald-900 font-tabular">
-                        ৳ {formatCurrency(c.totalPurchased)}
+                        Tk {formatCurrency(c.totalPurchased)}
                       </td>
                       <td className="py-1.5 px-2.5 text-right border-r border-slate-200 font-medium text-slate-800 font-tabular">
-                        ৳ {formatCurrency(c.totalPaid)}
+                        Tk {formatCurrency(c.totalPaid)}
                       </td>
                       <td className="py-1.5 px-2.5 text-right font-black text-rose-700 font-tabular">
-                        {c.totalDue > 0 ? `৳ ${formatCurrency(c.totalDue)}` : '-'}
+                        {c.totalDue > 0 ? `Tk ${formatCurrency(c.totalDue)}` : '-'}
                       </td>
                     </tr>
                   ))}
@@ -310,13 +310,13 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
                       {sales.length} Memos
                     </td>
                     <td className="py-2.5 px-3 text-right text-emerald-900 font-black font-tabular">
-                      ৳ {formatCurrency(totalSales)}
+                      Tk {formatCurrency(totalSales)}
                     </td>
                     <td className="py-2.5 px-2.5 text-right text-slate-800 font-bold border-r border-slate-200 font-tabular">
-                      ৳ {formatCurrency(totalPaid)}
+                      Tk {formatCurrency(totalPaid)}
                     </td>
                     <td className="py-2.5 px-2.5 text-right text-rose-800 font-black font-tabular">
-                      ৳ {formatCurrency(totalDue)}
+                      Tk {formatCurrency(totalDue)}
                     </td>
                   </tr>
                 </tfoot>
@@ -362,13 +362,13 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
                         )}
                         <td className="py-1.5 px-3 border-r border-slate-200 text-slate-700">{s.desc || s.category}</td>
                         <td className="py-1.5 px-3 text-right border-r border-slate-200 font-black text-emerald-900 font-tabular">
-                          ৳ {formatCurrency(s.grandTotal)}
+                          Tk {formatCurrency(s.grandTotal)}
                         </td>
                         <td className="py-1.5 px-2.5 text-right border-r border-slate-200 font-medium text-slate-800 font-tabular">
-                          ৳ {formatCurrency(s.paid)}
+                          Tk {formatCurrency(s.paid)}
                         </td>
                         <td className="py-1.5 px-2.5 text-right font-black text-rose-700 font-tabular">
-                          {s.due > 0 ? `৳ ${formatCurrency(s.due)}` : '-'}
+                          {s.due > 0 ? `Tk ${formatCurrency(s.due)}` : '-'}
                         </td>
                       </tr>
                     ))
@@ -378,13 +378,13 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
                   <tr>
                     <td colSpan={isSingle ? 4 : 5} className="py-2.5 px-3 text-right font-black">Grand Total:</td>
                     <td className="py-2.5 px-3 text-right text-emerald-900 font-black text-sm font-tabular">
-                      ৳ {formatCurrency(totalSales)}
+                      Tk {formatCurrency(totalSales)}
                     </td>
                     <td className="py-2.5 px-2.5 text-right text-slate-800 font-bold border-r border-slate-200 font-tabular">
-                      ৳ {formatCurrency(totalPaid)}
+                      Tk {formatCurrency(totalPaid)}
                     </td>
                     <td className="py-2.5 px-2.5 text-right text-rose-800 font-black font-tabular">
-                      ৳ {formatCurrency(totalDue)}
+                      Tk {formatCurrency(totalDue)}
                     </td>
                   </tr>
                 </tfoot>

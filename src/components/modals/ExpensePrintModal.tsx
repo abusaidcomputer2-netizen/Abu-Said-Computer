@@ -91,7 +91,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
                 </div>
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                    <span className="text-amber-500">Abu Said</span> Computer
+                    <span className="text-[#0062cc]">Abu Said</span> Computer
                   </h2>
                   <p className="text-xs font-bold text-slate-700 tracking-wide mt-1">
                     Official Operating Expense Statement
@@ -132,7 +132,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
                       {c.count} Entries
                     </td>
                     <td className="py-2 px-3 text-right font-black text-rose-700 font-tabular text-sm">
-                      ৳ {formatCurrency(c.amount)}
+                      Tk {formatCurrency(c.amount)}
                     </td>
                   </tr>
                 ))}
@@ -146,7 +146,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
                     {expenses.length} Entries
                   </td>
                   <td className="py-2.5 px-3 text-right text-base text-rose-900 font-black font-tabular">
-                    ৳ {formatCurrency(totalAmount)}
+                    Tk {formatCurrency(totalAmount)}
                   </td>
                 </tr>
               </tfoot>
@@ -178,7 +178,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
                       {e.desc || '--'}
                     </td>
                     <td className="py-1.5 px-3 text-right font-black text-rose-700 font-tabular">
-                      ৳ {formatCurrency(e.amount)}
+                      Tk {formatCurrency(e.amount)}
                     </td>
                   </tr>
                 ))}
@@ -189,7 +189,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
                     Total Operating Expenses:
                   </td>
                   <td className="py-2.5 px-3 text-right text-base text-rose-900 font-black font-tabular">
-                    ৳ {formatCurrency(totalAmount)}
+                    Tk {formatCurrency(totalAmount)}
                   </td>
                 </tr>
               </tfoot>

@@ -358,7 +358,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            ৳{formatCurrency(totalBilled)}
+            Tk {formatCurrency(totalBilled)}
           </div>
           <div className="flex items-center gap-1 text-[11px] text-blue-400 font-semibold mt-1.5">
             <ArrowUpRight className="w-3 h-3" />
@@ -375,7 +375,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-emerald-400 tracking-tight">
-            ৳{formatCurrency(totalCashPaid)}
+            Tk {formatCurrency(totalCashPaid)}
           </div>
           <div className="text-[11px] text-slate-400 font-medium mt-1.5">
             {totalBilled > 0 ? `${Math.round((totalCashPaid / totalBilled) * 100)}% realization` : '0% realization'}
@@ -395,7 +395,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-amber-400 tracking-tight">
-            ৳{formatCurrency(dueTotals.netDue)}
+            Tk {formatCurrency(dueTotals.netDue)}
           </div>
           <div className="flex items-center justify-between text-[11px] text-amber-300/90 font-semibold mt-1.5">
             <span>{customerSummaries.length} Debtors</span>
@@ -416,7 +416,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-rose-400 tracking-tight">
-            ৳{formatCurrency(totalExpenseVal)}
+            Tk {formatCurrency(totalExpenseVal)}
           </div>
           <div className="text-[11px] text-slate-400 font-medium mt-1.5">
             {filteredExpenses.length} Slips Recorded
@@ -432,7 +432,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-teal-300 tracking-tight">
-            ৳{formatCurrency(netEstimatedProfit)}
+            Tk {formatCurrency(netEstimatedProfit)}
           </div>
           <div className="text-[11px] text-teal-400/90 font-semibold mt-1.5">
             {grossMarginPct}% Margin
@@ -452,7 +452,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            ৳{formatCurrency(totalStockValue)}
+            Tk {formatCurrency(totalStockValue)}
           </div>
           <div className="text-[11px] text-indigo-300 font-semibold mt-1.5 flex items-center justify-between">
             <span>{totalStockCount} units</span>
@@ -487,7 +487,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   activeMetric === 'revenue' ? 'bg-cyan-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Revenue (৳)
+                Revenue (Tk )
               </button>
               <button
                 type="button"
@@ -522,10 +522,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <div className="absolute -top-14 bg-slate-950 text-white text-[11px] font-bold px-3 py-1.5 rounded-xl border border-slate-700 shadow-2xl pointer-events-none whitespace-nowrap z-30">
                         <div className="text-slate-300 text-[10px]">{d.fullDate}</div>
                         <div className="text-cyan-400 font-black">
-                          {activeMetric === 'revenue' ? `৳${formatCurrency(d.revenue)}` : `${d.count} memos`}
+                          {activeMetric === 'revenue' ? `Tk ${formatCurrency(d.revenue)}` : `${d.count} memos`}
                         </div>
                         <div className="text-emerald-400 text-[9px]">
-                          Cash: ৳{formatCurrency(d.paid)}
+                          Cash: Tk {formatCurrency(d.paid)}
                         </div>
                       </div>
                     )}
@@ -554,18 +554,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="grid grid-cols-3 gap-3 pt-3 border-t border-slate-800 text-center">
             <div className="p-2.5 bg-slate-950/70 rounded-2xl border border-slate-800/80">
               <span className="text-[10px] text-slate-400 font-medium block">Average Invoice</span>
-              <span className="text-xs sm:text-sm font-black text-white">৳{formatCurrency(avgTicket)}</span>
+              <span className="text-xs sm:text-sm font-black text-white">Tk {formatCurrency(avgTicket)}</span>
             </div>
             <div className="p-2.5 bg-slate-950/70 rounded-2xl border border-slate-800/80">
               <span className="text-[10px] text-slate-400 font-medium block">Today Sales</span>
               <span className="text-xs sm:text-sm font-black text-cyan-400">
-                ৳{formatCurrency(trendData[trendData.length - 1]?.revenue || 0)}
+                Tk {formatCurrency(trendData[trendData.length - 1]?.revenue || 0)}
               </span>
             </div>
             <div className="p-2.5 bg-slate-950/70 rounded-2xl border border-slate-800/80">
               <span className="text-[10px] text-slate-400 font-medium block">14-Day Sum</span>
               <span className="text-xs sm:text-sm font-black text-emerald-400">
-                ৳{formatCurrency(trendData.reduce((acc, t) => acc + t.revenue, 0))}
+                Tk {formatCurrency(trendData.reduce((acc, t) => acc + t.revenue, 0))}
               </span>
             </div>
           </div>
@@ -622,7 +622,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-black text-blue-300 block">৳{formatCurrency(categoryStats.photocopy)}</span>
+                  <span className="text-xs font-black text-blue-300 block">Tk {formatCurrency(categoryStats.photocopy)}</span>
                   <span className="text-[10px] text-slate-400 font-bold">{categoryStats.photocopyPct}%</span>
                 </div>
               </div>
@@ -637,7 +637,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-black text-emerald-300 block">৳{formatCurrency(categoryStats.online)}</span>
+                  <span className="text-xs font-black text-emerald-300 block">Tk {formatCurrency(categoryStats.online)}</span>
                   <span className="text-[10px] text-slate-400 font-bold">{categoryStats.onlinePct}%</span>
                 </div>
               </div>
@@ -652,7 +652,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-black text-amber-300 block">৳{formatCurrency(categoryStats.stationery)}</span>
+                  <span className="text-xs font-black text-amber-300 block">Tk {formatCurrency(categoryStats.stationery)}</span>
                   <span className="text-[10px] text-slate-400 font-bold">{categoryStats.stationeryPct}%</span>
                 </div>
               </div>
@@ -666,10 +666,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <Wallet className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Net Cash In Hand</span>
               </span>
-              <span className="text-emerald-400 font-black">৳{formatCurrency(netCashInHand)}</span>
+              <span className="text-emerald-400 font-black">Tk {formatCurrency(netCashInHand)}</span>
             </div>
             <div className="text-[10px] text-slate-500">
-              Inflow: ৳{formatCurrency(totalCashInflow)} • Outflow: ৳{formatCurrency(totalExpenseVal)}
+              Inflow: Tk {formatCurrency(totalCashInflow)} • Outflow: Tk {formatCurrency(totalExpenseVal)}
             </div>
             <button
               type="button"
@@ -703,7 +703,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div key={idx} className="p-3 bg-slate-950 rounded-2xl border border-slate-800/70 space-y-1.5 hover:border-slate-700 transition">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-white truncate max-w-[180px]">{p.name}</span>
-                    <span className="text-xs font-black text-emerald-400">৳{formatCurrency(p.revenue)}</span>
+                    <span className="text-xs font-black text-emerald-400">Tk {formatCurrency(p.revenue)}</span>
                   </div>
                   <div className="flex items-center justify-between text-[10px] text-slate-400">
                     <span className="capitalize">{p.category}</span>
@@ -740,7 +740,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         </div>
                         <span className="text-xs font-bold text-white">{st.user}</span>
                       </div>
-                      <span className="text-xs font-black text-white">৳{formatCurrency(st.billed)}</span>
+                      <span className="text-xs font-black text-white">Tk {formatCurrency(st.billed)}</span>
                     </div>
 
                     <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden">
@@ -752,7 +752,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                     <div className="flex items-center justify-between text-[10px] text-slate-400">
                       <span>{st.count} invoices issued</span>
-                      <span className="text-emerald-400 font-bold">৳{formatCurrency(st.paid)} collected</span>
+                      <span className="text-emerald-400 font-bold">Tk {formatCurrency(st.paid)} collected</span>
                     </div>
                   </div>
                 );
@@ -801,11 +801,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                 <div className="text-right">
                   <div className="text-xs font-black text-white group-hover:text-cyan-300">
-                    ৳{formatCurrency(s.grandTotal)}
+                    Tk {formatCurrency(s.grandTotal)}
                   </div>
                   <div className="text-[10px]">
                     {s.due > 0 ? (
-                      <span className="text-amber-400 font-bold">Due ৳{formatCurrency(s.due)}</span>
+                      <span className="text-amber-400 font-bold">Due Tk {formatCurrency(s.due)}</span>
                     ) : (
                       <span className="text-emerald-400 font-bold">Paid</span>
                     )}

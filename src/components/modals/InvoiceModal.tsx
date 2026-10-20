@@ -1,7 +1,7 @@
 import React from 'react';
-import { X, Printer, Building2 } from 'lucide-react';
+import { X, Printer, Building2, CheckCircle2 } from 'lucide-react';
 import { SaleRecord } from '../../types';
-import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, generateBarcodeSvg } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, generateBarcodeSvg, numberToWordsTaka } from '../../utils/helpers';
 
 interface InvoiceModalProps {
   sale: SaleRecord | null;
@@ -20,10 +20,10 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
 
   return (
     <div className="print-modal-backdrop fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 print:p-0 print:m-0 print:bg-white print:static print:block">
-      <div className="print-modal-dialog bg-white text-slate-800 w-full max-w-2xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-2 sm:my-4 border border-slate-200 print:w-full print:max-w-none print:shadow-none print:border-none print:m-0 print:rounded-none print:static">
+      <div className="print-modal-dialog bg-white text-slate-800 w-full max-w-3xl rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-2 sm:my-4 border border-slate-200 print:w-full print:max-w-none print:shadow-none print:border-none print:m-0 print:rounded-none print:static">
         {/* Modal Top Bar (Hidden during printing) */}
-        <div className="no-print bg-slate-50 px-4 sm:px-6 py-2.5 sm:py-3 border-b border-slate-200 flex justify-between items-center">
-          <span className="text-xs font-black text-slate-700 uppercase flex items-center gap-1.5">
+        <div className="no-print bg-slate-50 px-4 sm:px-6 py-3 border-b border-slate-200 flex justify-between items-center">
+          <span className="text-xs sm:text-sm font-black text-slate-800 uppercase flex items-center gap-2">
             <Building2 className="w-4 h-4 text-blue-600" />
             <span>Sales Invoice Preview</span>
           </span>
@@ -31,7 +31,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
             <button
               type="button"
               onClick={handlePrint}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm cursor-pointer"
             >
               <Printer className="w-4 h-4 text-amber-300" />
               <span>Print / PDF</span>
@@ -39,20 +39,20 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              className="p-2 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Printable Invoice Container */}
-        <div className="print-page-container invoice-print-container p-4 sm:p-6 text-slate-900 bg-white print:p-0 print:shadow-none print:border-none">
-          <div className="print-content-body space-y-2.5">
-            {/* Header */}
-            <div className="flex justify-between items-start border-b border-slate-300 pb-2">
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 bg-transparent">
+        {/* Printable Cash Memo Sheet */}
+        <div className="print-page-container invoice-print-container p-6 sm:p-8 text-slate-900 bg-white print:p-0 print:shadow-none print:border-none">
+          <div className="space-y-4">
+            {/* Header Lockup - Colors matched to logo blue & navy */}
+            <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3.5">
+              <div className="flex items-center gap-3.5">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center flex-shrink-0 bg-transparent">
                   <img 
                     src="/logo.png" 
                     alt="Abu Said Computer" 
@@ -63,167 +63,182 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                   />
                 </div>
                 <div>
-                  <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-none">
-                    <span className="text-amber-500">Abu Said</span> Computer
+                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-none">
+                    <span className="text-[#0062cc]">Abu Said</span> <span className="text-[#0f172a]">Computer</span>
                   </h2>
-                  <p className="text-[11px] sm:text-xs font-bold text-slate-700 tracking-wide mt-0.5">
-                    Online Service & IT Point
+                  <p className="text-xs sm:text-sm font-bold text-slate-700 tracking-wide mt-1">
+                    Online Service & IT Point • Computer Training & Stationery
                   </p>
-                  <p className="text-[10px] text-slate-500">
-                    Paduar Bazar, Cumilla • Mobile: 01904142370
+                  <p className="text-[11px] sm:text-xs text-slate-600 font-medium">
+                    Bhai Bhai Super Market (2nd Floor), Paduar Bazar, Cumilla-3500 • Mobile: 01904-142370
                   </p>
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <h3 className="text-lg sm:text-xl font-black text-teal-800 leading-tight tracking-normal">
-                  INVOICE
+                <h3 className="text-2xl sm:text-3xl font-black text-[#0062cc] leading-tight tracking-wider">
+                  CASH MEMO
                 </h3>
-                <p className="text-[11px] text-slate-600 font-bold mt-0.5">
-                  Date : <span className="font-black text-slate-900">{formatDateDisplay(sale.rawDate || sale.date)}</span>
+                <p className="text-xs sm:text-sm text-slate-700 font-bold mt-1 text-right">
+                  <span className="font-black text-slate-900">{formatDateDisplay(sale.rawDate || sale.date)}</span> : Date
                 </p>
               </div>
             </div>
 
-            {/* Customer & Invoice Metadata Box */}
-            <div className="grid grid-cols-12 gap-2 bg-slate-50 border border-slate-200 p-2 sm:p-2.5 rounded-xl text-xs items-center">
-              <div className="col-span-7 space-y-0.5">
-                <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Customer Info:
+            {/* Customer & Invoice Meta Box */}
+            <div className="grid grid-cols-12 gap-3 bg-slate-50 border border-slate-300 p-3.5 sm:p-4 rounded-xl text-xs sm:text-sm items-center">
+              <div className="col-span-7 space-y-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                  Customer Information:
                 </span>
-                <div className="text-xs sm:text-sm font-black text-slate-900">{sale.customer || 'General Customer'}</div>
-                <div className="text-slate-700 font-semibold text-[10.5px]">
-                  Mobile: <span className="font-bold">{sale.phone || '01904142370'}</span>
+                <div className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+                  {sale.customer || 'General Customer'}
                 </div>
-                <div className="text-slate-600 font-medium text-[10.5px]">
-                  Address: <span>{sale.address || 'Paduar Bazar, Cumilla'}</span>
+                <div className="text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-1.5">
+                  <span className="font-bold text-slate-600">Mobile:</span>
+                  <span className="font-black text-slate-900 font-tabular">{sale.phone || '01904142370'}</span>
+                </div>
+                <div className="text-slate-600 font-medium text-xs sm:text-[13px]">
+                  <span className="font-bold text-slate-600">Address:</span> {sale.address || 'Paduar Bazar, Cumilla'}
                 </div>
               </div>
 
-              <div className="col-span-5 flex flex-col items-end text-right space-y-0.5">
-                <p className="text-xs font-bold leading-tight">
-                  Invoice No : <span className="text-red-600 font-black">AS-{sale.invoiceNo}</span>
+              <div className="col-span-5 flex flex-col items-end text-right space-y-1">
+                <p className="text-xs sm:text-sm font-bold leading-tight text-right">
+                  <span className="text-red-600 font-black text-sm sm:text-base">AS-{sale.invoiceNo}</span> : Invoice No
                 </p>
-                <p className="text-xs font-bold leading-tight">
-                  Seller : <span className="text-blue-600 font-black">{sale.user}</span>
+                <p className="text-xs sm:text-sm font-bold leading-tight text-slate-700 text-right">
+                  <span className="text-blue-700 font-black">{sale.user}</span> : Sales Operator
                 </p>
                 <div
-                  className="pt-0.5 flex items-center justify-end"
+                  className="pt-1 flex items-center justify-end"
                   dangerouslySetInnerHTML={{ __html: barcodeHtml }}
                 />
               </div>
             </div>
 
-            {/* Items Table */}
-            <table className="w-full text-left text-xs border border-slate-200 border-collapse">
-              <thead>
-                <tr className="bg-slate-100 text-slate-800 font-black border-b border-slate-200 text-[11px]">
-                  <th className="py-1 px-2 text-center w-8 border-r border-slate-200">SL</th>
-                  <th className="py-1 px-2.5 border-r border-slate-200">Item Description / Service</th>
-                  <th className="py-1 px-2.5 text-right w-20 border-r border-slate-200">Rate</th>
-                  <th className="py-1 px-2 text-center w-14 border-r border-slate-200">Qty</th>
-                  <th className="py-1 px-2.5 text-right w-24">Total Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-800 font-medium text-[11px]">
-                {sale.items.map((it, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50">
-                    <td className="py-1 px-2 text-center border-r border-slate-200 font-bold text-slate-500">
-                      {idx + 1}
-                    </td>
-                    <td className="py-1 px-2.5 border-r border-slate-200 font-bold">{it.name}</td>
-                    <td className="py-1 px-2.5 text-right border-r border-slate-200 font-tabular">
-                      {formatCurrency(it.price)}
-                    </td>
-                    <td className="py-1 px-2 text-center border-r border-slate-200 font-bold font-tabular">
-                      {it.qty}
-                    </td>
-                    <td className="py-1 px-2.5 text-right font-black font-tabular">
-                      ৳ {formatCurrency(it.total)}
-                    </td>
+            {/* Memo Items Table - ONLY actual items, NO blank/empty rows */}
+            <div className="border border-slate-300 rounded-xl overflow-hidden shadow-xs">
+              <table className="w-full text-left text-xs sm:text-sm border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-900 font-black border-b border-slate-300 text-xs sm:text-sm uppercase tracking-wider">
+                    <th className="py-3 px-3 text-center w-14 border-r border-slate-300">SL</th>
+                    <th className="py-3 px-4 border-r border-slate-300">Item Description / Service</th>
+                    <th className="py-3 px-3 text-right w-24 sm:w-28 border-r border-slate-300">Rate</th>
+                    <th className="py-3 px-3 text-center w-16 sm:w-20 border-r border-slate-300">Qty</th>
+                    <th className="py-3 px-4 text-right w-28 sm:w-32">Total Amount</th>
                   </tr>
-                ))}
-              </tbody>
-              <tfoot className="text-xs border-t-2 border-slate-300 text-[11px]">
-                <tr className="border-b border-slate-200">
-                  <td colSpan={4} className="py-1 px-2.5 text-right font-bold text-slate-700">
-                    Subtotal:
-                  </td>
-                  <td className="py-1 px-2.5 text-right font-black text-slate-900 font-tabular">
-                    ৳ {formatCurrency(sale.subtotal)}
-                  </td>
-                </tr>
-                {sale.discount > 0 && (
-                  <tr className="border-b border-slate-200 text-red-600">
-                    <td colSpan={4} className="py-0.5 px-2.5 text-right font-bold">
-                      Discount:
-                    </td>
-                    <td className="py-0.5 px-2.5 text-right font-black font-tabular">
-                      -৳ {formatCurrency(sale.discount)}
-                    </td>
-                  </tr>
-                )}
-                <tr className="bg-teal-50 text-teal-900 border-b border-slate-300">
-                  <td colSpan={4} className="py-1 px-2.5 text-right font-black text-xs">
-                    Grand Total:
-                  </td>
-                  <td className="py-1 px-2.5 text-right font-black text-sm text-teal-900 font-tabular">
-                    ৳ {formatCurrency(sale.grandTotal)}
-                  </td>
-                </tr>
-                {sale.due > 0 && (
-                  <>
-                    <tr className="border-b border-slate-200 text-emerald-800">
-                      <td colSpan={4} className="py-0.5 px-2.5 text-right font-bold">
-                        Paid Amount:
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-slate-900 font-semibold">
+                  {sale.items.map((it, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50">
+                      <td className="py-3 px-3 text-center border-r border-slate-200 font-bold text-slate-600 text-xs sm:text-sm">
+                        {idx + 1}
                       </td>
-                      <td className="py-0.5 px-2.5 text-right font-black text-emerald-700 font-tabular">
-                        ৳ {formatCurrency(sale.paid)}
+                      <td className="py-3 px-4 border-r border-slate-200 font-bold text-slate-900 text-sm">
+                        {it.name}
+                      </td>
+                      <td className="py-3 px-3 text-right border-r border-slate-200 font-bold font-tabular text-slate-800 text-sm">
+                        {formatCurrency(it.price)}
+                      </td>
+                      <td className="py-3 px-3 text-center border-r border-slate-200 font-black font-tabular text-slate-900 text-sm">
+                        {it.qty}
+                      </td>
+                      <td className="py-3 px-4 text-right font-black font-tabular text-slate-950 text-sm">
+                        {formatCurrency(it.total)}
                       </td>
                     </tr>
-                    <tr className="bg-rose-50 border-b border-slate-300 text-rose-800">
-                      <td colSpan={4} className="py-1 px-2.5 text-right font-black">
-                        Due Amount:
+                  ))}
+                </tbody>
+                <tfoot className="border-t-2 border-slate-300 font-bold text-xs sm:text-sm">
+                  <tr className="border-b border-slate-200 bg-slate-50/60">
+                    <td colSpan={4} className="py-2.5 px-4 text-right text-slate-700 font-bold sm:text-sm">
+                      Subtotal:
+                    </td>
+                    <td className="py-2.5 px-4 text-right font-black text-slate-950 font-tabular text-sm sm:text-base">
+                      {formatCurrency(sale.subtotal)}
+                    </td>
+                  </tr>
+                  {sale.discount > 0 && (
+                    <tr className="border-b border-slate-200 text-red-600 bg-red-50/40">
+                      <td colSpan={4} className="py-2 px-4 text-right font-bold sm:text-sm">
+                        Discount:
                       </td>
-                      <td className="py-1 px-2.5 text-right font-black text-xs text-rose-700 font-tabular">
-                        ৳ {formatCurrency(sale.due)}
+                      <td className="py-2 px-4 text-right font-black font-tabular text-sm sm:text-base">
+                        -{formatCurrency(sale.discount)}
                       </td>
                     </tr>
-                  </>
-                )}
-              </tfoot>
-            </table>
-
-            {/* Company Official Details */}
-            <div className="pt-1 text-[10px] text-slate-600 leading-tight border-t border-slate-200">
-              <p className="font-black text-slate-900 uppercase text-[10.5px]">ABU SAID COMPUTER</p>
-              <p>Office: Bhai Bhai Super Market (2nd Floor), Paduar Bazar, Cumilla-3500</p>
-              <p>
-                Mobile: <span className="font-bold text-slate-900">+88 01904 142370</span> | Email: abusaidcomputer2@gmail.com
-              </p>
+                  )}
+                  <tr className="bg-blue-50 text-slate-950 border-y-2 border-blue-600">
+                    <td colSpan={4} className="py-3 px-4 text-right font-black text-sm sm:text-base uppercase tracking-wide">
+                      Grand Total:
+                    </td>
+                    <td className="py-3 px-4 text-right font-black text-base sm:text-lg text-blue-900 font-tabular">
+                      {formatCurrency(sale.grandTotal)}
+                    </td>
+                  </tr>
+                  {sale.due > 0 ? (
+                    <>
+                      <tr className="border-b border-slate-200 text-emerald-900 bg-emerald-50/40">
+                        <td colSpan={4} className="py-2.5 px-4 text-right font-bold sm:text-sm">
+                          Paid Amount:
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-black text-emerald-900 font-tabular text-sm sm:text-base">
+                          {formatCurrency(sale.paid)}
+                        </td>
+                      </tr>
+                      <tr className="bg-rose-50 text-rose-950 border-b border-rose-300">
+                        <td colSpan={4} className="py-2.5 px-4 text-right font-black text-sm sm:text-base">
+                          Due Amount:
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-black text-base sm:text-lg text-rose-700 font-tabular">
+                          {formatCurrency(sale.due)}
+                        </td>
+                      </tr>
+                    </>
+                  ) : (
+                    <tr className="bg-emerald-50/60 text-emerald-900 border-b border-slate-300">
+                      <td colSpan={4} className="py-2 px-4 text-right font-bold text-xs sm:text-sm">
+                        Payment Status:
+                      </td>
+                      <td className="py-2 px-4 text-right font-black text-xs sm:text-sm text-emerald-700 flex items-center justify-end gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Full Paid</span>
+                      </td>
+                    </tr>
+                  )}
+                </tfoot>
+              </table>
             </div>
 
-            {/* Signatures */}
-            <div className="flex justify-between items-end pt-4 pb-0.5 text-center text-xs text-slate-700">
-              <div>
-                <div className="border-t border-dotted border-slate-400 w-36 sm:w-44 pt-1 font-bold text-slate-800 text-[9.5px] uppercase tracking-wider">
-                  CUSTOMER SIGNATURE
+            {/* In Words Banner in English */}
+            <div className="bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs sm:text-sm">
+              <span className="font-bold text-slate-600 uppercase text-[11px] tracking-wider">In Words: </span>
+              <span className="font-bold text-slate-900">{numberToWordsTaka(sale.grandTotal)}</span>
+            </div>
+
+            {/* Signatures Area */}
+            <div className="pt-10 pb-2 flex justify-between items-end text-center px-4">
+              <div className="w-48 text-center">
+                <div className="border-t-2 border-slate-700 pt-1.5 font-bold text-slate-800 text-xs uppercase tracking-wider">
+                  Customer Signature
                 </div>
               </div>
-              <div>
-                <div className="border-t border-slate-400 w-40 sm:w-48 pt-1 font-bold text-slate-900 text-[9.5px] uppercase tracking-wider">
-                  AUTHORIZED SIGNATURE
+
+              <div className="w-48 text-center">
+                <div className="border-t-2 border-slate-800 pt-1.5 font-black text-slate-900 text-xs uppercase tracking-wider">
+                  Authorized Signature
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Print Document Footer */}
-          <div className="print-doc-footer flex justify-between items-center pt-1.5 mt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium">
-            <div>
-              Sales Invoice • Printed: {printTimestamp} • Operator: <span className="font-bold text-slate-800">{sale.user}</span>
-            </div>
-            <div className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-300 text-[9.5px]">
-              Page 1 of 1
+            {/* Clean Minimal Footer Bar */}
+            <div className="border-t border-slate-300 pt-2 flex justify-between items-center text-xs text-slate-600">
+              <div className="font-medium text-slate-600">
+                {printTimestamp} • {sale.user}
+              </div>
+              <div className="font-medium text-slate-500 text-[11px]">
+                Page 1 of 1
+              </div>
             </div>
           </div>
         </div>

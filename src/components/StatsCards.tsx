@@ -26,7 +26,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ totals, isAdmin, onOpenD
             Photocopy
           </span>
           <div className="text-lg sm:text-xl font-black text-white font-tabular">
-            ৳ {formatCurrency(totals.photocopy)}
+            Tk {formatCurrency(totals.photocopy)}
           </div>
         </div>
         <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
@@ -41,7 +41,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ totals, isAdmin, onOpenD
             Online Service
           </span>
           <div className="text-lg sm:text-xl font-black text-white font-tabular">
-            ৳ {formatCurrency(totals.online)}
+            Tk {formatCurrency(totals.online)}
           </div>
         </div>
         <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
@@ -56,7 +56,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ totals, isAdmin, onOpenD
             Stationery
           </span>
           <div className="text-lg sm:text-xl font-black text-white font-tabular">
-            ৳ {formatCurrency(totals.stationery)}
+            Tk {formatCurrency(totals.stationery)}
           </div>
         </div>
         <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
@@ -71,7 +71,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ totals, isAdmin, onOpenD
             Total Collection
           </span>
           <div className="text-xl sm:text-2xl font-black text-white font-tabular">
-            ৳ {formatCurrency(totals.cashCollection)}
+            Tk {formatCurrency(totals.cashCollection)}
           </div>
         </div>
         <div className="w-9 h-9 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-amber-300">
@@ -90,7 +90,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ totals, isAdmin, onOpenD
             Outstanding Due
           </span>
           <div className="text-lg sm:text-xl font-black text-rose-400 font-tabular">
-            ৳ {formatCurrency(totals.outstandingDue)}
+            Tk {formatCurrency(totals.outstandingDue)}
           </div>
         </div>
         <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
@@ -106,7 +106,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ totals, isAdmin, onOpenD
               Total Expense
             </span>
             <div className="text-lg sm:text-xl font-black text-rose-400 font-tabular">
-              ৳ {formatCurrency(totals.totalExpense)}
+              Tk {formatCurrency(totals.totalExpense)}
             </div>
           </div>
           <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
@@ -123,7 +123,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ totals, isAdmin, onOpenD
               Cash Balance
             </span>
             <div className="text-xl sm:text-2xl font-black text-white font-tabular">
-              ৳ {formatCurrency(totals.cashBalance)}
+              Tk {formatCurrency(totals.cashBalance)}
             </div>
           </div>
           <div className="w-9 h-9 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-emerald-200">

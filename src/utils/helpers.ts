@@ -117,8 +117,8 @@ export function generateBarcodeSvg(text: string): string {
 
 export function normalizeCategory(cat?: string): 'Photocopy' | 'Online Application' | 'Stationery Products' {
   const c = (cat || '').toString().trim().toLowerCase();
-  if (c.includes('photocopy') || c.includes('ফটোকপি')) return 'Photocopy';
-  if (c.includes('stationery') || c.includes('স্টেশনারি')) return 'Stationery Products';
+  if (c.includes('photocopy')) return 'Photocopy';
+  if (c.includes('stationery')) return 'Stationery Products';
   return 'Online Application';
 }
 
@@ -127,3 +127,43 @@ export function resolveCustomerAddress(custName?: string, savedAddress?: string)
   if (addr && addr !== '--' && addr !== 'N/A' && addr !== 'Cumilla') return addr;
   return 'Paduar Bazar, Cumilla';
 }
+
+const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+const TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+export function numberToWordsTaka(amount: number | string | undefined | null): string {
+  const n = Math.round(Math.abs(Number(amount) || 0));
+  if (n === 0) return 'Zero Taka Only';
+
+  function convertHundreds(val: number): string {
+    let s = '';
+    if (val >= 100) {
+      s += ONES[Math.floor(val / 100)] + ' Hundred ';
+      val %= 100;
+    }
+    if (val >= 20) {
+      s += TENS[Math.floor(val / 10)] + ' ';
+      val %= 10;
+    }
+    if (val > 0) {
+      s += ONES[val] + ' ';
+    }
+    return s.trim();
+  }
+
+  let crore = Math.floor(n / 10000000);
+  let remainder = n % 10000000;
+  let lakh = Math.floor(remainder / 100000);
+  remainder %= 100000;
+  let thousand = Math.floor(remainder / 1000);
+  let hundred = remainder % 1000;
+
+  let words = '';
+  if (crore > 0) words += convertHundreds(crore) + ' Crore ';
+  if (lakh > 0) words += convertHundreds(lakh) + ' Lakh ';
+  if (thousand > 0) words += convertHundreds(thousand) + ' Thousand ';
+  if (hundred > 0) words += convertHundreds(hundred) + ' ';
+
+  return words.trim() + ' Taka Only';
+}
+

@@ -151,7 +151,7 @@ export const SummaryReportModal: React.FC<SummaryReportModalProps> = ({
                 </div>
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                    <span className="text-amber-500">Abu Said</span> Computer
+                    <span className="text-[#0062cc]">Abu Said</span> Computer
                   </h2>
                   <p className="text-xs font-bold text-slate-700 tracking-wide mt-1">
                     Sales & Due Summary Report
@@ -177,25 +177,25 @@ export const SummaryReportModal: React.FC<SummaryReportModalProps> = ({
             <div className="border-r border-slate-200 pr-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase block">Photocopy</span>
               <span className="text-sm font-black text-blue-700 font-tabular">
-                ৳ {formatCurrency(sumPhotocopy)}
+                Tk {formatCurrency(sumPhotocopy)}
               </span>
             </div>
             <div className="border-r border-slate-200 pr-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase block">Online Application</span>
               <span className="text-sm font-black text-emerald-700 font-tabular">
-                ৳ {formatCurrency(sumOnline)}
+                Tk {formatCurrency(sumOnline)}
               </span>
             </div>
             <div className="border-r border-slate-200 pr-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase block">Stationery</span>
               <span className="text-sm font-black text-amber-700 font-tabular">
-                ৳ {formatCurrency(sumStationery)}
+                Tk {formatCurrency(sumStationery)}
               </span>
             </div>
             <div className="bg-blue-50 py-1 rounded-xl border border-blue-200">
               <span className="text-[10px] font-bold text-blue-800 uppercase block">Total Net Sales</span>
               <span className="text-sm sm:text-base font-black text-blue-950 font-tabular">
-                ৳ {formatCurrency(sumGrand)}
+                Tk {formatCurrency(sumGrand)}
               </span>
             </div>
           </div>
@@ -245,7 +245,7 @@ export const SummaryReportModal: React.FC<SummaryReportModalProps> = ({
                       {g.due > 0 ? formatCurrency(g.due) : '-'}
                     </td>
                     <td className="py-1.5 px-3 text-right font-black text-blue-900 font-tabular">
-                      ৳ {formatCurrency(g.grandTotal)}
+                      Tk {formatCurrency(g.grandTotal)}
                     </td>
                   </tr>
                 );
@@ -272,7 +272,7 @@ export const SummaryReportModal: React.FC<SummaryReportModalProps> = ({
                   {formatCurrency(sumDue)}
                 </td>
                 <td className="py-2.5 px-3 text-right text-blue-900 font-black text-sm font-tabular">
-                  ৳ {formatCurrency(sumGrand)}
+                  Tk {formatCurrency(sumGrand)}
                 </td>
               </tr>
             </tfoot>

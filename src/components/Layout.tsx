@@ -54,6 +54,7 @@ interface LayoutProps {
   onOpenChangePassword?: () => void;
   isGoogleDriveLinked?: boolean;
   onOpenGoogleDriveBackup?: () => void;
+  onOpenDataSheet?: () => void;
   children: React.ReactNode;
 }
 
@@ -67,6 +68,7 @@ export const Layout: React.FC<LayoutProps> = ({
   onOpenChangePassword,
   isGoogleDriveLinked,
   onOpenGoogleDriveBackup,
+  onOpenDataSheet,
   children
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -94,7 +96,7 @@ export const Layout: React.FC<LayoutProps> = ({
   const navItems = [
     { id: 'sales' as ActiveTab, label: 'Sales & Invoices', icon: Receipt, perm: 'memo' },
     { id: 'dashboard' as ActiveTab, label: 'Analytics Dashboard', icon: LayoutDashboard, perm: 'memo' },
-    { id: 'due' as ActiveTab, label: 'Due Ledger', icon: BookMarked, perm: 'due', badge: totalOutstandingDue > 0 ? `৳${formatCurrency(totalOutstandingDue)}` : null, badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+    { id: 'due' as ActiveTab, label: 'Due Ledger', icon: BookMarked, perm: 'due', badge: totalOutstandingDue > 0 ? `Tk ${formatCurrency(totalOutstandingDue)}` : null, badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
     { id: 'customers' as ActiveTab, label: 'Customer Directory', icon: Users, perm: 'customer' },
     { id: 'cust_sales' as ActiveTab, label: 'Customer Sales', icon: TrendingUp, perm: 'cust_sales' },
     { id: 'cash_closing' as ActiveTab, label: 'Daily Cash Closing', icon: Coins, perm: 'cash_closing' },
@@ -174,7 +176,7 @@ export const Layout: React.FC<LayoutProps> = ({
               {!isSidebarCollapsed && (
                 <div>
                   <div className="flex items-center gap-1.5 leading-none">
-                    <span className="text-amber-500 font-black text-lg">Abu Said</span>
+                    <span className="text-[#0062cc] font-black text-lg">Abu Said</span>
                     <span className="text-white font-black text-lg">Computer</span>
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium mt-1">

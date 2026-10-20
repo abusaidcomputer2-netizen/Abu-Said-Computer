@@ -132,7 +132,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
             <div>
               <span className="text-[10px] uppercase font-bold text-rose-400 block">Total Due Billed (Dr)</span>
               <div className="text-lg font-black text-white font-tabular">
-                ৳ {formatCurrency(selectedFilterCust === 'ALL' ? dueTotals.shopTotalDue : activeBilled)}
+                Tk {formatCurrency(selectedFilterCust === 'ALL' ? dueTotals.shopTotalDue : activeBilled)}
               </div>
             </div>
             <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
@@ -144,7 +144,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
             <div>
               <span className="text-[10px] uppercase font-bold text-emerald-400 block">Total Paid (Cr)</span>
               <div className="text-lg font-black text-white font-tabular">
-                ৳ {formatCurrency(selectedFilterCust === 'ALL' ? dueTotals.shopTotalPaid : activePaid)}
+                Tk {formatCurrency(selectedFilterCust === 'ALL' ? dueTotals.shopTotalPaid : activePaid)}
               </div>
             </div>
             <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -158,7 +158,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                 Current Outstanding (Net Due)
               </span>
               <div className="text-2xl sm:text-3xl font-black text-white font-tabular">
-                ৳ {formatCurrency(selectedFilterCust === 'ALL' ? dueTotals.netDue : activeNet)}
+                Tk {formatCurrency(selectedFilterCust === 'ALL' ? dueTotals.netDue : activeNet)}
               </div>
             </div>
             <div className="w-9 h-9 rounded-xl bg-white/20 text-amber-300 flex items-center justify-center">
@@ -188,7 +188,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                 <option value="ALL">All Due Customers ({customerSummaries.length})</option>
                 {customerSummaries.map(c => (
                   <option key={c.name} value={c.name}>
-                    {c.name} (Due: ৳{formatCurrency(c.netBalance)})
+                    {c.name} (Due: Tk {formatCurrency(c.netBalance)})
                   </option>
                 ))}
               </select>
@@ -285,10 +285,10 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                     </td>
                     <td className="p-3 text-slate-300 text-xs">{r.desc || '--'}</td>
                     <td className="p-3 text-right font-black text-rose-400 font-tabular">
-                      {r.due > 0 ? `৳ ${formatCurrency(r.due)}` : '-'}
+                      {r.due > 0 ? `Tk ${formatCurrency(r.due)}` : '-'}
                     </td>
                     <td className="p-3 text-right font-black text-emerald-400 font-tabular">
-                      {r.paid > 0 ? `৳ ${formatCurrency(r.paid)}` : '-'}
+                      {r.paid > 0 ? `Tk ${formatCurrency(r.paid)}` : '-'}
                     </td>
                   </tr>
                 ))
@@ -326,7 +326,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                 <option value="">Select customer...</option>
                 {customerSummaries.map(c => (
                   <option key={c.name} value={c.name}>
-                    {c.name} (Due: ৳{formatCurrency(c.netBalance)})
+                    {c.name} (Due: Tk {formatCurrency(c.netBalance)})
                   </option>
                 ))}
               </select>
@@ -345,7 +345,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
 
             <div className="sm:col-span-2">
               <label className="block text-[11px] font-bold text-emerald-400 mb-1">
-                Amount (৳) *
+                Amount (Tk ) *
               </label>
               <input
                 type="number"

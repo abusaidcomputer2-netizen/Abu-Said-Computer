@@ -7,7 +7,8 @@ import {
   CalendarDays, 
   RotateCw, 
   Edit3, 
-  Trash2 
+  Trash2,
+  FileSpreadsheet
 } from 'lucide-react';
 import { SaleRecord } from '../types';
 import { formatCurrency, formatDateDisplay } from '../utils/helpers';
@@ -32,6 +33,7 @@ interface TransactionTableProps {
   onReload: () => void;
   onPrintInvoice: (sale: SaleRecord) => void;
   onOpenSummaryReport: () => void;
+  onOpenDataSheet?: () => void;
   onEditSale: (sale: SaleRecord) => void;
   onDeleteSale: (sale: SaleRecord) => void;
 }
@@ -56,6 +58,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   onReload,
   onPrintInvoice,
   onOpenSummaryReport,
+  onOpenDataSheet,
   onEditSale,
   onDeleteSale,
 }) => {
@@ -98,15 +101,6 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
             >
               <CalendarDays className="w-3.5 h-3.5 text-emerald-400" /> Running Month
-            </button>
-
-            <button
-              type="button"
-              onClick={onReload}
-              className="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-              title="Reload Data"
-            >
-              <RotateCw className="w-3.5 h-3.5" /> Reload
             </button>
           </div>
         </div>
@@ -221,12 +215,12 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                     )}
                   </td>
                   <td className="p-3 text-right font-black text-emerald-400 text-sm font-tabular whitespace-nowrap">
-                    ৳ {formatCurrency(s.grandTotal)}
+                    Tk {formatCurrency(s.grandTotal)}
                   </td>
                   <td className="p-3 text-center whitespace-nowrap">
                     {s.due > 0 ? (
                       <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
-                        Due: ৳{formatCurrency(s.due)}
+                        Due: Tk {formatCurrency(s.due)}
                       </span>
                     ) : (
                       <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold">

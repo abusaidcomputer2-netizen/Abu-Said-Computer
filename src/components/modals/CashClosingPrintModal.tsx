@@ -34,8 +34,8 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
     cashClosing.difference === 0
       ? 'CASH BALANCED (MATCHED)'
       : cashClosing.difference < 0
-      ? `CASH SHORT: ৳ ${formatCurrency(Math.abs(cashClosing.difference))}`
-      : `CASH EXCESS: ৳ ${formatCurrency(cashClosing.difference)}`;
+      ? `CASH SHORT: Tk ${formatCurrency(Math.abs(cashClosing.difference))}`
+      : `CASH EXCESS: Tk ${formatCurrency(cashClosing.difference)}`;
 
   const statusColor =
     cashClosing.difference === 0
@@ -86,7 +86,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
                 </div>
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                    <span className="text-amber-500">Abu Said</span> Computer
+                    <span className="text-[#0062cc]">Abu Said</span> Computer
                   </h2>
                   <p className="text-xs font-bold text-slate-700 tracking-wide mt-1">
                     Daily Cash Closing & Drawer Reconciliation Slip
@@ -98,11 +98,11 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
               </div>
               <div className="text-right flex-shrink-0">
                 <h3 className="text-xl font-black text-emerald-900 uppercase">CASH CLOSING</h3>
-                <p className="text-xs text-slate-800 font-bold mt-1">
-                  Date : <span className="font-black text-slate-900">{formatDateDisplay(cashClosing.date)}</span>
+                <p className="text-xs text-slate-800 font-bold mt-1 text-right">
+                  <span className="font-black text-slate-900">{formatDateDisplay(cashClosing.date)}</span> : Date
                 </p>
-                <p className="text-[11px] text-slate-600 font-semibold mt-0.5">
-                  Cashier : <span className="font-bold text-slate-900">{cashClosing.user || currentUser}</span>
+                <p className="text-[11px] text-slate-600 font-semibold mt-0.5 text-right">
+                  <span className="font-bold text-slate-900">{cashClosing.user || currentUser}</span> : Cashier
                 </p>
               </div>
             </div>
@@ -124,7 +124,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
                   <tr>
                     <td className="py-2 px-3 border-r border-slate-200 text-slate-700">Opening Balance (Yesterday):</td>
                     <td className="py-2 px-3 text-right font-black text-slate-900 font-tabular">
-                      ৳ {formatCurrency(cashClosing.openingCash)}
+                      Tk {formatCurrency(cashClosing.openingCash)}
                     </td>
                   </tr>
                   {cashClosing.prevShortageDeducted > 0 && (
@@ -133,20 +133,20 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
                         (-) Prev Day Shortage Deducted:
                       </td>
                       <td className="py-2 px-3 text-right font-black text-rose-700 font-tabular">
-                        -৳ {formatCurrency(cashClosing.prevShortageDeducted)}
+                        -Tk {formatCurrency(cashClosing.prevShortageDeducted)}
                       </td>
                     </tr>
                   )}
                   <tr>
                     <td className="py-2 px-3 border-r border-slate-200 text-slate-700">(+) Sales Cash Received:</td>
                     <td className="py-2 px-3 text-right font-black text-emerald-700 font-tabular">
-                      ৳ {formatCurrency(cashClosing.salesInflow)}
+                      Tk {formatCurrency(cashClosing.salesInflow)}
                     </td>
                   </tr>
                   <tr>
                     <td className="py-2 px-3 border-r border-slate-200 text-slate-700">(+) Due Collected Today:</td>
                     <td className="py-2 px-3 text-right font-black text-emerald-700 font-tabular">
-                      ৳ {formatCurrency(cashClosing.dueInflow)}
+                      Tk {formatCurrency(cashClosing.dueInflow)}
                     </td>
                   </tr>
                   <tr className="bg-emerald-50">
@@ -154,7 +154,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
                       Total Cash Inflow:
                     </td>
                     <td className="py-1.5 px-3 text-right font-black text-emerald-900 font-tabular">
-                      ৳ {formatCurrency(cashClosing.totalInflow)}
+                      Tk {formatCurrency(cashClosing.totalInflow)}
                     </td>
                   </tr>
                   <tr>
@@ -162,7 +162,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
                       (-) Cash Outflows (Expenses & Purchases):
                     </td>
                     <td className="py-2 px-3 text-right font-black text-rose-700 font-tabular">
-                      -৳ {formatCurrency(cashClosing.expenseOutflow)}
+                      -Tk {formatCurrency(cashClosing.expenseOutflow)}
                     </td>
                   </tr>
                 </tbody>
@@ -170,7 +170,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
                   <tr>
                     <td className="py-2.5 px-3 text-blue-950 text-sm">Expected Drawer Cash:</td>
                     <td className="py-2.5 px-3 text-right text-base text-blue-950 font-black font-tabular">
-                      ৳ {formatCurrency(cashClosing.expectedCash)}
+                      Tk {formatCurrency(cashClosing.expectedCash)}
                     </td>
                   </tr>
                 </tfoot>
@@ -198,7 +198,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
                         {d.count > 0 ? d.count : '-'}
                       </td>
                       <td className="py-1.5 px-3 text-right font-black text-slate-900 font-tabular">
-                        ৳ {formatCurrency(d.count * d.val)}
+                        Tk {formatCurrency(d.count * d.val)}
                       </td>
                     </tr>
                   ))}
@@ -210,7 +210,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
                       Coins
                     </td>
                     <td className="py-1.5 px-3 text-right font-black text-slate-900 font-tabular">
-                      ৳ {formatCurrency(den.coins || 0)}
+                      Tk {formatCurrency(den.coins || 0)}
                     </td>
                   </tr>
                 </tbody>
@@ -220,7 +220,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
                       Actual Physical Cash:
                     </td>
                     <td className="py-2.5 px-3 text-right text-base text-emerald-900 font-black font-tabular">
-                      ৳ {formatCurrency(cashClosing.actualCash)}
+                      Tk {formatCurrency(cashClosing.actualCash)}
                     </td>
                   </tr>
                 </tfoot>
@@ -231,10 +231,10 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
           {/* Final Reconciliation Summary Bar */}
           <div className="bg-slate-100 border border-slate-300 p-3.5 rounded-2xl flex justify-between items-center text-xs font-bold">
             <div>
-              Expected Cash : <span className="text-slate-900 font-black text-sm font-tabular">৳ {formatCurrency(cashClosing.expectedCash)}</span>
+              Expected Cash : <span className="text-slate-900 font-black text-sm font-tabular">Tk {formatCurrency(cashClosing.expectedCash)}</span>
             </div>
             <div>
-              Actual Cash : <span className="text-emerald-800 font-black text-sm font-tabular">৳ {formatCurrency(cashClosing.actualCash)}</span>
+              Actual Cash : <span className="text-emerald-800 font-black text-sm font-tabular">Tk {formatCurrency(cashClosing.actualCash)}</span>
             </div>
             <div>
               Difference :{' '}
@@ -247,7 +247,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
                     : 'text-amber-700'
                 }`}
               >
-                {cashClosing.difference === 0 ? '৳ 0' : cashClosing.difference < 0 ? `-৳ ${formatCurrency(Math.abs(cashClosing.difference))}` : `+৳ ${formatCurrency(cashClosing.difference)}`}
+                {cashClosing.difference === 0 ? 'Tk 0' : cashClosing.difference < 0 ? `-Tk ${formatCurrency(Math.abs(cashClosing.difference))}` : `+Tk ${formatCurrency(cashClosing.difference)}`}
               </span>
             </div>
           </div>
@@ -276,7 +276,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
           {/* Footer */}
           <div className="print-doc-footer flex justify-between items-center pt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
             <div>
-              Daily Cash Closing Slip - Printed : {nowFormatted} • {currentUser}
+              {nowFormatted} • {currentUser}
             </div>
             <div className="font-bold text-slate-700">Page 1 of 1</div>
           </div>

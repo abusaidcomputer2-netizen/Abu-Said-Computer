@@ -261,7 +261,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                 </div>
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
-                    <span className="text-amber-500">Abu Said</span> Computer
+                    <span className="text-[#0062cc]">Abu Said</span> Computer
                   </h2>
                   <p className="text-xs font-bold text-slate-700 tracking-wide mt-1">
                     Online Service & IT Point • Business Financial Statement
@@ -273,8 +273,8 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
               </div>
               <div className="text-right flex-shrink-0">
                 <h3 className="text-xl font-black text-slate-900 uppercase">FINANCIAL STATEMENT</h3>
-                <p className="text-xs text-slate-700 font-bold mt-1">
-                  Period : <span className="text-blue-900 font-black">{periodLabel}</span>
+                <p className="text-xs text-slate-700 font-bold mt-1 text-right">
+                  <span className="text-blue-900 font-black">{periodLabel}</span> : Period
                 </p>
               </div>
             </div>
@@ -286,7 +286,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                 1. Total Sales (Billed)
               </span>
               <div className="text-xl sm:text-2xl font-black text-blue-900 font-tabular">
-                ৳ {formatCurrency(netSalesBilled)}
+                Tk {formatCurrency(netSalesBilled)}
               </div>
               <span className="text-[10px] text-blue-600 font-semibold">
                 {filteredSales.length} Memos
@@ -298,7 +298,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                 2. Cash Collection
               </span>
               <div className="text-xl sm:text-2xl font-black text-emerald-800 font-tabular">
-                ৳ {formatCurrency(totalCashInflow)}
+                Tk {formatCurrency(totalCashInflow)}
               </div>
               <span className="text-[10px] text-emerald-700 font-semibold">
                 (Current + Past Due)
@@ -310,7 +310,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                 3. Total Outflow
               </span>
               <div className="text-xl sm:text-2xl font-black text-rose-700 font-tabular">
-                ৳ {formatCurrency(totalOutflow)}
+                Tk {formatCurrency(totalOutflow)}
               </div>
               <span className="text-[10px] text-rose-600 font-semibold">
                 {filteredExpenses.length} Entries
@@ -322,7 +322,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                 4. Net Drawer Cash
               </span>
               <div className="text-xl sm:text-2xl font-black text-teal-800 font-tabular">
-                ৳ {formatCurrency(netDrawerCash)}
+                Tk {formatCurrency(netDrawerCash)}
               </div>
               <span className="text-[10px] text-teal-700 font-semibold">
                 (Inflow - Outflow)
@@ -352,19 +352,19 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                   <tr>
                     <td className="py-2 px-3 border-r border-slate-200">Photocopy Services</td>
                     <td className="py-2 px-3 text-right font-black text-blue-900 font-tabular">
-                      ৳ {formatCurrency(pSales)}
+                      Tk {formatCurrency(pSales)}
                     </td>
                   </tr>
                   <tr>
                     <td className="py-2 px-3 border-r border-slate-200">Online Applications</td>
                     <td className="py-2 px-3 text-right font-black text-blue-900 font-tabular">
-                      ৳ {formatCurrency(oSales)}
+                      Tk {formatCurrency(oSales)}
                     </td>
                   </tr>
                   <tr>
                     <td className="py-2 px-3 border-r border-slate-200">Stationery Products</td>
                     <td className="py-2 px-3 text-right font-black text-blue-900 font-tabular">
-                      ৳ {formatCurrency(sSales)}
+                      Tk {formatCurrency(sSales)}
                     </td>
                   </tr>
                   <tr className="bg-slate-50">
@@ -372,7 +372,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Gross Subtotal:
                     </td>
                     <td className="py-1.5 px-3 text-right font-black text-slate-900 font-tabular">
-                      ৳ {formatCurrency(subtotal)}
+                      Tk {formatCurrency(subtotal)}
                     </td>
                   </tr>
                   <tr className="bg-slate-50">
@@ -380,7 +380,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Less Discounts:
                     </td>
                     <td className="py-1.5 px-3 text-right font-black text-rose-600 font-tabular">
-                      -৳ {formatCurrency(discounts)}
+                      -Tk {formatCurrency(discounts)}
                     </td>
                   </tr>
                   <tr className="bg-blue-50/50">
@@ -388,7 +388,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Net Sales Billed:
                     </td>
                     <td className="py-2 px-3 text-right font-black text-blue-900 font-tabular text-sm">
-                      ৳ {formatCurrency(netSalesBilled)}
+                      Tk {formatCurrency(netSalesBilled)}
                     </td>
                   </tr>
                   <tr>
@@ -396,7 +396,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Cash Received from Sales:
                     </td>
                     <td className="py-2 px-3 text-right font-black text-slate-900 font-tabular">
-                      ৳ {formatCurrency(cashFromSales)}
+                      Tk {formatCurrency(cashFromSales)}
                     </td>
                   </tr>
                   <tr>
@@ -404,7 +404,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Previous Due Collected:
                     </td>
                     <td className="py-2 px-3 text-right font-black text-emerald-700 font-tabular">
-                      ৳ {formatCurrency(dueCollected)}
+                      Tk {formatCurrency(dueCollected)}
                     </td>
                   </tr>
                 </tbody>
@@ -414,7 +414,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Total Cash Inflow (Drawer):
                     </td>
                     <td className="py-2.5 px-3 text-right font-black text-base text-emerald-900 font-tabular">
-                      ৳ {formatCurrency(totalCashInflow)}
+                      Tk {formatCurrency(totalCashInflow)}
                     </td>
                   </tr>
                 </tfoot>
@@ -451,7 +451,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       <tr key={c}>
                         <td className="py-2 px-3 border-r border-slate-200 font-bold text-slate-700">{c}</td>
                         <td className="py-2 px-3 text-right font-black text-rose-700 font-tabular">
-                          ৳ {formatCurrency(expCatMap[c])}
+                          Tk {formatCurrency(expCatMap[c])}
                         </td>
                       </tr>
                     ))
@@ -463,7 +463,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Total Outflow (Expenses + Purchases):
                     </td>
                     <td className="py-2.5 px-3 text-right font-black text-base text-rose-800 font-tabular">
-                      ৳ {formatCurrency(totalOutflow)}
+                      Tk {formatCurrency(totalOutflow)}
                     </td>
                   </tr>
                 </tfoot>
@@ -486,7 +486,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                   1. Previous Due
                 </span>
                 <span className="text-xl sm:text-2xl font-black text-slate-900 font-tabular">
-                  ৳ {formatCurrency(prevDue)}
+                  Tk {formatCurrency(prevDue)}
                 </span>
               </div>
 
@@ -495,7 +495,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                   2. New Billed Due
                 </span>
                 <span className="text-xl sm:text-2xl font-black text-amber-700 font-tabular">
-                  ৳ {formatCurrency(newDueBilled)}
+                  Tk {formatCurrency(newDueBilled)}
                 </span>
               </div>
 
@@ -504,7 +504,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                   3. Due Collected
                 </span>
                 <span className="text-xl sm:text-2xl font-black text-emerald-700 font-tabular">
-                  ৳ {formatCurrency(dueCollected)}
+                  Tk {formatCurrency(dueCollected)}
                 </span>
               </div>
 
@@ -513,7 +513,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                   4. Total Net Due
                 </span>
                 <span className="text-xl sm:text-2xl font-black text-rose-800 font-tabular">
-                  ৳ {formatCurrency(totalNetDue)}
+                  Tk {formatCurrency(totalNetDue)}
                 </span>
               </div>
             </div>
@@ -537,7 +537,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
           {/* Footer */}
           <div className="print-doc-footer flex justify-between items-center pt-2 text-[10.5px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
             <div>
-              Business Financial Statement - Printed : {nowFormatted} • {currentUser}
+              {nowFormatted} • {currentUser}
             </div>
             <div className="font-bold text-slate-700">Page 1 of 1</div>
           </div>

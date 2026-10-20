@@ -62,7 +62,7 @@ export const DeleteMemoModal: React.FC<DeleteMemoModalProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 font-bold">Amount:</span>
-                <span className="font-black text-emerald-400 font-tabular">৳ {formatCurrency(sale.grandTotal)}</span>
+                <span className="font-black text-emerald-400 font-tabular">Tk {formatCurrency(sale.grandTotal)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 font-bold">Date & Time:</span>

@@ -95,7 +95,7 @@ export const StockInventoryModal: React.FC<StockInventoryModalProps> = ({
           <div className="bg-slate-950 border border-emerald-500/30 p-3 rounded-2xl">
             <span className="text-[10px] font-bold text-emerald-400 uppercase block">Stock Cost Valuation</span>
             <div className="text-lg sm:text-xl font-black text-emerald-400 font-tabular">
-              ৳ {formatCurrency(totalStockValue)}
+              Tk {formatCurrency(totalStockValue)}
             </div>
           </div>
           <div className="bg-slate-950 border border-rose-500/30 p-3 rounded-2xl">
@@ -166,13 +166,13 @@ export const StockInventoryModal: React.FC<StockInventoryModalProps> = ({
                     <tr key={p.id} className="hover:bg-slate-900/60 transition">
                       <td className="p-3 text-center font-bold text-amber-400">{p.sl}</td>
                       <td className="p-3 font-bold text-white">{p.name}</td>
-                      <td className="p-3 text-right text-slate-400 font-tabular">৳ {formatCurrency(cost)}</td>
+                      <td className="p-3 text-right text-slate-400 font-tabular">Tk {formatCurrency(cost)}</td>
                       <td className="p-3 text-right font-black text-emerald-400 font-tabular">
-                        ৳ {formatCurrency(p.price)}
+                        Tk {formatCurrency(p.price)}
                       </td>
                       <td className="p-3 text-center font-bold text-blue-300 font-tabular">{qty}</td>
                       <td className="p-3 text-right font-black text-white font-tabular">
-                        ৳ {formatCurrency(val)}
+                        Tk {formatCurrency(val)}
                       </td>
                       <td className="p-3 text-center">
                         <span className={`px-2.5 py-0.5 rounded-full border text-xs ${badgeColor}`}>

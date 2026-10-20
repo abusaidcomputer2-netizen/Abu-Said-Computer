@@ -202,8 +202,8 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                       <td className="p-3 text-slate-400 whitespace-nowrap">{formatDateDisplay(p.date)}</td>
                       <td className="p-3 font-bold text-white">{p.product}</td>
                       <td className="p-3 text-center font-black text-blue-300 font-tabular">{p.qty}</td>
-                      <td className="p-3 text-right text-slate-400 font-tabular">৳ {formatCurrency(p.unitCost)}</td>
-                      <td className="p-3 text-right font-black text-emerald-400 font-tabular">৳ {formatCurrency(p.totalCost)}</td>
+                      <td className="p-3 text-right text-slate-400 font-tabular">Tk {formatCurrency(p.unitCost)}</td>
+                      <td className="p-3 text-right font-black text-emerald-400 font-tabular">Tk {formatCurrency(p.totalCost)}</td>
                       <td className="p-3 text-xs text-slate-400">
                         {p.supplier && <span className="text-amber-300 font-bold mr-1">{p.supplier}</span>}
                         {p.notes}
@@ -349,7 +349,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
 
                   <div className="sm:col-span-2 text-right">
                     <span className="font-black text-emerald-400 text-xs sm:text-sm font-tabular">
-                      ৳ {formatCurrency(it.totalCost)}
+                      Tk {formatCurrency(it.totalCost)}
                     </span>
                   </div>
 
@@ -377,7 +377,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
               <div className="text-right">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Grand Total Cost:</span>
                 <span className="text-xl sm:text-2xl font-black text-emerald-400 font-tabular">
-                  ৳ {formatCurrency(grandTotalCost)}
+                  Tk {formatCurrency(grandTotalCost)}
                 </span>
               </div>
               <button

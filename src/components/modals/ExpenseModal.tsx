@@ -13,50 +13,30 @@ interface ExpenseModalProps {
   showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
-export const EXPENSE_CATEGORIES_BN = [
-  'দোকান ভাড়া',
-  'বিদ্যুৎ বিল',
-  'ইন্টারনেট বিল',
-  'কর্মচারী বেতন',
-  'কাগজ ক্রয়',
-  'কালি ও টোনার ক্রয়',
-  'মেশিন মেরামত ও সার্ভিসিং',
-  'চা ও আপ্যায়ন',
-  'স্টেশনারি মালামাল ক্রয়',
-  'ফটোকপি কাগজ ও মালামাল',
-  'হার্ডওয়্যার ও কম্পিউটার যন্ত্রাংশ',
-  'যাতায়াত ও পরিবহন খরচ',
-  'মোবাইল রিচার্জ ও বিল',
-  'দোকান সাজসজ্জা ও সংস্কার',
-  'প্যাকেজিং ও অন্যান্য খরচ',
-  'অন্যান্য খরচ'
+export const EXPENSE_CATEGORIES_EN = [
+  'Shop Rent',
+  'Electricity Bill',
+  'Internet Bill',
+  'Staff Salary',
+  'Paper Purchase',
+  'Ink & Toner',
+  'Machine Repair & Servicing',
+  'Tea & Entertainment',
+  'Stationery Supplies',
+  'Photocopy Consumables',
+  'Hardware & Parts',
+  'Conveyance & Transport',
+  'Mobile Bill & Recharge',
+  'Shop Renovation',
+  'Packaging & Supplies',
+  'Other Expenses'
 ];
 
-export const formatExpenseCategoryBn = (cat: string) => {
-  const map: Record<string, string> = {
-    'shop rent': 'দোকান ভাড়া',
-    'electricity bill': 'বিদ্যুৎ বিল',
-    'internet bill': 'ইন্টারনেট বিল',
-    'staff salary': 'কর্মচারী বেতন',
-    'paper purchase': 'কাগজ ক্রয়',
-    'ink / toner': 'কালি ও টোনার ক্রয়',
-    'ink and toner': 'কালি ও টোনার ক্রয়',
-    'machine maintenance': 'মেশিন মেরামত ও সার্ভিসিং',
-    'tea & snacks': 'চা ও আপ্যায়ন',
-    'tea and snacks': 'চা ও আপ্যায়ন',
-    'stationery products purchase': 'স্টেশনারি মালামাল ক্রয়',
-    'photocopy paper & toner purchase': 'ফটোকপি কাগজ ও মালামাল',
-    'hardware & tools': 'হার্ডওয়্যার ও কম্পিউটার যন্ত্রাংশ',
-    'conveyance': 'যাতায়াত ও পরিবহন খরচ',
-    'mobile recharge': 'মোবাইল রিচার্জ ও বিল',
-    'others': 'অন্যান্য খরচ',
-    'general': 'অন্যান্য খরচ'
-  };
-  const key = (cat || '').toLowerCase().trim();
-  return map[key] || cat;
+export const formatExpenseCategoryEn = (cat: string) => {
+  return cat || 'Other Expenses';
 };
 
-const DEFAULT_CATEGORIES = EXPENSE_CATEGORIES_BN;
+const DEFAULT_CATEGORIES = EXPENSE_CATEGORIES_EN;
 
 export const ExpenseModal: React.FC<ExpenseModalProps> = ({
   expenses,
@@ -93,7 +73,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
   const handleEdit = (exp: ExpenseRecord) => {
     setEditingId(exp.id);
-    setCategory(exp.category);
+    setCategory(formatExpenseCategoryEn(exp.category));
     setAmount(String(exp.amount));
     setDate(exp.date);
     setDescription(exp.desc || '');
@@ -135,7 +115,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
             <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
               <Receipt className="w-4 h-4" />
             </div>
-            <span>Operating Expense Records & Management</span>
+            <span>Operating Expense Management</span>
           </h3>
           <div className="flex items-center gap-2">
             <button
@@ -160,7 +140,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
                 Recent Expense Entries
               </h4>
               <span className="text-xs text-rose-400 font-black font-tabular">
-                Total: ৳ {formatCurrency(totalExpense)} ({filteredExpenses.length} Entries)
+                Total: Tk {formatCurrency(totalExpense)} ({filteredExpenses.length} Entries)
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -207,10 +187,10 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
                       <td className="p-3 whitespace-nowrap text-slate-400 font-semibold">
                         {formatDateDisplay(e.date)}
                       </td>
-                      <td className="p-3 font-bold text-rose-300">{e.category}</td>
+                      <td className="p-3 font-bold text-rose-300">{formatExpenseCategoryEn(e.category)}</td>
                       <td className="p-3 text-slate-300 text-xs">{e.desc || '--'}</td>
                       <td className="p-3 text-right font-black text-rose-400 font-tabular">
-                        ৳ {formatCurrency(e.amount)}
+                        Tk {formatCurrency(e.amount)}
                       </td>
                       <td className="p-3 text-center space-x-1.5 whitespace-nowrap">
                         <button
@@ -274,7 +254,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
             </div>
 
             <div className="sm:col-span-3">
-              <label className="block text-[11px] font-bold text-slate-400 mb-1">Amount (৳) *</label>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">Amount (Tk) *</label>
               <input
                 type="number"
                 min="1"

@@ -13,7 +13,8 @@ import {
   LogOut,
   Database,
   Building2,
-  KeyRound
+  KeyRound,
+  FileSpreadsheet
 } from 'lucide-react';
 import { User } from '../types';
 
@@ -22,6 +23,7 @@ interface NavbarProps {
   lowStockCount: number;
   onLogout: () => void;
   onOpenChangePassword?: () => void;
+  onOpenDataSheet: () => void;
   onOpenDueLedger: () => void;
   onOpenCustomer: () => void;
   onOpenCustomerSales: () => void;
@@ -40,6 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   lowStockCount,
   onLogout,
   onOpenChangePassword,
+  onOpenDataSheet,
   onOpenDueLedger,
   onOpenCustomer,
   onOpenCustomerSales,
@@ -50,8 +53,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenExpense,
   onOpenProduct,
   onOpenUser,
-  onOpenMigration,
-}) => {
+  onMigration: onOpenMigration,
+}: any) => {
   const isAdmin = currentUser.role === 'admin';
   const perms = (currentUser.permissions || '').toLowerCase();
   const hasPerm = (p: string) => isAdmin || perms === 'all' || perms.includes(p);
@@ -73,9 +76,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-amber-500 font-black text-lg tracking-tight">Abu Said</span>
+              <span className="text-[#0062cc] font-black text-lg tracking-tight drop-shadow-xs">Abu Said</span>
               <span className="text-white font-black text-lg tracking-tight">Computer</span>
-              <span className="text-[10px] uppercase font-black px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <span className="text-[10px] uppercase font-black px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30">
                 PRO
               </span>
             </div>
