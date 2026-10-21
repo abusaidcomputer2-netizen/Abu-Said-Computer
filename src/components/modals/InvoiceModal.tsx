@@ -129,7 +129,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                     <th className="py-2.5 px-4 border-r border-slate-300">Item Description / Service</th>
                     <th className="py-2.5 px-3 text-right w-24 sm:w-28 border-r border-slate-300">Rate</th>
                     <th className="py-2.5 px-3 text-center w-16 sm:w-20 border-r border-slate-300">Qty</th>
-                    <th className="py-2.5 px-4 text-right w-28 sm:w-32">Total Amount</th>
+                    <th className="py-2.5 px-2.5 sm:px-4 text-right whitespace-nowrap text-[11px] sm:text-xs">Total Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 text-slate-900 font-semibold">
