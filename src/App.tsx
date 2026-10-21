@@ -594,11 +594,63 @@ export default function App() {
       });
     }
 
+    // 5. Immediate optimistic update for Due Ledger if memo has due
+    if (newRecord.due > 0) {
+      const dueId = `INV-${invoiceNo}`;
+      const newDueRec: DueRecord = {
+        rowId: Date.now(),
+        id: dueId,
+        date: newRecord.date,
+        customer: newRecord.customer,
+        phone: newRecord.phone,
+        address: newRecord.address,
+        type: 'Memo / Bill',
+        desc: `Memo #${invoiceNo}${newRecord.desc ? ` [${newRecord.desc}]` : ''}`,
+        due: newRecord.due,
+        paid: 0,
+        user: newRecord.user,
+        timestamp: newRecord.timestamp
+      };
+      setDueRecords(prev => [newDueRec, ...prev.filter(d => d.id !== dueId)]);
+      setCustomerSummaries(prev => {
+        const existingIdx = prev.findIndex(c => c.name.toLowerCase() === newRecord.customer.toLowerCase());
+        if (existingIdx >= 0) {
+          const updated = [...prev];
+          const curr = updated[existingIdx];
+          const totalDue = curr.totalDue + newRecord.due;
+          const netBalance = totalDue - curr.totalPaid;
+          updated[existingIdx] = { ...curr, totalDue, netBalance };
+          return updated;
+        } else {
+          return [
+            ...prev,
+            {
+              name: newRecord.customer,
+              phone: newRecord.phone || '',
+              address: newRecord.address || 'Paduar Bazar, Cumilla',
+              totalDue: newRecord.due,
+              totalPaid: 0,
+              netBalance: newRecord.due
+            }
+          ];
+        }
+      });
+      setDueTotals(prev => ({
+        shopTotalDue: prev.shopTotalDue + newRecord.due,
+        shopTotalPaid: prev.shopTotalPaid,
+        netDue: prev.netDue + newRecord.due
+      }));
+      updateCachedBootstrap(prev => ({
+        ...prev,
+        dueRecords: [newDueRec, ...(prev.dueRecords || []).filter((d: any) => d.id !== dueId)]
+      }));
+    }
+
     setEditingSale(null);
     setActiveTab('sales');
     setInvoiceModalSale(newRecord);
 
-    // 5. Send to Backend API
+    // 6. Send to Backend API
     const url = isEdit ? `/api/sales/${payload.id}` : '/api/sales';
     const method = isEdit ? 'PUT' : 'POST';
 
@@ -612,21 +664,15 @@ export default function App() {
         showToast(data.message, 'success');
         if (data.invoiceData) {
           setInvoiceModalSale(data.invoiceData);
-          setSales(prev => prev.map(s => s.id === newRecord.id ? data.invoiceData : s));
-          updateCachedBootstrap(prev => {
-            const list = prev.records || prev.sales || [];
-            return {
-              ...prev,
-              records: list.map((s: any) => s.id === newRecord.id ? data.invoiceData : s),
-              sales: list.map((s: any) => s.id === newRecord.id ? data.invoiceData : s)
-            };
-          });
         }
       } else {
         showToast(isEdit ? 'Invoice updated!' : 'Invoice generated successfully!', 'success');
       }
     } catch {
       showToast(isEdit ? 'Invoice updated!' : 'Invoice generated successfully!', 'success');
+    } finally {
+      // Re-synchronize full store state from SQLite database
+      await fetchBootstrapData();
     }
   };
 
@@ -649,6 +695,8 @@ export default function App() {
       }
     } catch {
       showToast('Memo deleted', 'info');
+    } finally {
+      await fetchBootstrapData();
     }
   };
 
@@ -725,6 +773,8 @@ export default function App() {
       }
     } catch {
       showToast('Purchase recorded successfully', 'success');
+    } finally {
+      await fetchBootstrapData();
     }
     setActiveTab('sales');
   };
@@ -743,19 +793,27 @@ export default function App() {
       }
     } catch {
       // local delete already applied
+    } finally {
+      await fetchBootstrapData();
     }
     setActiveTab('sales');
   };
 
   const handleSubmitPaperUsage = async (payload: any) => {
-    const { data } = await safeFetchJson<any>('/api/photocopy-paper', {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    if (data && data.status === 'success') {
-      showToast(data.message, 'success');
-    } else {
+    try {
+      const { data } = await safeFetchJson<any>('/api/photocopy-paper', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      if (data && data.status === 'success') {
+        showToast(data.message, 'success');
+      } else {
+        showToast('Paper usage logged', 'success');
+      }
+    } catch {
       showToast('Paper usage logged', 'success');
+    } finally {
+      await fetchBootstrapData();
     }
     setActiveTab('sales');
   };
@@ -797,6 +855,8 @@ export default function App() {
       }
     } catch {
       showToast(isEdit ? 'Expense updated' : 'Expense recorded', 'success');
+    } finally {
+      await fetchBootstrapData();
     }
     setActiveTab('sales');
   };
@@ -815,6 +875,8 @@ export default function App() {
       }
     } catch {
       // local delete already applied
+    } finally {
+      await fetchBootstrapData();
     }
     setActiveTab('sales');
   };
@@ -928,6 +990,8 @@ export default function App() {
       }
     } catch {
       showToast(isEdit ? 'Customer updated!' : 'Customer saved!', 'success');
+    } finally {
+      await fetchBootstrapData();
     }
   };
 
@@ -947,6 +1011,8 @@ export default function App() {
       }
     } catch {
       showToast('Customer deleted', 'info');
+    } finally {
+      await fetchBootstrapData();
     }
   };
 
@@ -1005,6 +1071,8 @@ export default function App() {
       }
     } catch {
       showToast(isEdit ? 'Product updated!' : 'Product saved!', 'success');
+    } finally {
+      await fetchBootstrapData();
     }
   };
 
@@ -1024,6 +1092,8 @@ export default function App() {
       }
     } catch {
       showToast('Product deleted', 'info');
+    } finally {
+      await fetchBootstrapData();
     }
   };
 

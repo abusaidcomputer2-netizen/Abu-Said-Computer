@@ -294,6 +294,28 @@ export const Layout: React.FC<LayoutProps> = ({
                       </button>
                     );
                   })}
+                  {isAdmin && onOpenDataSheet && (
+                    <button
+                      onClick={() => {
+                        onOpenDataSheet();
+                        setSidebarOpen(false);
+                      }}
+                      title="Google Sheet & Live Data Storage"
+                      className={`w-full flex items-center ${
+                        isSidebarCollapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2'
+                      } rounded-xl text-xs font-bold transition cursor-pointer group text-emerald-300 hover:bg-slate-800/80 hover:text-white`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <FileSpreadsheet className="w-4 h-4 flex-shrink-0 text-emerald-400 group-hover:text-emerald-300" />
+                        {!isSidebarCollapsed && <span>Data Sheets</span>}
+                      </div>
+                      {!isSidebarCollapsed && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          Admin
+                        </span>
+                      )}
+                    </button>
+                  )}
                 </nav>
               </div>
             )}

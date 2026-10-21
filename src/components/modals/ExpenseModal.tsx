@@ -190,7 +190,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
                       <td className="p-3 font-bold text-rose-300">{formatExpenseCategoryEn(e.category)}</td>
                       <td className="p-3 text-slate-300 text-xs">{e.desc || '--'}</td>
                       <td className="p-3 text-right font-black text-rose-400 font-tabular">
-                        Tk {formatCurrency(e.amount)}
+                        {e.amount > 0 ? `Tk ${formatCurrency(e.amount)}` : <span className="text-slate-500 font-bold">--</span>}
                       </td>
                       <td className="p-3 text-center space-x-1.5 whitespace-nowrap">
                         <button

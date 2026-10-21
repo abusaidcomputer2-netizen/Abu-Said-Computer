@@ -178,7 +178,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
                       {e.desc || '--'}
                     </td>
                     <td className="py-1.5 px-3 text-right font-black text-rose-700 font-tabular">
-                      Tk {formatCurrency(e.amount)}
+                      {e.amount > 0 ? `Tk ${formatCurrency(e.amount)}` : '--'}
                     </td>
                   </tr>
                 ))}
@@ -214,7 +214,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
           {/* Footer */}
           <div className="print-doc-footer flex justify-between items-center pt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
             <div>
-              Expense Statement - Printed : {nowFormatted} • {currentUser}
+              {nowFormatted} • {currentUser}
             </div>
             <div className="font-bold text-slate-700">Page 1 of 1</div>
           </div>

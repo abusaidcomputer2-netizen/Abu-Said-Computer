@@ -102,6 +102,18 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             >
               <CalendarDays className="w-3.5 h-3.5 text-emerald-400" /> Running Month
             </button>
+
+            {isAdmin && onOpenDataSheet && (
+              <button
+                type="button"
+                onClick={onOpenDataSheet}
+                className="px-3 py-1.5 bg-emerald-700/80 hover:bg-emerald-600 text-white border border-emerald-500/40 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                title="Google Sheet & Live Data Storage (Admin Only)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Sheets</span>
+              </button>
+            )}
           </div>
         </div>
 

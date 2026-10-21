@@ -508,7 +508,6 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
         runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
       }
     }
-    saveDatabase();
 
     // 3. Record in Due Ledger if due > 0
     const dueVal = parseFloat(due) || 0;
@@ -523,6 +522,7 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
         user || 'Staff', `${dateStr} ${now.toTimeString().split(' ')[0]}`
       ]);
     }
+    saveDatabase();
 
     const responseRecord = {
       rowId: saleId,
@@ -661,6 +661,7 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
         runSql('UPDATE due_ledger SET due_dr = 0, description = description || " [Paid in Full]" WHERE id = ?', [existingDue.id]);
       }
     }
+    saveDatabase();
 
     const updatedSale = {
       rowId: saleId,
@@ -720,6 +721,7 @@ apiRouter.delete('/sales/:id', (req: Request, res: Response) => {
     // 3. Delete sale and items
     runSql('DELETE FROM sale_items WHERE sale_id = ?', [saleId]);
     runSql('DELETE FROM sales WHERE id = ?', [saleId]);
+    saveDatabase();
 
     return res.json({ status: 'success', message: `Invoice #${existing.invoice_no} deleted and stock restored!` });
   } catch (err: any) {
@@ -900,23 +902,37 @@ function cleanExpenseCategory(cat: string): string {
 
 apiRouter.post('/photocopy-paper', (req: Request, res: Response) => {
   try {
-    const { productName, qty } = req.body;
+    const { productName, qty, date, notes, user } = req.body;
     const pName = (productName || '').trim();
     if (!pName) return res.status(400).json({ status: 'error', message: 'Product name required' });
 
     const qVal = parseFloat(qty) || 1;
 
-    // Deduct stock from products inventory
+    // 1. Deduct stock from products inventory
     const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = LOWER(?)', [pName]);
     if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
       const newStock = Math.max(0, (prod.stock_qty || 0) - qVal);
       runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
-      saveDatabase();
     }
+
+    // 2. Log in expenses list as non-monetary paper usage entry (amount = 0)
+    const count = queryOne('SELECT COUNT(*) as c FROM expenses')?.c || 0;
+    const expId = `EXP-${count + 1001}`;
+    const now = new Date();
+    const dateStr = date || now.toISOString().split('T')[0];
+    const timestampStr = `${dateStr} ${now.toTimeString().split(' ')[0]}`;
+    const expDesc = `Paper Usage: ${qVal} unit(s) ${pName}${notes ? ` [${notes.trim()}]` : ''}`;
+
+    runSql(`
+      INSERT INTO expenses (expense_id, timestamp, date, category, description, amount, user_name)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [expId, timestampStr, dateStr, 'Photocopy Consumables', expDesc, 0, user || 'Staff']);
+
+    saveDatabase();
 
     return res.json({ 
       status: 'success', 
-      message: `Deducted ${qVal} unit(s) from paper stock for photocopy usage.` 
+      message: `Deducted ${qVal} unit(s) from paper stock and recorded in expenses log.` 
     });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });

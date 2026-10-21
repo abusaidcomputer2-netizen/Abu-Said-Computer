@@ -41,8 +41,6 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
     }
   };
 
-  const totalCost = qty * unitCost;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!productName) {
@@ -59,8 +57,8 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
       await onSubmitPaperUsage({
         productName,
         qty,
-        unitCost,
-        totalCost,
+        unitCost: 0,
+        totalCost: 0,
         date,
         notes,
         user: currentUser
@@ -90,9 +88,9 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
           </button>
         </div>
 
-        <p className="text-xs text-slate-400">
-          Record photocopy machine paper usage. Paper stock quantities will automatically be deducted from inventory without duplicate expense entries.
-        </p>
+        <div className="p-3 bg-blue-500/10 border border-blue-500/25 rounded-2xl text-xs text-blue-200">
+          Deducts paper stock from Stationery Inventory and logs it in the Operating Expense history as internal consumption without charging any monetary cash expense.
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
           <div>
@@ -102,13 +100,13 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
             <select
               required
               value={productName}
-              onChange={e => handleProductChange(e.target.value)}
+              onChange={e => setProductName(e.target.value)}
               className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-blue-500"
             >
               <option value="">Select Paper Product...</option>
               {paperProducts.map(p => (
                 <option key={p.id} value={p.name}>
-                  {p.name} (Stock: {p.stockQty || 0}, Cost: Tk {p.costPrice})
+                  {p.name} (Available Stock: {p.stockQty || 0} Reams/Pcs)
                 </option>
               ))}
             </select>
@@ -119,42 +117,19 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                Quantity Used (Reams/Pcs) *
-              </label>
-              <input
-                type="number"
-                min="1"
-                step="any"
-                required
-                value={qty || ''}
-                onChange={e => setQty(parseFloat(e.target.value) || 1)}
-                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-white text-center font-black focus:outline-none font-tabular"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                Cost per Unit (Tk )
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                required
-                value={unitCost || ''}
-                onChange={e => setUnitCost(parseFloat(e.target.value) || 0)}
-                className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-white text-right font-black focus:outline-none font-tabular"
-              />
-            </div>
-          </div>
-
-          <div className="bg-slate-950 border border-blue-500/30 p-3 rounded-xl flex justify-between items-center text-xs">
-            <span className="font-bold text-slate-300">Total Recorded Expense:</span>
-            <span className="text-base font-black text-emerald-400 font-tabular">
-              Tk {formatCurrency(totalCost)}
-            </span>
+          <div>
+            <label className="block text-[11px] font-bold text-slate-400 mb-1">
+              Quantity Used (Reams/Pcs) *
+            </label>
+            <input
+              type="number"
+              min="1"
+              step="any"
+              required
+              value={qty || ''}
+              onChange={e => setQty(parseFloat(e.target.value) || 1)}
+              className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-white text-center font-black focus:outline-none font-tabular"
+            />
           </div>
 
           <div>

@@ -75,11 +75,11 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                 </div>
               </div>
               <div className="text-right flex-shrink-0">
-                <h3 className="text-2xl sm:text-3xl font-black text-[#0062cc] leading-tight tracking-wider">
-                  CASH MEMO
+                <h3 className="text-2xl sm:text-3xl font-black text-[#0062cc] leading-tight tracking-wide">
+                  Invoice
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-700 font-bold mt-1 text-right">
-                  <span className="font-black text-slate-900">{formatDateDisplay(sale.rawDate || sale.date)}</span> : Date
+                <p className="text-xs sm:text-sm font-medium mt-1 text-right">
+                  <span className="font-black text-slate-900">{formatDateDisplay(sale.rawDate || sale.date)}</span> <span className="text-slate-600 font-semibold">: Date</span>
                 </p>
               </div>
             </div>
@@ -103,11 +103,11 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
               </div>
 
               <div className="col-span-5 flex flex-col items-end text-right space-y-1">
-                <p className="text-xs sm:text-sm font-bold leading-tight text-right">
-                  <span className="text-red-600 font-black text-sm sm:text-base">AS-{sale.invoiceNo}</span> : Invoice No
+                <p className="text-xs sm:text-sm font-medium leading-tight text-right">
+                  <span className="text-[#0062cc] font-black text-sm sm:text-base">AS-{sale.invoiceNo}</span> <span className="text-slate-600 font-semibold">: Invoice No</span>
                 </p>
-                <p className="text-xs sm:text-sm font-bold leading-tight text-slate-700 text-right">
-                  <span className="text-blue-700 font-black">{sale.user}</span> : Sales Operator
+                <p className="text-xs sm:text-[13px] font-medium leading-tight text-right">
+                  <span className="text-slate-900 font-bold">{sale.user}</span> <span className="text-slate-600 font-semibold">: Sales by</span>
                 </p>
                 <div
                   className="pt-1 flex items-center justify-end"

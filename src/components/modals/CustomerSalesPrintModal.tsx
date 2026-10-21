@@ -409,7 +409,7 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
           {/* Footer */}
           <div className="print-doc-footer flex justify-between items-center pt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
             <div>
-              Customer Sales Statement - Printed : {nowFormatted} • {currentUser}
+              {nowFormatted} • {currentUser}
             </div>
             <div className="font-bold text-slate-700">Page 1 of 1</div>
           </div>
