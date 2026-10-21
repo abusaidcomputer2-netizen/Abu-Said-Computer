@@ -75,6 +75,21 @@
     overflow: hidden !important;
   }
 
+  /* Completely hide all inactive/interactive background modals during printing */
+  div.fixed:not(.print-modal-backdrop),
+  div.fixed:not(.print-modal-backdrop) *,
+  div.absolute:not(.print-modal-backdrop),
+  aside,
+  header,
+  nav,
+  footer {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+  }
+
   #app-main-layout {
     display: block !important;
     background: #ffffff !important;

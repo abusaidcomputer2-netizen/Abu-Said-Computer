@@ -45,8 +45,8 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
       : 'text-amber-800 bg-amber-50 border-amber-300';
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 print:p-0 print:m-0 print:bg-white print:static print:block">
-      <div className="bg-white text-slate-800 w-full max-w-3xl max-h-[92vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto border border-slate-200 print:w-full print:max-w-none print:max-h-none print:shadow-none print:border-none print:m-0 print:rounded-none print:static">
+    <div className="print-modal-backdrop fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 print:p-0 print:m-0 print:bg-white print:static print:block">
+      <div className="print-modal-dialog bg-white text-slate-800 w-full max-w-3xl max-h-[92vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto border border-slate-200 print:w-full print:max-w-none print:max-h-none print:shadow-none print:border-none print:m-0 print:rounded-none print:static">
         {/* Top Control Bar */}
         <div className="no-print bg-slate-50 px-6 py-3.5 border-b border-slate-200 flex justify-between items-center flex-shrink-0">
           <span className="text-xs font-black text-slate-700 uppercase flex items-center gap-1.5">
@@ -276,7 +276,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
           {/* Footer */}
           <div className="print-doc-footer flex justify-between items-center pt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
             <div>
-              {nowFormatted} • {currentUser}
+              Abu Said Computer • Bhai Bhai Super Market, Paduar Bazar, Cumilla • 01904-142370 • Printed: {nowFormatted}
             </div>
             <div className="font-bold text-slate-700">Page 1 of 1</div>
           </div>

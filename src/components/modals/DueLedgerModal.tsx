@@ -25,6 +25,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
   showToast
 }) => {
   const [selectedFilterCust, setSelectedFilterCust] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
@@ -41,6 +42,13 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
   // Filter records
   const filteredRecords = dueRecords.filter(r => {
     if (selectedFilterCust !== 'ALL' && r.customer.toLowerCase() !== selectedFilterCust.toLowerCase()) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const matchName = r.customer.toLowerCase().includes(q);
+      const matchPhone = (r.phone || '').toLowerCase().includes(q);
+      const matchDesc = (r.desc || '').toLowerCase().includes(q);
+      if (!matchName && !matchPhone && !matchDesc) return false;
+    }
     if (filterMonth && r.date && !r.date.startsWith(filterMonth)) return false;
     if (filterStartDate && r.date && r.date < filterStartDate) return false;
     if (filterEndDate && r.date && r.date > filterEndDate) return false;
@@ -101,7 +109,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div className="no-print print:hidden fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
       <div className="bg-slate-900 border border-amber-500/40 text-slate-100 w-full max-w-5xl rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5 my-4">
         {/* Top Header */}
         <div className="flex justify-between items-center border-b border-slate-800 pb-3 flex-wrap gap-2">
@@ -180,6 +188,16 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
             <div className="sm:col-span-4">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search customer, mobile or memo..."
+                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white font-bold placeholder-slate-500 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div className="sm:col-span-3">
               <select
                 value={selectedFilterCust}
                 onChange={e => setSelectedFilterCust(e.target.value)}
@@ -194,7 +212,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
               </select>
             </div>
 
-            <div className="sm:col-span-3 flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-xl px-2 py-1 text-xs">
+            <div className="sm:col-span-2 flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-xl px-2 py-1 text-xs">
               <span className="text-slate-400 font-medium text-[11px]">From:</span>
               <input
                 type="date"
@@ -207,7 +225,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
               />
             </div>
 
-            <div className="sm:col-span-3 flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-xl px-2 py-1 text-xs">
+            <div className="sm:col-span-2 flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-xl px-2 py-1 text-xs">
               <span className="text-slate-400 font-medium text-[11px]">To:</span>
               <input
                 type="date"
@@ -220,8 +238,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
               />
             </div>
 
-            <div className="sm:col-span-2 flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-xl px-2 py-1 text-xs">
-              <span className="text-slate-400 font-medium text-[11px]">Month:</span>
+            <div className="sm:col-span-1 flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-xl px-1.5 py-1 text-xs">
               <input
                 type="month"
                 value={filterMonth}
@@ -230,7 +247,8 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                   setFilterStartDate('');
                   setFilterEndDate('');
                 }}
-                className="bg-transparent text-white font-bold text-[11px] focus:outline-none w-full"
+                className="bg-transparent text-white font-bold text-[10px] focus:outline-none w-full"
+                title="Filter by Month"
               />
             </div>
           </div>

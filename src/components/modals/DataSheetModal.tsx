@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { SaleRecord, Customer, Product, ExpenseRecord, DueRecord } from '../../types';
 import { formatCurrency, formatDateDisplay } from '../../utils/helpers';
+import * as XLSX from 'xlsx';
 
 interface DataSheetModalProps {
   isOpen: boolean;
@@ -92,15 +93,122 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
     (d.desc && d.desc.toLowerCase().includes(term))
   );
 
-  // Export current active sheet to CSV
-  const handleExportCsv = () => {
-    let headers: string[] = [];
-    let rows: (string | number)[][] = [];
-    let filename = `AS_Computer_${activeSheet}_${new Date().toISOString().split('T')[0]}.csv`;
+  // Export ALL sheets into a single master Excel (.xlsx) file with individual sheet tabs
+  const handleExportAllSheetsExcel = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+      const today = new Date().toISOString().split('T')[0];
 
-    if (activeSheet === 'sales') {
-      headers = ['SL', 'Invoice No', 'Date', 'Time', 'Customer Name', 'Mobile', 'Category', 'Items Description', 'Subtotal', 'Discount', 'Grand Total', 'Paid', 'Due', 'Operator'];
-      rows = filteredSales.map((s, idx) => [
+      // 1. Sales Record
+      const salesHeaders = ['SL', 'Invoice No', 'Date', 'Time', 'Customer Name', 'Mobile', 'Address', 'Category', 'Items Breakdown', 'Subtotal', 'Discount', 'Grand Total', 'Paid', 'Due', 'Operator'];
+      const salesData = [
+        salesHeaders,
+        ...sales.map((s, idx) => [
+          idx + 1,
+          `AS-${s.invoiceNo}`,
+          s.rawDate || s.date,
+          s.timestamp ? (s.timestamp.split(' ')[1] || '') : '',
+          s.customer || 'General Customer',
+          s.phone || '',
+          s.address || '',
+          s.category,
+          s.items?.map(it => `${it.name} (${it.qty}x${it.price})`).join('; ') || s.desc || '',
+          s.subtotal,
+          s.discount,
+          s.grandTotal,
+          s.paid,
+          s.due,
+          s.user
+        ])
+      ];
+      const wsSales = XLSX.utils.aoa_to_sheet(salesData);
+      XLSX.utils.book_append_sheet(wb, wsSales, 'Sales Record');
+
+      // 2. Customers
+      const customerHeaders = ['SL', 'Customer Name', 'Mobile', 'Address'];
+      const customerData = [
+        customerHeaders,
+        ...customers.map((c, idx) => [
+          idx + 1,
+          c.name,
+          c.phone || '',
+          c.address || ''
+        ])
+      ];
+      const wsCustomers = XLSX.utils.aoa_to_sheet(customerData);
+      XLSX.utils.book_append_sheet(wb, wsCustomers, 'Customers');
+
+      // 3. Products / Stock
+      const productHeaders = ['SL', 'Category', 'Product / Service Name', 'Selling Price', 'Cost Price', 'In Stock Qty', 'Low Stock Limit'];
+      const productData = [
+        productHeaders,
+        ...products.map((p, idx) => [
+          idx + 1,
+          p.category,
+          p.name,
+          p.price,
+          p.costPrice,
+          p.stockQty !== null && p.stockQty !== undefined ? p.stockQty : 'Unlimited / Service',
+          p.lowStockLimit || 0
+        ])
+      ];
+      const wsProducts = XLSX.utils.aoa_to_sheet(productData);
+      XLSX.utils.book_append_sheet(wb, wsProducts, 'Stock Inventory');
+
+      // 4. Due Ledger
+      const dueHeaders = ['Entry ID', 'Date', 'Customer Name', 'Mobile', 'Transaction Type', 'Description', 'Due (Debit)', 'Paid (Credit)', 'Operator'];
+      const dueData = [
+        dueHeaders,
+        ...dueLedger.map((d, idx) => [
+          d.id || `DUE-${idx + 1}`,
+          d.date,
+          d.customer,
+          d.phone || '',
+          d.type,
+          d.desc,
+          d.due,
+          d.paid,
+          d.user
+        ])
+      ];
+      const wsDue = XLSX.utils.aoa_to_sheet(dueData);
+      XLSX.utils.book_append_sheet(wb, wsDue, 'Due Ledger');
+
+      // 5. Expenses
+      const expenseHeaders = ['Expense ID', 'Date', 'Category', 'Description', 'Amount', 'Staff'];
+      const expenseData = [
+        expenseHeaders,
+        ...expenses.map((e, idx) => [
+          e.expId || `EXP-${e.id || idx + 1}`,
+          e.date,
+          e.category,
+          e.desc || '',
+          e.amount,
+          e.user || 'Staff'
+        ])
+      ];
+      const wsExpenses = XLSX.utils.aoa_to_sheet(expenseData);
+      XLSX.utils.book_append_sheet(wb, wsExpenses, 'Expenses');
+
+      const fileName = `AS_Computer_Master_Database_${today}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      showToast(`${fileName} (All 5 Sheets) downloaded successfully!`, 'success');
+    } catch (err: any) {
+      console.error('Failed to export all sheets to Excel:', err);
+      showToast('Export failed: ' + (err.message || 'Error creating spreadsheet'), 'error');
+    }
+  };
+
+  // Export all sheets combined into single file (.csv)
+  const handleExportAllSheetsCsv = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const sections: string[] = [];
+
+    // Sales
+    sections.push('=== SHEET 1: SALES RECORD ===');
+    sections.push(['SL', 'Invoice No', 'Date', 'Time', 'Customer Name', 'Mobile', 'Category', 'Items Breakdown', 'Subtotal', 'Discount', 'Grand Total', 'Paid', 'Due', 'Operator'].map(h => `"${h}"`).join(','));
+    sales.forEach((s, idx) => {
+      sections.push([
         idx + 1,
         `AS-${s.invoiceNo}`,
         s.rawDate || s.date,
@@ -115,69 +223,52 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
         s.paid,
         s.due,
         s.user
-      ]);
-    } else if (activeSheet === 'customers') {
-      headers = ['SL', 'Customer Name', 'Mobile', 'Address'];
-      rows = filteredCustomers.map((c, idx) => [
-        idx + 1,
-        c.name,
-        c.phone || '',
-        c.address || ''
-      ]);
-    } else if (activeSheet === 'products') {
-      headers = ['SL', 'Category', 'Product / Service Name', 'Selling Price', 'Cost Price', 'In Stock Qty', 'Low Stock Limit'];
-      rows = filteredProducts.map((p, idx) => [
-        idx + 1,
-        p.category,
-        p.name,
-        p.price,
-        p.costPrice,
-        p.stockQty !== null && p.stockQty !== undefined ? p.stockQty : 'Unlimited / Service',
-        p.lowStockLimit || 0
-      ]);
-    } else if (activeSheet === 'due') {
-      headers = ['Entry ID', 'Date', 'Customer Name', 'Mobile', 'Transaction Type', 'Description', 'Due (Debit)', 'Paid (Credit)', 'Operator'];
-      rows = filteredDue.map(d => [
-        d.id || '',
-        d.date,
-        d.customer,
-        d.phone || '',
-        d.type,
-        d.desc,
-        d.due,
-        d.paid,
-        d.user
-      ]);
-    } else if (activeSheet === 'expenses') {
-      headers = ['Expense ID', 'Date', 'Category', 'Description', 'Amount', 'Staff'];
-      rows = filteredExpenses.map(e => [
-        e.expId || `EXP-${e.id}`,
-        e.date,
-        e.category,
-        e.desc || '',
-        e.amount,
-        e.user || 'Staff'
-      ]);
-    }
+      ].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+    });
 
-    const csvContent = [
-      headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','),
-      ...rows.map(row => row.map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(','))
-    ].join('\r\n');
+    // Customers
+    sections.push('\r\n=== SHEET 2: CUSTOMERS DIRECTORY ===');
+    sections.push(['SL', 'Customer Name', 'Mobile', 'Address'].map(h => `"${h}"`).join(','));
+    customers.forEach((c, idx) => {
+      sections.push([idx + 1, c.name, c.phone || '', c.address || ''].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+    });
 
+    // Products
+    sections.push('\r\n=== SHEET 3: STOCK INVENTORY ===');
+    sections.push(['SL', 'Category', 'Product / Service Name', 'Selling Price', 'Cost Price', 'In Stock Qty', 'Low Stock Limit'].map(h => `"${h}"`).join(','));
+    products.forEach((p, idx) => {
+      sections.push([idx + 1, p.category, p.name, p.price, p.costPrice, p.stockQty ?? 'Unlimited', p.lowStockLimit || 0].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+    });
+
+    // Due Ledger
+    sections.push('\r\n=== SHEET 4: DUE LEDGER ===');
+    sections.push(['Entry ID', 'Date', 'Customer Name', 'Mobile', 'Transaction Type', 'Description', 'Due (Debit)', 'Paid (Credit)', 'Operator'].map(h => `"${h}"`).join(','));
+    dueLedger.forEach((d, idx) => {
+      sections.push([d.id || `DUE-${idx + 1}`, d.date, d.customer, d.phone || '', d.type, d.desc, d.due, d.paid, d.user].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+    });
+
+    // Expenses
+    sections.push('\r\n=== SHEET 5: EXPENSES ===');
+    sections.push(['Expense ID', 'Date', 'Category', 'Description', 'Amount', 'Staff'].map(h => `"${h}"`).join(','));
+    expenses.forEach((e, idx) => {
+      sections.push([e.expId || `EXP-${e.id || idx + 1}`, e.date, e.category, e.desc || '', e.amount, e.user || 'Staff'].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+    });
+
+    const csvContent = '\uFEFF' + sections.join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', filename);
+    link.setAttribute('download', `AS_Computer_All_Sheets_${today}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast(`${filename} exported successfully!`, 'success');
+    URL.revokeObjectURL(url);
+    showToast(`AS_Computer_All_Sheets_${today}.csv (All Sheets) downloaded successfully!`, 'success');
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+    <div className="no-print print:hidden fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
       <div className="bg-slate-900 border border-emerald-500/30 text-slate-100 w-full max-w-6xl rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 my-2 sm:my-4 flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="flex justify-between items-start border-b border-slate-800 pb-3 flex-wrap gap-2">
@@ -230,11 +321,22 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
 
             <button
               type="button"
-              onClick={handleExportCsv}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              onClick={handleExportAllSheetsCsv}
+              className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-500/40 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Download all sheets combined in a single CSV file (Sales, Customers, Stock, Due, Expenses)"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Export CSV</span>
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-200" />
+              <span>Export CSV (All Sheets)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportAllSheetsExcel}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Download Master Spreadsheet (.xlsx) with all individual sheet tabs"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-300" />
+              <span>Excel (.xlsx)</span>
             </button>
 
             <button
@@ -316,7 +418,7 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              <span>Sales Sheet</span>
+              <span>Sales & Invoices</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900/60 font-black">
                 {sales.length}
               </span>
@@ -331,7 +433,7 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              <span>Customers Sheet</span>
+              <span>Customers</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900/60 font-black">
                 {customers.length}
               </span>
@@ -346,7 +448,7 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              <span>Products / Stock Sheet</span>
+              <span>Products & Stock</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900/60 font-black">
                 {products.length}
               </span>
@@ -361,7 +463,7 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              <span>Due Ledger Sheet</span>
+              <span>Due Ledger</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900/60 font-black">
                 {dueLedger.length}
               </span>
@@ -376,7 +478,7 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
                   : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
               }`}
             >
-              <span>Expenses Sheet</span>
+              <span>Expenses</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-900/60 font-black">
                 {expenses.length}
               </span>

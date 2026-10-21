@@ -53,7 +53,7 @@ import { GoogleDriveBackupModal } from './components/modals/GoogleDriveBackupMod
 import { DataSheetModal } from './components/modals/DataSheetModal';
 import { initGoogleAuth, setCachedAccessToken } from './services/googleAuth';
 import { User as GoogleUser } from 'firebase/auth';
-import { normalizeCategory } from './utils/helpers';
+import { normalizeCategory, recalculateDueSummaries } from './utils/helpers';
 import { 
   FALLBACK_USERS, 
   FALLBACK_PRODUCTS, 
@@ -244,17 +244,65 @@ export default function App() {
         console.warn('Backend API /api/bootstrap not available, using local cache or default seeds...', err);
       }
 
-      if (!isLoaded && cached) {
-        setUsers(cached.users || FALLBACK_USERS);
-        setProducts(cached.products || []);
-        setCustomers(cached.customers || []);
-        setSales(cached.records || cached.sales || []);
-        setExpenses(cached.expenses || []);
-        setDueRecords(cached.dueRecords || []);
-        setCustomerSummaries(cached.customerSummaries || []);
-        setDueTotals(cached.dueTotals || { shopTotalDue: 0, shopTotalPaid: 0, netDue: 0 });
-        setPurchases(cached.purchases || []);
-        setCashClosings(cached.cashClosings || []);
+      if (!isLoaded) {
+        const source = cached || {};
+        const initialUsers = source.users && source.users.length > 0 ? source.users : FALLBACK_USERS;
+        const initialProducts = source.products && source.products.length > 0 ? source.products : FALLBACK_PRODUCTS;
+        const initialCustomers = source.customers && source.customers.length > 0 ? source.customers : FALLBACK_CUSTOMERS;
+        const initialSales = (source.records || source.sales || []).length > 0 ? (source.records || source.sales) : FALLBACK_SALES;
+        const initialExpenses = source.expenses && source.expenses.length > 0 ? source.expenses : FALLBACK_EXPENSES;
+        let initialDue = source.dueRecords && source.dueRecords.length > 0 ? source.dueRecords : FALLBACK_DUE_RECORDS;
+
+        // Auto-reconcile due records from any sales that have due > 0
+        initialSales.forEach((s: any) => {
+          if (s.due > 0) {
+            const dueId = `INV-${s.invoiceNo}`;
+            const exists = initialDue.some((d: any) => d.id === dueId);
+            if (!exists) {
+              initialDue = [{
+                rowId: Date.now() + Math.random(),
+                id: dueId,
+                date: s.rawDate || s.date,
+                customer: s.customer,
+                phone: s.phone || '',
+                address: s.address || 'Paduar Bazar, Cumilla',
+                type: 'Memo / Bill',
+                desc: `Memo #${s.invoiceNo}${s.desc ? ` [${s.desc}]` : ''}`,
+                due: s.due,
+                paid: 0,
+                user: s.user || 'Md Abu Said',
+                timestamp: s.timestamp || s.date
+              }, ...initialDue];
+            }
+          }
+        });
+
+        const { customerSummaries: calcSummaries, dueTotals: calcTotals } = recalculateDueSummaries(initialDue);
+        setUsers(initialUsers);
+        setProducts(initialProducts);
+        setCustomers(initialCustomers);
+        setSales(initialSales);
+        setExpenses(initialExpenses);
+        setDueRecords(initialDue);
+        setCustomerSummaries(calcSummaries);
+        setDueTotals(calcTotals);
+        setPurchases(source.purchases || FALLBACK_PURCHASES);
+        setCashClosings(source.cashClosings || FALLBACK_CASH_CLOSINGS);
+
+        const toSave = {
+          users: initialUsers,
+          products: initialProducts,
+          customers: initialCustomers,
+          records: initialSales,
+          sales: initialSales,
+          expenses: initialExpenses,
+          dueRecords: initialDue,
+          customerSummaries: calcSummaries,
+          dueTotals: calcTotals,
+          purchases: source.purchases || FALLBACK_PURCHASES,
+          cashClosings: source.cashClosings || FALLBACK_CASH_CLOSINGS
+        };
+        localStorage.setItem('as_computer_cached_bootstrap', JSON.stringify(toSave));
       }
     } catch (err: any) {
       console.warn('Bootstrap data load warning:', err);
@@ -617,39 +665,19 @@ export default function App() {
         user: newRecord.user,
         timestamp: newRecord.timestamp
       };
-      setDueRecords(prev => [newDueRec, ...prev.filter(d => d.id !== dueId)]);
-      setCustomerSummaries(prev => {
-        const existingIdx = prev.findIndex(c => c.name.toLowerCase() === newRecord.customer.toLowerCase());
-        if (existingIdx >= 0) {
-          const updated = [...prev];
-          const curr = updated[existingIdx];
-          const totalDue = curr.totalDue + newRecord.due;
-          const netBalance = totalDue - curr.totalPaid;
-          updated[existingIdx] = { ...curr, totalDue, netBalance };
-          return updated;
-        } else {
-          return [
-            ...prev,
-            {
-              name: newRecord.customer,
-              phone: newRecord.phone || '',
-              address: newRecord.address || 'Paduar Bazar, Cumilla',
-              totalDue: newRecord.due,
-              totalPaid: 0,
-              netBalance: newRecord.due
-            }
-          ];
-        }
+      setDueRecords(prev => {
+        const updatedList = [newDueRec, ...prev.filter(d => d.id !== dueId)];
+        const { customerSummaries: newSummaries, dueTotals: newTotals } = recalculateDueSummaries(updatedList);
+        setCustomerSummaries(newSummaries);
+        setDueTotals(newTotals);
+        updateCachedBootstrap(c => ({
+          ...c,
+          dueRecords: updatedList,
+          customerSummaries: newSummaries,
+          dueTotals: newTotals
+        }));
+        return updatedList;
       });
-      setDueTotals(prev => ({
-        shopTotalDue: prev.shopTotalDue + newRecord.due,
-        shopTotalPaid: prev.shopTotalPaid,
-        netDue: prev.netDue + newRecord.due
-      }));
-      updateCachedBootstrap(prev => ({
-        ...prev,
-        dueRecords: [newDueRec, ...(prev.dueRecords || []).filter((d: any) => d.id !== dueId)]
-      }));
     }
 
     setEditingSale(null);
@@ -722,11 +750,19 @@ export default function App() {
       timestamp: new Date().toISOString()
     };
 
-    setDueRecords(prev => [newDueRec, ...prev]);
-    updateCachedBootstrap(prev => ({
-      ...prev,
-      dueRecords: [newDueRec, ...(prev.dueRecords || [])]
-    }));
+    setDueRecords(prev => {
+      const updatedList = [newDueRec, ...prev];
+      const { customerSummaries: newSummaries, dueTotals: newTotals } = recalculateDueSummaries(updatedList);
+      setCustomerSummaries(newSummaries);
+      setDueTotals(newTotals);
+      updateCachedBootstrap(c => ({
+        ...c,
+        dueRecords: updatedList,
+        customerSummaries: newSummaries,
+        dueTotals: newTotals
+      }));
+      return updatedList;
+    });
 
     try {
       const { data } = await safeFetchJson<any>('/api/due-ledger/payment', {
@@ -741,7 +777,6 @@ export default function App() {
     } catch {
       showToast('Payment collected successfully', 'success');
     }
-    setActiveTab('sales');
     await fetchBootstrapData();
   };
 
@@ -1336,6 +1371,7 @@ export default function App() {
               <MemoEntryForm
                 products={products}
                 customers={customers}
+                customerSummaries={customerSummaries}
                 currentUser={currentUser.username}
                 editingSale={editingSale}
                 onCancelEdit={() => {
@@ -1413,6 +1449,7 @@ export default function App() {
             setActiveTab('sales');
           }}
           onOpenLedgerPrint={(cust, sDate, eDate, m) => {
+            setDueLedgerOpen(false);
             setLedgerPrintFilterCustomer(cust || 'ALL');
             setLedgerPrintStartDate(sDate || '');
             setLedgerPrintEndDate(eDate || '');
@@ -1435,7 +1472,7 @@ export default function App() {
           currentUser={currentUser.username}
           onClose={() => {
             setLedgerPrintOpen(false);
-            setActiveTab('sales');
+            setDueLedgerOpen(true);
           }}
         />
       )}
@@ -1462,7 +1499,10 @@ export default function App() {
             setStockInventoryOpen(false);
             setActiveTab('sales');
           }}
-          onOpenStockPrint={() => setStockPrintOpen(true)}
+          onOpenStockPrint={() => {
+            setStockInventoryOpen(false);
+            setStockPrintOpen(true);
+          }}
           onOpenPurchase={() => setPurchaseOpen(true)}
           onOpenPaperUsage={() => setPaperUsageOpen(true)}
         />
@@ -1474,7 +1514,7 @@ export default function App() {
           currentUser={currentUser.username}
           onClose={() => {
             setStockPrintOpen(false);
-            setActiveTab('sales');
+            setStockInventoryOpen(true);
           }}
         />
       )}
@@ -1517,7 +1557,10 @@ export default function App() {
             setExpenseOpen(false);
             setActiveTab('sales');
           }}
-          onOpenExpensePrint={() => setExpensePrintOpen(true)}
+          onOpenExpensePrint={() => {
+            setExpenseOpen(false);
+            setExpensePrintOpen(true);
+          }}
           onSubmitExpense={handleSubmitExpense}
           onDeleteExpense={handleDeleteExpense}
           showToast={showToast}
@@ -1530,7 +1573,7 @@ export default function App() {
           currentUser={currentUser.username}
           onClose={() => {
             setExpensePrintOpen(false);
-            setActiveTab('sales');
+            setExpenseOpen(true);
           }}
         />
       )}
@@ -1557,6 +1600,7 @@ export default function App() {
             setActiveTab('sales');
           }}
           onOpenCustomerSalesPrint={(cust, sDate, eDate) => {
+            setCustomerSalesOpen(false);
             setCustomerSalesPrintCustomer(cust || '');
             setCustomerSalesPrintStartDate(sDate || '');
             setCustomerSalesPrintEndDate(eDate || '');
@@ -1576,7 +1620,7 @@ export default function App() {
           currentUser={currentUser.username}
           onClose={() => {
             setCustomerSalesPrintOpen(false);
-            setActiveTab('sales');
+            setCustomerSalesOpen(true);
           }}
         />
       )}
@@ -1593,6 +1637,7 @@ export default function App() {
             setActiveTab('sales');
           }}
           onOpenCashClosingPrint={(record) => {
+            setCashClosingOpen(false);
             if (record) {
               setCashClosingPrintData(record);
             } else {
@@ -1613,7 +1658,7 @@ export default function App() {
           currentUser={currentUser.username}
           onClose={() => {
             setCashClosingPrintOpen(false);
-            setActiveTab('sales');
+            setCashClosingOpen(true);
           }}
         />
       )}

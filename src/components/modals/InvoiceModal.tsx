@@ -50,7 +50,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
         <div className="print-page-container invoice-print-container p-6 sm:p-8 text-slate-900 bg-white print:p-0 print:shadow-none print:border-none">
           <div className="space-y-4">
             {/* Header Lockup - Colors matched to logo blue & navy */}
-            <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3.5">
+            <div className="flex justify-between items-start border-b-2 border-slate-900 pb-3.5">
               <div className="flex items-center gap-3.5">
                 <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center flex-shrink-0 bg-transparent">
                   <img 
@@ -78,39 +78,42 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                 <h3 className="text-2xl sm:text-3xl font-black text-[#0062cc] leading-tight tracking-wide">
                   Invoice
                 </h3>
-                <p className="text-xs sm:text-sm font-medium mt-1 text-right">
-                  <span className="font-black text-slate-900">{formatDateDisplay(sale.rawDate || sale.date)}</span> <span className="text-slate-600 font-semibold">: Date</span>
+                <p className="text-xs sm:text-sm font-bold mt-1 text-right text-slate-700">
+                  <span className="text-slate-500 font-semibold">Date: </span>
+                  <span className="font-black text-slate-900">{formatDateDisplay(sale.rawDate || sale.date)}</span>
                 </p>
               </div>
             </div>
 
             {/* Customer & Invoice Meta Box */}
-            <div className="grid grid-cols-12 gap-3 bg-slate-50 border border-slate-300 p-3.5 sm:p-4 rounded-xl text-xs sm:text-sm items-center">
-              <div className="col-span-7 space-y-1">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Customer Information:
+            <div className="grid grid-cols-12 gap-3 bg-slate-50 border border-slate-300 p-4 rounded-xl text-xs sm:text-sm items-center">
+              <div className="col-span-7 space-y-1.5">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  CUSTOMER INFORMATION:
                 </span>
-                <div className="text-sm sm:text-base font-black text-slate-900 leading-tight">
+                <div className="text-base sm:text-lg font-black text-slate-900 leading-tight">
                   {sale.customer || 'General Customer'}
                 </div>
                 <div className="text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-1.5">
                   <span className="font-bold text-slate-600">Mobile:</span>
-                  <span className="font-black text-slate-900 font-tabular">{sale.phone || '01904142370'}</span>
+                  <span className="font-black text-slate-900 font-tabular text-sm">{sale.phone || '01904142370'}</span>
                 </div>
-                <div className="text-slate-600 font-medium text-xs sm:text-[13px]">
+                <div className="text-slate-700 font-medium text-xs sm:text-sm">
                   <span className="font-bold text-slate-600">Address:</span> {sale.address || 'Paduar Bazar, Cumilla'}
                 </div>
               </div>
 
               <div className="col-span-5 flex flex-col items-end text-right space-y-1">
-                <p className="text-xs sm:text-sm font-medium leading-tight text-right">
-                  <span className="text-[#0062cc] font-black text-sm sm:text-base">AS-{sale.invoiceNo}</span> <span className="text-slate-600 font-semibold">: Invoice No</span>
+                <p className="text-sm font-bold leading-tight text-right">
+                  <span className="text-slate-500 font-semibold">Invoice No: </span>
+                  <span className="text-[#0062cc] font-black text-base sm:text-lg font-tabular ml-1">AS-{sale.invoiceNo}</span>
                 </p>
-                <p className="text-xs sm:text-[13px] font-medium leading-tight text-right">
-                  <span className="text-slate-900 font-bold">{sale.user}</span> <span className="text-slate-600 font-semibold">: Sales by</span>
+                <p className="text-xs sm:text-sm font-medium leading-tight text-right">
+                  <span className="text-slate-500 font-semibold">Sales by: </span>
+                  <span className="text-slate-900 font-bold ml-1">{sale.user}</span>
                 </p>
                 <div
-                  className="pt-1 flex items-center justify-end"
+                  className="pt-1.5 flex items-center justify-end"
                   dangerouslySetInnerHTML={{ __html: barcodeHtml }}
                 />
               </div>
@@ -231,13 +234,22 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
               </div>
             </div>
 
-            {/* Clean Minimal Footer Bar */}
-            <div className="border-t border-slate-300 pt-2 flex justify-between items-center text-xs text-slate-600">
-              <div className="font-medium text-slate-600">
-                {printTimestamp} • {sale.user}
+            {/* Correct & Complete Professional Shop Footer */}
+            <div className="border-t-2 border-slate-300 pt-3 space-y-1 text-slate-700">
+              <div className="flex justify-between items-center text-xs font-bold text-slate-800">
+                <span>ধন্যবাদ, আবার আসবেন! • Thank you for your business!</span>
+                <span className="text-[11px] font-semibold text-slate-500">Abu Said Computer POS</span>
               </div>
-              <div className="font-medium text-slate-500 text-[11px]">
-                Page 1 of 1
+              <div className="text-[11px] text-slate-600 font-medium">
+                Bhai Bhai Super Market (2nd Floor), Paduar Bazar Bishwa Road, Cumilla-3500 • Mobile: 01904-142370, 01841-855200
+              </div>
+              <div className="flex justify-between items-center pt-1 text-[10px] text-slate-500 border-t border-slate-200 font-medium">
+                <div>
+                  Printed: {printTimestamp} • Served by: <strong className="text-slate-700">{sale.user}</strong>
+                </div>
+                <div className="font-bold text-slate-600 whitespace-nowrap">
+                  Page 1 of 1
+                </div>
               </div>
             </div>
           </div>

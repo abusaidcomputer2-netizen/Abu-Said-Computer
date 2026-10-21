@@ -167,3 +167,59 @@ export function numberToWordsTaka(amount: number | string | undefined | null): s
   return words.trim() + ' Taka Only';
 }
 
+export function recalculateDueSummaries(dueRecords: any[] = []) {
+  const custDueMap: Record<string, {
+    name: string;
+    phone: string;
+    address: string;
+    totalDue: number;
+    totalPaid: number;
+    netBalance: number;
+  }> = {};
+
+  let totalShopDue = 0;
+  let totalShopPaid = 0;
+
+  dueRecords.forEach(d => {
+    const cName = d.customer || d.customer_name;
+    if (!cName) return;
+    if (!custDueMap[cName]) {
+      custDueMap[cName] = {
+        name: cName,
+        phone: d.phone || d.customer_phone || '',
+        address: d.address || d.customer_address || '',
+        totalDue: 0,
+        totalPaid: 0,
+        netBalance: 0
+      };
+    }
+    const dueAmt = Number(d.due ?? d.due_dr ?? 0) || 0;
+    const paidAmt = Number(d.paid ?? d.paid_cr ?? 0) || 0;
+    custDueMap[cName].totalDue += dueAmt;
+    custDueMap[cName].totalPaid += paidAmt;
+    custDueMap[cName].netBalance = custDueMap[cName].totalDue - custDueMap[cName].totalPaid;
+    if ((d.phone || d.customer_phone) && !custDueMap[cName].phone) {
+      custDueMap[cName].phone = d.phone || d.customer_phone;
+    }
+    if ((d.address || d.customer_address) && !custDueMap[cName].address) {
+      custDueMap[cName].address = d.address || d.customer_address;
+    }
+
+    totalShopDue += dueAmt;
+    totalShopPaid += paidAmt;
+  });
+
+  const activeDueCustomers = Object.values(custDueMap)
+    .filter(c => c.netBalance > 0)
+    .sort((a, b) => a.name.localeCompare(b.name, 'bn'));
+
+  return {
+    customerSummaries: activeDueCustomers,
+    dueTotals: {
+      shopTotalDue: totalShopDue,
+      shopTotalPaid: totalShopPaid,
+      netDue: totalShopDue - totalShopPaid
+    }
+  };
+}
+

@@ -106,7 +106,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const countStationery = products.filter(p => normalizeCategory(p.category) === 'Stationery Products').length;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div className="no-print print:hidden fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
       <div className="bg-slate-900 border border-emerald-500/30 text-slate-100 w-full max-w-4xl rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5 my-4">
         {/* Header */}
         <div className="flex justify-between items-center border-b border-slate-800 pb-3">

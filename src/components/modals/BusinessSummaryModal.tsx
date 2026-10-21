@@ -139,8 +139,8 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
   const periodLabel = formatPeriodHeader(startDate, endDate, filterMonth);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-slate-900 border border-amber-500/40 text-slate-100 w-full max-w-5xl rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5 my-4">
+    <div className="print-modal-backdrop fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 print:p-0 print:m-0 print:bg-white print:static print:block">
+      <div className="print-modal-dialog bg-slate-900 border border-amber-500/40 text-slate-100 w-full max-w-5xl rounded-3xl p-5 sm:p-7 shadow-2xl space-y-5 my-4 print:w-full print:max-w-none print:shadow-none print:border-none print:p-0 print:m-0 print:bg-white print:space-y-0">
         {/* Top Control Bar */}
         <div className="no-print flex justify-between items-center border-b border-slate-800 pb-3 flex-wrap gap-2">
           <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2.5">
@@ -535,9 +535,9 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
         </div>
 
           {/* Footer */}
-          <div className="print-doc-footer flex justify-between items-center pt-2 text-[10.5px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
+          <div className="print-doc-footer flex justify-between items-center pt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
             <div>
-              {nowFormatted} • {currentUser}
+              Abu Said Computer • Bhai Bhai Super Market, Paduar Bazar, Cumilla • 01904-142370 • Printed: {nowFormatted}
             </div>
             <div className="font-bold text-slate-700">Page 1 of 1</div>
           </div>

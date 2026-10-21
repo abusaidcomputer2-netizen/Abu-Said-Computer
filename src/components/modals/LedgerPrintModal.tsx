@@ -299,7 +299,7 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
           {/* Footer */}
           <div className="print-doc-footer flex justify-between items-center pt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
             <div>
-              {nowFormatted} • {currentUser}
+              Abu Said Computer • Bhai Bhai Super Market, Paduar Bazar, Cumilla • 01904-142370 • Printed: {nowFormatted}
             </div>
             <div className="font-bold text-slate-700">Page 1 of 1</div>
           </div>
