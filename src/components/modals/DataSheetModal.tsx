@@ -26,6 +26,7 @@ interface DataSheetModalProps {
   expenses: ExpenseRecord[];
   dueLedger?: DueRecord[];
   linkedSheetUrl?: string;
+  googleUser?: { email?: string | null; displayName?: string | null } | null;
   onOpenGoogleDriveBackup: () => void;
   onReload: () => void;
   showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
@@ -42,6 +43,7 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
   expenses,
   dueLedger = [],
   linkedSheetUrl,
+  googleUser,
   onOpenGoogleDriveBackup,
   onReload,
   showToast
@@ -199,26 +201,32 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {linkedSheetUrl ? (
+            {linkedSheetUrl && (
               <a
                 href={linkedSheetUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                title="Open live linked Google Sheet"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 <span>Open Google Sheet</span>
               </a>
-            ) : (
-              <button
-                type="button"
-                onClick={onOpenGoogleDriveBackup}
-                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
-              >
-                <Cloud className="w-3.5 h-3.5 text-amber-300" />
-                <span>Connect Google Sheet</span>
-              </button>
             )}
+
+            <button
+              type="button"
+              onClick={onOpenGoogleDriveBackup}
+              className={`px-3 py-1.5 ${
+                googleUser
+                  ? 'bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border border-blue-500/30'
+                  : 'bg-blue-600 hover:bg-blue-500 text-white'
+              } rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer`}
+              title="Manage Google Account & Drive Sync Settings"
+            >
+              <Cloud className="w-3.5 h-3.5 text-amber-300" />
+              <span>{googleUser ? (googleUser.email || 'Google Drive Sync') : 'Connect Google Sheet'}</span>
+            </button>
 
             <button
               type="button"
@@ -258,7 +266,7 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
                 <span className="text-emerald-400 font-mono text-[11px]">Server SQLite Database</span>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
-                Every sale memo, customer, product, and expense is saved permanently on disk inside <code className="bg-slate-900 px-1 py-0.2 rounded text-emerald-300">/data/database.sqlite</code>.
+                Every sale memo, customer, product, and expense is saved permanently on disk inside <code className="bg-slate-900 px-1 py-0.2 rounded text-emerald-300 font-mono">as_computer.db</code>.
               </p>
             </div>
           </div>
@@ -282,11 +290,15 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
               <div className="font-black text-white flex items-center gap-1.5">
                 <span>Cloud Integration:</span>
                 <span className="text-purple-400 font-mono text-[11px]">
-                  {linkedSheetUrl ? 'Google Sheet Linked' : 'Google Drive Ready'}
+                  {googleUser ? 'Google Drive Active' : (linkedSheetUrl ? 'Google Sheet Linked' : 'Google Drive Ready')}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
-                Synchronize records automatically to Google Sheets with 5 tabs or export all sheets to CSV spreadsheet at any time.
+                {googleUser ? (
+                  <>Connected: <span className="text-emerald-400 font-medium">{googleUser.email}</span>. Synced with your Google Drive spreadsheet.</>
+                ) : (
+                  <>Click "Connect Google Sheet" to sign in with your Gmail and sync with your Google Drive.</>
+                )}
               </p>
             </div>
           </div>

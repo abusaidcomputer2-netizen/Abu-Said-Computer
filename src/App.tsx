@@ -224,6 +224,12 @@ export default function App() {
             setPurchases(data.purchases || cached?.purchases || []);
             setCashClosings(data.cashClosings || cached?.cashClosings || []);
 
+            if (data.googleDriveBackup) {
+              if (data.googleDriveBackup.linkedSheetId) setLinkedSheetId(data.googleDriveBackup.linkedSheetId);
+              if (data.googleDriveBackup.linkedSheetUrl) setLinkedSheetUrl(data.googleDriveBackup.linkedSheetUrl);
+              if (data.googleDriveBackup.lastBackupTime) setLastBackupTime(data.googleDriveBackup.lastBackupTime);
+            }
+
             const mergedToSave = {
               ...data,
               products: mergedProducts,
@@ -1720,6 +1726,7 @@ export default function App() {
         expenses={expenses}
         dueLedger={dueRecords}
         linkedSheetUrl={linkedSheetUrl}
+        googleUser={googleUser}
         onOpenGoogleDriveBackup={() => {
           setDataSheetOpen(false);
           setDriveBackupOpen(true);
