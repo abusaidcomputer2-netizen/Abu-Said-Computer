@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Printer, PieChart, Building2, TrendingUp, Receipt, BookMarked, Wallet } from 'lucide-react';
 import { SaleRecord, ExpenseRecord, DueRecord } from '../../types';
 import { formatCurrency, formatInvoicePrintTimestamp, formatPeriodHeader } from '../../utils/helpers';
+import { ReportFooter } from '../ReportFooter';
 
 interface BusinessSummaryModalProps {
   sales: SaleRecord[];
@@ -519,27 +520,14 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
             </div>
           </div>
 
-          {/* Signatures */}
-          <div className="flex justify-between items-end pt-10 pb-2 text-center text-xs text-slate-700">
-            <div>
-              <div className="border-t border-slate-500 w-48 pt-1.5 font-bold text-slate-900 text-[11px] uppercase tracking-wider">
-                CHECKED & VERIFIED BY
-              </div>
-            </div>
-            <div>
-              <div className="border-t-2 border-slate-900 w-52 pt-1.5 font-black text-slate-900 text-[11px] uppercase tracking-wider">
-                AUTHORIZED SIGNATURE
-              </div>
-            </div>
-          </div>
-        </div>
-
-          {/* Footer */}
-          <div className="print-doc-footer flex justify-between items-center pt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
-            <div>
-              Abu Said Computer • Bhai Bhai Super Market, Paduar Bazar, Cumilla • 01904-142370 • Printed: {nowFormatted}
-            </div>
-            <div className="font-bold text-slate-700">Page 1 of 1</div>
+            {/* Unified Report Footer matching exact user sample */}
+            <ReportFooter
+              reportTitle="Financial Statement (P&L)"
+              printTimestamp={nowFormatted}
+              currentUser={currentUser}
+              leftSignatureLabel="CHECKED & VERIFIED BY"
+              rightSignatureLabel="AUTHORIZED SIGNATURE"
+            />
           </div>
         </div>
       </div>

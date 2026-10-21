@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Printer, TrendingUp, Users, FileText } from 'lucide-react';
 import { SaleRecord, Customer } from '../../types';
 import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, resolveCustomerAddress } from '../../utils/helpers';
+import { ReportFooter } from '../ReportFooter';
 
 interface CustomerSalesPrintModalProps {
   sales: SaleRecord[];
@@ -391,27 +392,14 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
               </table>
             )}
 
-            {/* Signatures */}
-            <div className="flex justify-between items-end pt-10 pb-2 text-center text-xs text-slate-700">
-              <div>
-                <div className="border-t border-slate-400 w-40 pt-1 font-bold text-slate-800 text-[10px] uppercase">
-                  Prepared By
-                </div>
-              </div>
-              <div>
-                <div className="border-t border-slate-800 w-48 pt-1 font-black text-slate-900 text-[10px] uppercase">
-                  For : Abu Said Computer
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="print-doc-footer flex justify-between items-center pt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
-            <div>
-              Abu Said Computer • Bhai Bhai Super Market, Paduar Bazar, Cumilla • 01904-142370 • Printed: {nowFormatted}
-            </div>
-            <div className="font-bold text-slate-700">Page 1 of 1</div>
+            {/* Unified Report Footer matching exact user sample */}
+            <ReportFooter
+              reportTitle="Customer Purchase Statement"
+              printTimestamp={nowFormatted}
+              currentUser={currentUser}
+              leftSignatureLabel="PREPARED BY"
+              rightSignatureLabel="AUTHORIZED SIGNATURE"
+            />
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Printer, Coins, Building2 } from 'lucide-react';
 import { CashClosingRecord } from '../../types';
 import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp } from '../../utils/helpers';
+import { ReportFooter } from '../ReportFooter';
 
 interface CashClosingPrintModalProps {
   cashClosing: CashClosingRecord | null;
@@ -258,27 +259,14 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
             </div>
           )}
 
-          {/* Signatures */}
-          <div className="flex justify-between items-end pt-10 pb-2 text-center text-xs text-slate-700">
-            <div>
-              <div className="border-t border-slate-400 w-44 pt-1 font-bold text-slate-800 text-[10px] uppercase">
-                Cashier / Staff Signature
-              </div>
-            </div>
-            <div>
-              <div className="border-t border-slate-400 w-48 pt-1 font-black text-slate-900 text-[10px] uppercase">
-                Proprietor / Authorized Signature
-              </div>
-            </div>
-          </div>
-        </div>
-
-          {/* Footer */}
-          <div className="print-doc-footer flex justify-between items-center pt-2 text-[10px] text-slate-600 border-t border-slate-300 font-medium mt-auto">
-            <div>
-              Abu Said Computer • Bhai Bhai Super Market, Paduar Bazar, Cumilla • 01904-142370 • Printed: {nowFormatted}
-            </div>
-            <div className="font-bold text-slate-700">Page 1 of 1</div>
+            {/* Unified Report Footer matching exact user sample */}
+            <ReportFooter
+              reportTitle="Daily Cash Closing Report"
+              printTimestamp={nowFormatted}
+              currentUser={cashClosing.user || currentUser}
+              leftSignatureLabel="CASHIER / STAFF SIGNATURE"
+              rightSignatureLabel="AUTHORIZED SIGNATURE"
+            />
           </div>
         </div>
       </div>
