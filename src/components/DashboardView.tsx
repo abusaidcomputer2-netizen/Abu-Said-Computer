@@ -26,7 +26,8 @@ import {
   Activity,
   PackageCheck,
   RotateCcw,
-  Coins
+  Coins,
+  Award
 } from 'lucide-react';
 import { SaleRecord, DueRecord, ExpenseRecord, Product, CustomerDueSummary } from '../types';
 import { formatCurrency, normalizeCategory } from '../utils/helpers';
@@ -46,6 +47,7 @@ interface DashboardViewProps {
   onPrintInvoice: (sale: SaleRecord) => void;
   onOpenStock?: () => void;
   onOpenExpenses?: () => void;
+  onOpenCommissionReport?: () => void;
 }
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'last_month';
@@ -64,7 +66,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenSalesEntry,
   onPrintInvoice,
   onOpenStock,
-  onOpenExpenses
+  onOpenExpenses,
+  onOpenCommissionReport
 }) => {
   const [period, setPeriod] = useState<PeriodFilter>('today');
   const [activeMetric, setActiveMetric] = useState<'revenue' | 'memos'>('revenue');
@@ -722,7 +725,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <Users className="w-4 h-4 text-purple-400" />
               <span>Staff Performance</span>
             </h3>
-            <span className="text-[10px] text-slate-400 font-bold uppercase">Accounts</span>
+            <div className="flex items-center gap-2">
+              {onOpenCommissionReport && (
+                <button
+                  type="button"
+                  onClick={onOpenCommissionReport}
+                  className="px-2.5 py-1 bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/40 rounded-xl text-[10px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  title="Staff Commission & Leave Performance Report"
+                >
+                  <Award className="w-3 h-3 text-purple-300" />
+                  <span>Commission Report</span>
+                </button>
+              )}
+              <span className="text-[10px] text-slate-400 font-bold uppercase">Accounts</span>
+            </div>
           </div>
 
           <div className="space-y-3">

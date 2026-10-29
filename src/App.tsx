@@ -51,6 +51,7 @@ import { MigrationModal } from './components/modals/MigrationModal';
 import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
 import { GoogleDriveBackupModal } from './components/modals/GoogleDriveBackupModal';
 import { DataSheetModal } from './components/modals/DataSheetModal';
+import { CommissionReportModal } from './components/modals/CommissionReportModal';
 import { initGoogleAuth, setCachedAccessToken } from './services/googleAuth';
 import { User as GoogleUser } from 'firebase/auth';
 import { normalizeCategory, recalculateDueSummaries } from './utils/helpers';
@@ -82,13 +83,16 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_USER_PASSWORDS;
   });
 
-  // Authentication State
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('as_computer_auth_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  // Authentication State: Always requires login & password on load
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const [loginUsername, setLoginUsername] = useState('Md Abu Said');
+  const [loginUsername, setLoginUsername] = useState(() => {
+    try {
+      return localStorage.getItem('as_computer_last_username') || 'Md Abu Said';
+    } catch {
+      return 'Md Abu Said';
+    }
+  });
   const [loginPassword, setLoginPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -151,6 +155,7 @@ export default function App() {
   const [migrationOpen, setMigrationOpen] = useState(false);
   const [driveBackupOpen, setDriveBackupOpen] = useState(false);
   const [dataSheetOpen, setDataSheetOpen] = useState(false);
+  const [commissionReportOpen, setCommissionReportOpen] = useState(false);
   const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
   const [googleToken, setGoogleToken] = useState<string | null>(null);
   const [linkedSheetId, setLinkedSheetId] = useState('');
@@ -372,7 +377,8 @@ export default function App() {
           const data = JSON.parse(rawText);
           if (data.status === 'success' && data.user) {
             setCurrentUser(data.user);
-            localStorage.setItem('as_computer_auth_user', JSON.stringify(data.user));
+            localStorage.setItem('as_computer_last_username', data.user.username);
+            sessionStorage.setItem('as_computer_session_active', 'true');
             showToast(`Welcome back, ${data.user.username}!`, 'success');
             loggedIn = true;
             return;
@@ -401,7 +407,8 @@ export default function App() {
           };
 
           setCurrentUser(matchedUser);
-          localStorage.setItem('as_computer_auth_user', JSON.stringify(matchedUser));
+          localStorage.setItem('as_computer_last_username', matchedUser.username);
+          sessionStorage.setItem('as_computer_session_active', 'true');
           showToast(`Welcome back, ${matchedUser.username}!`, 'success');
           return;
         }
@@ -1285,6 +1292,7 @@ export default function App() {
       isGoogleDriveLinked={!!linkedSheetId}
       onOpenGoogleDriveBackup={() => setDriveBackupOpen(true)}
       onOpenDataSheet={() => setDataSheetOpen(true)}
+      onOpenCommissionReport={() => setCommissionReportOpen(true)}
     >
       {/* Toast Notification Container */}
       <div className="fixed top-6 right-6 z-[999999] flex flex-col gap-2 pointer-events-none">
@@ -1344,6 +1352,7 @@ export default function App() {
             setActiveTab('expenses');
             setExpenseOpen(true);
           }}
+          onOpenCommissionReport={() => setCommissionReportOpen(true)}
         />
       ) : (
         <>
@@ -1779,6 +1788,15 @@ export default function App() {
         onReload={fetchBootstrapData}
         showToast={showToast}
       />
+
+      {commissionReportOpen && currentUser && (
+        <CommissionReportModal
+          sales={sales}
+          users={users.length > 0 ? users : FALLBACK_USERS}
+          currentUser={currentUser}
+          onClose={() => setCommissionReportOpen(false)}
+        />
+      )}
     </Layout>
   );
 }

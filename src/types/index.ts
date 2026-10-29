@@ -141,3 +141,13 @@ export interface CashClosingRecord {
   notes: string;
   denominations: DenominationCounts;
 }
+
+export interface StaffLeaveRecord {
+  id: string;
+  staffName: string;
+  date: string;
+  endDate?: string;
+  days: number;
+  reason: string;
+  createdAt: string;
+}

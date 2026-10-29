@@ -23,7 +23,8 @@ import {
   KeyRound,
   LayoutDashboard,
   FileSpreadsheet,
-  Cloud
+  Cloud,
+  Award
 } from 'lucide-react';
 import { User } from '../types';
 import { formatCurrency } from '../utils/helpers';
@@ -55,6 +56,7 @@ interface LayoutProps {
   isGoogleDriveLinked?: boolean;
   onOpenGoogleDriveBackup?: () => void;
   onOpenDataSheet?: () => void;
+  onOpenCommissionReport?: () => void;
   children: React.ReactNode;
 }
 
@@ -69,6 +71,7 @@ export const Layout: React.FC<LayoutProps> = ({
   isGoogleDriveLinked,
   onOpenGoogleDriveBackup,
   onOpenDataSheet,
+  onOpenCommissionReport,
   children
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -312,6 +315,28 @@ export const Layout: React.FC<LayoutProps> = ({
                       {!isSidebarCollapsed && (
                         <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                           Admin
+                        </span>
+                      )}
+                    </button>
+                  )}
+                  {onOpenCommissionReport && (
+                    <button
+                      onClick={() => {
+                        onOpenCommissionReport();
+                        setSidebarOpen(false);
+                      }}
+                      title="Staff Commission & Leave Report"
+                      className={`w-full flex items-center ${
+                        isSidebarCollapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2'
+                      } rounded-xl text-xs font-bold transition cursor-pointer group text-purple-300 hover:bg-slate-800/80 hover:text-white`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Award className="w-4 h-4 flex-shrink-0 text-purple-400 group-hover:text-purple-300" />
+                        {!isSidebarCollapsed && <span>Commission & Leave</span>}
+                      </div>
+                      {!isSidebarCollapsed && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                          Sheet
                         </span>
                       )}
                     </button>

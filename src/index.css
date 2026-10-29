@@ -174,7 +174,7 @@
   .print-content-body {
     width: 100% !important;
     height: auto !important;
-    padding-bottom: 26px !important;
+    padding-bottom: 30px !important;
   }
 
   .print-doc-footer {
@@ -188,14 +188,24 @@
     justify-content: space-between !important;
     align-items: center !important;
     margin-top: 0 !important;
-    padding-top: 5px !important;
-    padding-bottom: 3px !important;
+    padding-top: 4px !important;
+    padding-bottom: 2px !important;
     border-top: 1px solid #94a3b8 !important;
     font-size: 10px !important;
     line-height: 1.3 !important;
     color: #475569 !important;
     box-sizing: border-box !important;
     z-index: 9999 !important;
+  }
+
+  .page-number-val::after {
+    content: counter(page);
+  }
+
+  .report-footer-container {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-top: auto !important;
   }
 
   /* Table rules */

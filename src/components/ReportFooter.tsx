@@ -24,7 +24,7 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
   className = ''
 }) => {
   return (
-    <div className={`mt-auto space-y-4 pt-4 ${className}`}>
+    <div className={`report-footer-container mt-auto space-y-4 pt-4 ${className}`}>
       {/* Shop Info Block */}
       <div className="pt-3 border-t border-slate-300 text-left">
         <div className="font-black text-slate-900 tracking-wider uppercase text-xs sm:text-sm">
@@ -75,7 +75,8 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
           {reportTitle} - Printed : {printTimestamp} {currentUser ? `• ${currentUser}` : ''}
         </div>
         <div className="font-bold text-slate-700 whitespace-nowrap">
-          {pageInfo}
+          <span className="print:hidden">{pageInfo}</span>
+          <span className="hidden print:inline auto-page-counter">Page <span className="page-number-val"></span></span>
         </div>
       </div>
     </div>
