@@ -53,7 +53,7 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
   let totalDue = 0;
 
   filteredSales.forEach(s => {
-    const name = s.customer || 'New Customer';
+    const name = s.customer || 'Cash Customer';
     if (!custMap[name]) {
       const matched = customers.find(c => c.name.toLowerCase() === name.toLowerCase());
       custMap[name] = {

@@ -288,7 +288,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       await onSubmitSale({
         id: editingSale?.id,
         user: currentUser,
-        customer: customerName.trim() || 'New Customer',
+        customer: customerName.trim() || 'Cash Customer',
         phone: customerPhone.trim() || '01904142370',
         address: customerAddress.trim() || 'Paduar Bazar, Cumilla',
         desc: workDesc.trim(),
@@ -377,7 +377,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
               list="customerDatalist"
               value={customerName}
               onChange={e => handleCustomerSelect(e.target.value)}
-              placeholder="New Customer"
+              placeholder="Cash Customer"
               className="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
             />
             <datalist id="customerDatalist">

@@ -30,6 +30,7 @@ interface TransactionTableProps {
   onFilterStaffChange: (val: string) => void;
   onFilterToday: () => void;
   onFilterRunningMonth: () => void;
+  onFilterAll?: () => void;
   onReload: () => void;
   onPrintInvoice: (sale: SaleRecord) => void;
   onOpenSummaryReport: () => void;
@@ -78,6 +79,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   onFilterStaffChange,
   onFilterToday,
   onFilterRunningMonth,
+  onFilterAll,
   onReload,
   onPrintInvoice,
   onOpenSummaryReport,
@@ -96,7 +98,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               <span>Transactions Record</span>
             </h2>
             <span className="text-[10px] sm:text-[11px] px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold">
-              {activeFilterBadge}
+              {activeFilterBadge} ({sales.length} Memos)
             </span>
           </div>
 
@@ -110,13 +112,15 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               <span>Summary Print</span>
             </button>
 
-            <button
-              type="button"
-              onClick={onFilterToday}
-              className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer"
-            >
-              <Calendar className="w-3.5 h-3.5 text-amber-300" /> Today
-            </button>
+            {onFilterAll && (
+              <button
+                type="button"
+                onClick={onFilterAll}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer"
+              >
+                <span>সকল মেমো (All)</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -124,6 +128,14 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
             >
               <CalendarDays className="w-3.5 h-3.5 text-emerald-400" /> Running Month
+            </button>
+
+            <button
+              type="button"
+              onClick={onFilterToday}
+              className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer"
+            >
+              <Calendar className="w-3.5 h-3.5 text-amber-300" /> Today
             </button>
           </div>
         </div>
@@ -224,7 +236,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                     #{s.invoiceNo}
                   </td>
                   <td className="p-3">
-                    <div className="font-bold text-white">{s.customer || 'New Customer'}</div>
+                    <div className="font-bold text-white">{s.customer || 'Cash Customer'}</div>
                     <div className="text-[10px] text-slate-400 font-mono">{s.phone || '01904142370'}</div>
                   </td>
                   <td className="p-3">

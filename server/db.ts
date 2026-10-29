@@ -226,8 +226,8 @@ function seedInitialData(): void {
     `);
   }
 
-  // Seed October 2026 sales & due records from provided CSV if sales table is empty
-  seedOctoberSalesData();
+  // Seed all sales & due records from provided CSV backup if sales table is empty
+  seedFullBackupData();
 
   // Set permanent Google Apps Script webhook URL
   db.run(`
@@ -275,7 +275,7 @@ function parseCSVLines(text: string): string[][] {
   return lines;
 }
 
-function seedOctoberSalesData(): void {
+function seedFullBackupData(): void {
   const salesCount = db.exec("SELECT COUNT(*) as count FROM sales")[0]?.values[0][0] as number;
   if (salesCount > 0) return;
 
@@ -285,14 +285,12 @@ function seedOctoberSalesData(): void {
   try {
     const csvRaw = fs.readFileSync(csvPath, 'utf8');
     const allLines = parseCSVLines(csvRaw);
-    const rows = allLines.slice(1).filter(r => {
-      const ts = r[1] || '';
-      return ts.startsWith('2026-10') || ts.includes('/10/2026') || ts.includes('-10-2026');
-    });
+    const rows = allLines.slice(1);
 
     if (rows.length === 0) return;
 
     const customerMap = new Map<string, { name: string; phone: string; address: string }>();
+    customerMap.set('Cash Customer', { name: 'Cash Customer', phone: '01904142370', address: 'Paduar Bazar, Cumilla' });
     customerMap.set('Md Abu Said', { name: 'Md Abu Said', phone: '01904142370', address: 'Paduar Bazar, Cumilla' });
     customerMap.set('Md Sujon', { name: 'Md Sujon', phone: '01812345678', address: 'Paduar Bazar, Cumilla' });
     customerMap.set('Al-Amin Traders', { name: 'Al-Amin Traders', phone: '01711223344', address: 'Paduar Bazar Biswa Road, Cumilla' });
@@ -305,8 +303,10 @@ function seedOctoberSalesData(): void {
       { category: 'Photocopy', name: 'LG Photocopy', price: 4, costPrice: 1.8, stockQty: null, lowStockLimit: 5 },
       { category: 'Photocopy', name: 'Legal Photocopy (Duplex)', price: 5, costPrice: 2.2, stockQty: null, lowStockLimit: 5 },
       { category: 'Photocopy', name: 'Color Print', price: 10, costPrice: 4, stockQty: null, lowStockLimit: 5 },
+      { category: 'Photocopy', name: 'A4 Color Print', price: 10, costPrice: 4, stockQty: null, lowStockLimit: 5 },
       { category: 'Photocopy', name: 'Lg Colour Print', price: 15, costPrice: 6, stockQty: null, lowStockLimit: 5 },
       { category: 'Photocopy', name: 'Black & White Print', price: 5, costPrice: 2, stockQty: null, lowStockLimit: 5 },
+      { category: 'Photocopy', name: 'A4 Black & White', price: 5, costPrice: 2, stockQty: null, lowStockLimit: 5 },
       { category: 'Photocopy', name: 'PP Size Photo', price: 10, costPrice: 3, stockQty: null, lowStockLimit: 5 },
       { category: 'Photocopy', name: 'A4 Lamination', price: 30, costPrice: 10, stockQty: null, lowStockLimit: 5 },
       { category: 'Photocopy', name: 'NID Card Lamination', price: 40, costPrice: 12, stockQty: null, lowStockLimit: 5 },
@@ -351,8 +351,18 @@ function seedOctoberSalesData(): void {
       const invNo = parseInt(r[0]);
       const ts = r[1];
       const user = r[2] || 'Md Abu Said';
-      const cName = (r[3] || 'Cash Customer').trim();
-      const cPhone = (r[4] || '').trim();
+      let rawCust = (r[3] || 'Cash Customer').trim();
+      
+      // Convert "New Customer" to "Cash Customer"
+      if (rawCust.toLowerCase() === 'new customer' || rawCust === '') {
+        rawCust = 'Cash Customer';
+      }
+
+      let cPhone = (r[4] || '').trim();
+      if (rawCust === 'Cash Customer' && !cPhone) {
+        cPhone = '01904142370';
+      }
+
       const cat = r[5] || 'Photocopy';
       const desc = r[6] || '';
       const subtotal = parseFloat((r[7] || '0').replace(/,/g, '')) || 0;
@@ -363,10 +373,10 @@ function seedOctoberSalesData(): void {
       const itemsRaw = r[12] || '[]';
       const dateOnly = ts.substring(0, 10);
 
-      if (!customerMap.has(cName)) {
-        customerMap.set(cName, { name: cName, phone: cPhone, address: 'Paduar Bazar, Cumilla' });
+      if (!customerMap.has(rawCust)) {
+        customerMap.set(rawCust, { name: rawCust, phone: cPhone, address: 'Paduar Bazar, Cumilla' });
       } else {
-        const existing = customerMap.get(cName)!;
+        const existing = customerMap.get(rawCust)!;
         if (!existing.phone && cPhone) existing.phone = cPhone;
       }
 
@@ -384,7 +394,7 @@ function seedOctoberSalesData(): void {
           subtotal, discount, grand_total, paid, due, items_json
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        invNo, ts, dateOnly, user, null, cName,
+        invNo, ts, dateOnly, user, null, rawCust,
         cPhone, 'Paduar Bazar, Cumilla', cat, desc,
         subtotal, discount, grandTotal, paid, due, JSON.stringify(parsedItems)
       ]);
@@ -403,12 +413,13 @@ function seedOctoberSalesData(): void {
         `, [invNo, invNo, iCat, pName, price, costPrice, qty, total]);
 
         if (!productMap.has(pName)) {
+          const isStationery = iCat.toLowerCase().includes('stationery') || ['paper', 'pen', 'folder', 'file', 'stamp', 'glue', 'envelope'].some(w => pName.toLowerCase().includes(w));
           productMap.set(pName, {
-            category: iCat,
+            category: isStationery ? 'Stationery Products' : iCat,
             name: pName,
             price: price,
             costPrice: costPrice,
-            stockQty: iCat === 'Stationery Products' ? 20 : null,
+            stockQty: isStationery ? 25 : null,
             lowStockLimit: 5
           });
         }
@@ -423,7 +434,7 @@ function seedOctoberSalesData(): void {
         `, [
           `DUE-INV-${invNo}`,
           dateOnly,
-          cName,
+          rawCust,
           cPhone,
           'Paduar Bazar, Cumilla',
           'Invoice Due',
@@ -453,7 +464,7 @@ function seedOctoberSalesData(): void {
       `, [pSl++, p.category, p.name, p.price, p.costPrice || 0, p.stockQty, p.lowStockLimit || 5]);
     }
   } catch (err) {
-    console.error('Error during seedOctoberSalesData:', err);
+    console.error('Error during seedFullBackupData:', err);
   }
 }
 

@@ -343,12 +343,13 @@ export default function App() {
       }
     );
     fetchGoogleDriveStatus();
+    fetchBootstrapData();
   }, []);
 
   useEffect(() => {
     if (currentUser) {
       fetchBootstrapData();
-      handleFilterToday();
+      handleFilterRunningMonth();
     }
   }, [currentUser]);
 
@@ -474,6 +475,14 @@ export default function App() {
     setFilterEndDate('');
     setSearchMemo('');
     setActiveFilterBadge(`Month (${ym})`);
+  };
+
+  const handleFilterAll = () => {
+    setFilterMonth('');
+    setFilterStartDate('');
+    setFilterEndDate('');
+    setSearchMemo('');
+    setActiveFilterBadge('সকল মেমো (All)');
   };
 
   // Tab switching handler that opens modals or switches active sections
@@ -620,7 +629,7 @@ export default function App() {
 
     // 3. Auto-save customer in Customer Directory if not exists
     const custName = (payload.customer || '').trim();
-    if (custName && custName.toLowerCase() !== 'general customer') {
+    if (custName && custName.toLowerCase() !== 'general customer' && custName.toLowerCase() !== 'cash customer') {
       const exists = customers.some(c => c.name.toLowerCase() === custName.toLowerCase());
       if (!exists) {
         const nextCust: Customer = {
@@ -1427,6 +1436,7 @@ export default function App() {
                 onFilterStaffChange={setFilterStaff}
                 onFilterToday={handleFilterToday}
                 onFilterRunningMonth={handleFilterRunningMonth}
+                onFilterAll={handleFilterAll}
                 onReload={fetchBootstrapData}
                 onPrintInvoice={sale => setInvoiceModalSale(sale)}
                 onOpenSummaryReport={() => setSummaryReportOpen(true)}
