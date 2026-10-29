@@ -13,30 +13,43 @@ interface ExpenseModalProps {
   showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
-export const EXPENSE_CATEGORIES_EN = [
-  'Shop Rent',
-  'Electricity Bill',
-  'Internet Bill',
-  'Staff Salary',
-  'Paper Purchase',
-  'Ink & Toner',
-  'Machine Repair & Servicing',
-  'Tea & Entertainment',
-  'Stationery Supplies',
-  'Photocopy Consumables',
-  'Hardware & Parts',
-  'Conveyance & Transport',
-  'Mobile Bill & Recharge',
-  'Shop Renovation',
-  'Packaging & Supplies',
-  'Other Expenses'
+export const EXPENSE_CATEGORIES_BN = [
+  'দোকান ভাড়া',
+  'বিদ্যুৎ বিল',
+  'ইন্টারনেট বিল',
+  'কর্মী বেতন ও ভাতা (Md Abu Said)',
+  'কর্মী বেতন ও ভাতা (অল স্টাফ)',
+  'কর্মী বেতন ও খাবার বিল',
+  'কালি ও টোনার',
+  'মেশিন মেরামত ও সার্ভিসিং',
+  'চা ও আপ্যায়ন',
+  'ফটোকপির ব্যবহার্য সামগ্রী',
+  'যাতায়াত ও পরিবহন',
+  'অন্যান্য খরচ'
 ];
 
-export const formatExpenseCategoryEn = (cat: string) => {
-  return cat || 'Other Expenses';
+export const formatExpenseCategoryBn = (cat: string) => {
+  if (!cat) return 'অন্যান্য খরচ';
+  const c = cat.toLowerCase();
+  if (c.includes('rent') || c.includes('ভাড়া') || c.includes('ভাড়া')) return 'দোকান ভাড়া';
+  if (c.includes('electric') || c.includes('বিদ্যুৎ')) return 'বিদ্যুৎ বিল';
+  if (c.includes('internet') || c.includes('ইন্টারনেট')) return 'ইন্টারনেট বিল';
+  if (c.includes('said') || c.includes('আবু সাঈদ')) return 'কর্মী বেতন ও ভাতা (Md Abu Said)';
+  if (c.includes('salary') || c.includes('staff') || c.includes('অল স্টাফ') || c.includes('কর্মী')) return 'কর্মী বেতন ও ভাতা (অল স্টাফ)';
+  if (c.includes('খাবার') || c.includes('food') || c.includes('meal')) return 'কর্মী বেতন ও খাবার বিল';
+  if (c.includes('ink') || c.includes('toner') || c.includes('কালি') || c.includes('টোনার')) return 'কালি ও টোনার';
+  if (c.includes('repair') || c.includes('servicing') || c.includes('মেরামত')) return 'মেশিন মেরামত ও সার্ভিসিং';
+  if (c.includes('tea') || c.includes('entertainment') || c.includes('আপ্যায়ন') || c.includes('চা')) return 'চা ও আপ্যায়ন';
+  if (c.includes('paper') || c.includes('photocopy') || c.includes('ফটোকপি')) return 'ফটোকপির ব্যবহার্য সামগ্রী';
+  if (c.includes('transport') || c.includes('conveyance') || c.includes('যাতায়াত')) return 'যাতায়াত ও পরিবহন';
+  if (c.includes('other') || c.includes('অন্যান্য')) return 'অন্যান্য খরচ';
+  return cat;
 };
 
-const DEFAULT_CATEGORIES = EXPENSE_CATEGORIES_EN;
+// Aliases for compatibility
+export const EXPENSE_CATEGORIES_EN = EXPENSE_CATEGORIES_BN;
+export const formatExpenseCategoryEn = formatExpenseCategoryBn;
+const DEFAULT_CATEGORIES = EXPENSE_CATEGORIES_BN;
 
 export const ExpenseModal: React.FC<ExpenseModalProps> = ({
   expenses,
@@ -245,6 +258,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
                 onChange={e => setCategory(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white font-semibold focus:outline-none focus:border-rose-500"
               >
+                <option value="" disabled>Select Expense Category...</option>
                 {DEFAULT_CATEGORIES.map(c => (
                   <option key={c} value={c}>
                     {c}

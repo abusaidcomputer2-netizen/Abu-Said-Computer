@@ -27,7 +27,7 @@ import { Layout, ActiveTab } from './components/Layout';
 import { DashboardView } from './components/DashboardView';
 import { StatsCards } from './components/StatsCards';
 import { MemoEntryForm } from './components/MemoEntryForm';
-import { TransactionTable } from './components/TransactionTable';
+import { TransactionTable, isMemoEditable } from './components/TransactionTable';
 import { InvoiceModal } from './components/modals/InvoiceModal';
 import { DueLedgerModal } from './components/modals/DueLedgerModal';
 import { LedgerPrintModal } from './components/modals/LedgerPrintModal';
@@ -1430,8 +1430,13 @@ export default function App() {
                 onReload={fetchBootstrapData}
                 onPrintInvoice={sale => setInvoiceModalSale(sale)}
                 onOpenSummaryReport={() => setSummaryReportOpen(true)}
-                onOpenDataSheet={() => setDataSheetOpen(true)}
-                onEditSale={sale => setEditingSale(sale)}
+                onEditSale={sale => {
+                  if (!isMemoEditable(sale.rawDate || sale.date)) {
+                    showToast('শুধুমাত্র আজ এবং গতকালের মেমো এডিট করা যাবে!', 'warning');
+                    return;
+                  }
+                  setEditingSale(sale);
+                }}
                 onDeleteSale={sale => setDeleteMemoSale(sale)}
               />
             </div>

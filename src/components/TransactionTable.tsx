@@ -38,6 +38,29 @@ interface TransactionTableProps {
   onDeleteSale: (sale: SaleRecord) => void;
 }
 
+export const isMemoEditable = (saleDateStr?: string) => {
+  if (!saleDateStr) return false;
+  const now = new Date();
+  
+  const getDates = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const bdTime = new Date(d.getTime() + (6 * 60 + d.getTimezoneOffset()) * 60000);
+    const bdy = bdTime.getFullYear();
+    const bdm = String(bdTime.getMonth() + 1).padStart(2, '0');
+    const bdDay = String(bdTime.getDate()).padStart(2, '0');
+    return [`${y}-${m}-${day}`, `${bdy}-${bdm}-${bdDay}`];
+  };
+
+  const todayVariants = getDates(now);
+  const yesterdayVariants = getDates(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+  const allowed = new Set([...todayVariants, ...yesterdayVariants]);
+
+  const cleanDate = saleDateStr.substring(0, 10).replace(/\//g, '-');
+  return allowed.has(cleanDate);
+};
+
 export const TransactionTable: React.FC<TransactionTableProps> = ({
   sales,
   filterStartDate,
@@ -246,13 +269,22 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                     >
                       <Printer className="w-3.5 h-3.5" />
                     </button>
-                    <button
-                      onClick={() => onEditSale(s)}
-                      className="p-1.5 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white rounded-lg transition cursor-pointer"
-                      title="Edit Memo"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
+                    {isMemoEditable(s.rawDate || s.date) ? (
+                      <button
+                        onClick={() => onEditSale(s)}
+                        className="p-1.5 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white rounded-lg transition cursor-pointer"
+                        title="Edit Memo (আজ বা গতকালের মেমো)"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <span
+                        className="p-1.5 bg-slate-800/40 text-slate-600 rounded-lg cursor-not-allowed inline-flex items-center justify-center opacity-30"
+                        title="শুধুমাত্র আজ এবং গতকালের মেমো এডিট করা যাবে (Locked)"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </span>
+                    )}
                     {isAdmin && (
                       <button
                         onClick={() => onDeleteSale(s)}
