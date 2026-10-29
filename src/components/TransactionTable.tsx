@@ -30,7 +30,6 @@ interface TransactionTableProps {
   onFilterStaffChange: (val: string) => void;
   onFilterToday: () => void;
   onFilterRunningMonth: () => void;
-  onFilterAll?: () => void;
   onReload: () => void;
   onPrintInvoice: (sale: SaleRecord) => void;
   onOpenSummaryReport: () => void;
@@ -79,7 +78,6 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   onFilterStaffChange,
   onFilterToday,
   onFilterRunningMonth,
-  onFilterAll,
   onReload,
   onPrintInvoice,
   onOpenSummaryReport,
@@ -98,7 +96,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               <span>Transactions Record</span>
             </h2>
             <span className="text-[10px] sm:text-[11px] px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold">
-              {activeFilterBadge} ({sales.length} Memos)
+              {activeFilterBadge} ({sales.length})
             </span>
           </div>
 
@@ -111,16 +109,6 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               <Printer className="w-3.5 h-3.5 text-amber-300" />
               <span>Summary Print</span>
             </button>
-
-            {onFilterAll && (
-              <button
-                type="button"
-                onClick={onFilterAll}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer"
-              >
-                <span>সকল মেমো (All)</span>
-              </button>
-            )}
 
             <button
               type="button"

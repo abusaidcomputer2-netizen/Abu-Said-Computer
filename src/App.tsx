@@ -121,7 +121,7 @@ export default function App() {
   const [filterMonth, setFilterMonth] = useState('');
   const [searchMemo, setSearchMemo] = useState('');
   const [filterStaff, setFilterStaff] = useState('ALL');
-  const [activeFilterBadge, setActiveFilterBadge] = useState('সকল মেমো (All)');
+  const [activeFilterBadge, setActiveFilterBadge] = useState('Running Month');
 
   // Modals & Action States
   const [editingSale, setEditingSale] = useState<SaleRecord | null>(null);
@@ -185,7 +185,7 @@ export default function App() {
     }
   };
 
-  const CACHE_VERSION = 'v4_full_backup_853_cash_cust';
+  const CACHE_VERSION = 'v5_all_prods_custs_854';
 
   // Bootstrap data fetch with intelligent merge so state is never lost
   const fetchBootstrapData = async () => {
@@ -357,7 +357,7 @@ export default function App() {
   useEffect(() => {
     if (currentUser) {
       fetchBootstrapData();
-      handleFilterAll();
+      handleFilterRunningMonth();
     }
   }, [currentUser]);
 
@@ -1444,7 +1444,6 @@ export default function App() {
                 onFilterStaffChange={setFilterStaff}
                 onFilterToday={handleFilterToday}
                 onFilterRunningMonth={handleFilterRunningMonth}
-                onFilterAll={handleFilterAll}
                 onReload={fetchBootstrapData}
                 onPrintInvoice={sale => setInvoiceModalSale(sale)}
                 onOpenSummaryReport={() => setSummaryReportOpen(true)}

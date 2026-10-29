@@ -283,7 +283,15 @@ function seedFullBackupData(): void {
   db.run("DELETE FROM sale_items;");
   db.run("DELETE FROM due_ledger;");
 
-  const csvPath = path.resolve(process.cwd(), 'public/assets/aistudio/AS_Computer_Shop_Management_System_40d860e8');
+  const assetDir = path.resolve(process.cwd(), 'public/assets/aistudio');
+  let csvPath = path.join(assetDir, 'AS_Computer_Shop_Management_System_9b748c27');
+  if (fs.existsSync(assetDir)) {
+    const matched = fs.readdirSync(assetDir).filter(f => f.startsWith('AS_Computer_Shop_Management_System'));
+    if (matched.length > 0) {
+      matched.sort((a, b) => fs.statSync(path.join(assetDir, b)).mtimeMs - fs.statSync(path.join(assetDir, a)).mtimeMs);
+      csvPath = path.join(assetDir, matched[0]);
+    }
+  }
   if (!fs.existsSync(csvPath)) return;
 
   try {
