@@ -205,7 +205,6 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
           currentUser={currentUser}
           leftSignatureLabel="APPROVED BY"
           rightSignatureLabel="AUTHORIZED SIGNATURE"
-          className="mt-auto pt-2"
         />
         </div>
       </div>

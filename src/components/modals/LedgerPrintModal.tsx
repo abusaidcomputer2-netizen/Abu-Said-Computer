@@ -290,7 +290,6 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
             currentUser={currentUser}
             leftSignatureLabel="CUSTOMER SIGNATURE"
             rightSignatureLabel="AUTHORIZED SIGNATURE"
-            className="mt-auto pt-2"
           />
         </div>
       </div>

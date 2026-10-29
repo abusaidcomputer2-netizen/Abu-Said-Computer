@@ -180,7 +180,6 @@ export const StockPrintModal: React.FC<StockPrintModalProps> = ({ products, curr
           currentUser={currentUser}
           leftSignatureLabel="CHECKED BY"
           rightSignatureLabel="AUTHORIZED SIGNATURE"
-          className="mt-auto pt-2"
         />
         </div>
       </div>

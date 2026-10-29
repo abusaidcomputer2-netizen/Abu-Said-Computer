@@ -222,7 +222,6 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
             currentUser={sale.user}
             showCustomerSignature={true}
             showAuthorizedSignature={true}
-            className="mt-auto"
           />
         </div>
       </div>

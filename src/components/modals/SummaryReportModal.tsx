@@ -287,7 +287,6 @@ export const SummaryReportModal: React.FC<SummaryReportModalProps> = ({
           currentUser={currentUser}
           leftSignatureLabel="PREPARED BY"
           rightSignatureLabel="AUTHORIZED SIGNATURE"
-          className="mt-auto pt-2"
         />
         </div>
       </div>

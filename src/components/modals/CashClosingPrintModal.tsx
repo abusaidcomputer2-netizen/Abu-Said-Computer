@@ -267,7 +267,6 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
           currentUser={cashClosing.user || currentUser}
           leftSignatureLabel="CASHIER / STAFF SIGNATURE"
           rightSignatureLabel="AUTHORIZED SIGNATURE"
-          className="mt-auto pt-2"
         />
         </div>
       </div>

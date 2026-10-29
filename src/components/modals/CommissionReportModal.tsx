@@ -693,7 +693,6 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
           currentUser={selectedStaff}
           leftSignatureLabel="STAFF SIGNATURE"
           rightSignatureLabel="AUTHORIZED SIGNATURE"
-          className="mt-auto pt-2"
         />
         </div>
       </div>

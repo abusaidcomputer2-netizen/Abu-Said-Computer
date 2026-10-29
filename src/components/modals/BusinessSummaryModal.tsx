@@ -528,7 +528,6 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
           currentUser={currentUser}
           leftSignatureLabel="CHECKED & VERIFIED BY"
           rightSignatureLabel="AUTHORIZED SIGNATURE"
-          className="mt-auto pt-2"
         />
         </div>
       </div>

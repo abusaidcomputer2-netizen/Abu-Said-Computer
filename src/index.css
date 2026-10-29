@@ -176,7 +176,8 @@
   .print-content-body {
     width: 100% !important;
     height: auto !important;
-    flex-grow: 1 !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
     padding-bottom: 4px !important;
   }
 
@@ -199,7 +200,11 @@
   .report-footer-container {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    margin-top: auto !important;
+    flex-grow: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    margin-top: 0 !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }

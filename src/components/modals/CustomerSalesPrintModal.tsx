@@ -400,7 +400,6 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
             currentUser={currentUser}
             leftSignatureLabel="PREPARED BY"
             rightSignatureLabel="AUTHORIZED SIGNATURE"
-            className="mt-auto pt-2"
           />
         </div>
       </div>
