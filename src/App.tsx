@@ -121,7 +121,7 @@ export default function App() {
   const [filterMonth, setFilterMonth] = useState('');
   const [searchMemo, setSearchMemo] = useState('');
   const [filterStaff, setFilterStaff] = useState('ALL');
-  const [activeFilterBadge, setActiveFilterBadge] = useState('Today');
+  const [activeFilterBadge, setActiveFilterBadge] = useState('সকল মেমো (All)');
 
   // Modals & Action States
   const [editingSale, setEditingSale] = useState<SaleRecord | null>(null);
@@ -185,6 +185,8 @@ export default function App() {
     }
   };
 
+  const CACHE_VERSION = 'v4_full_backup_853_cash_cust';
+
   // Bootstrap data fetch with intelligent merge so state is never lost
   const fetchBootstrapData = async () => {
     setIsLoading(true);
@@ -195,28 +197,33 @@ export default function App() {
       if (cachedStr) {
         try {
           cached = JSON.parse(cachedStr);
+          // If cached data is from an older version or incomplete, clear it
+          if (cached?.cacheVersion !== CACHE_VERSION || !cached?.records || cached?.records?.length < 800) {
+            cached = null;
+            localStorage.removeItem('as_computer_cached_bootstrap');
+          }
         } catch (e) {
           console.error('Error parsing cached data', e);
+          cached = null;
         }
       }
 
       try {
-        const res = await fetch('/api/bootstrap');
+        const res = await fetch(`/api/bootstrap?_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+        });
         const rawText = await res.text();
         if (rawText && rawText.trim().startsWith('{')) {
           const data = JSON.parse(rawText);
           if (data.status === 'success') {
-            const mergedProducts = (data.products && data.products.length > 0)
-              ? data.products
-              : (cached?.products || []);
+            const apiSales = data.records || data.sales || [];
+            const apiProducts = data.products || [];
+            const apiCustomers = data.customers || [];
 
-            const mergedCustomers = (data.customers && data.customers.length > 0)
-              ? data.customers
-              : (cached?.customers || []);
-
-            const mergedSales = (data.records && data.records.length > 0)
-              ? data.records
-              : (cached?.records || []);
+            const mergedProducts = apiProducts.length > 0 ? apiProducts : (cached?.products || []);
+            const mergedCustomers = apiCustomers.length > 0 ? apiCustomers : (cached?.customers || []);
+            const mergedSales = apiSales.length > 0 ? apiSales : (cached?.records || cached?.sales || []);
 
             setUsers(data.users || FALLBACK_USERS);
             setProducts(mergedProducts);
@@ -237,6 +244,7 @@ export default function App() {
 
             const mergedToSave = {
               ...data,
+              cacheVersion: CACHE_VERSION,
               products: mergedProducts,
               customers: mergedCustomers,
               records: mergedSales
@@ -349,7 +357,7 @@ export default function App() {
   useEffect(() => {
     if (currentUser) {
       fetchBootstrapData();
-      handleFilterRunningMonth();
+      handleFilterAll();
     }
   }, [currentUser]);
 

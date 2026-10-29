@@ -276,8 +276,12 @@ function parseCSVLines(text: string): string[][] {
 }
 
 function seedFullBackupData(): void {
-  const salesCount = db.exec("SELECT COUNT(*) as count FROM sales")[0]?.values[0][0] as number;
-  if (salesCount > 0) return;
+  const salesCount = (db.exec("SELECT COUNT(*) as count FROM sales")[0]?.values[0][0] as number) || 0;
+  if (salesCount >= 850) return;
+
+  db.run("DELETE FROM sales;");
+  db.run("DELETE FROM sale_items;");
+  db.run("DELETE FROM due_ledger;");
 
   const csvPath = path.resolve(process.cwd(), 'public/assets/aistudio/AS_Computer_Shop_Management_System_40d860e8');
   if (!fs.existsSync(csvPath)) return;

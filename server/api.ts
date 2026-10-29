@@ -73,6 +73,9 @@ apiRouter.post('/auth/login', (req: Request, res: Response) => {
 
 // ---------------- BOOTSTRAP ----------------
 apiRouter.get('/bootstrap', (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     const users = queryAll('SELECT id, username, role, phone, permissions FROM users ORDER BY username ASC');
     const products = queryAll('SELECT * FROM products ORDER BY category ASC, sl ASC');
