@@ -1226,9 +1226,13 @@ export default function App() {
                   }}
                   className="w-full bg-slate-950 border border-slate-700/80 text-white rounded-2xl pl-10 pr-4 py-3 text-sm font-bold focus:outline-none focus:border-cyan-400 transition cursor-pointer"
                 >
-                  <option value="Md Abu Said">Md Abu Said</option>
-                  <option value="Md Sujon">Md Sujon</option>
-                  <option value="Md Saimon Hasan">Md Saimon Hasan</option>
+                  {(users.length > 0 ? users : [
+                    { id: 1, username: 'Md Abu Said' },
+                    { id: 2, username: 'Md Sujon' },
+                    { id: 3, username: 'Md Saimon Hasan' }
+                  ]).map(u => (
+                    <option key={u.username} value={u.username}>{u.username}</option>
+                  ))}
                 </select>
               </div>
             </div>

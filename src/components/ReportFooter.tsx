@@ -24,9 +24,9 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
   className = ''
 }) => {
   return (
-    <div className={`report-footer-container mt-auto space-y-4 pt-4 ${className}`}>
+    <div className={`report-footer-container mt-auto space-y-3 sm:space-y-4 print:space-y-2 pt-3 sm:pt-4 print:pt-1.5 ${className}`}>
       {/* Shop Info Block */}
-      <div className="pt-3 border-t border-slate-300 text-left">
+      <div className="pt-2 sm:pt-3 print:pt-1 border-t border-slate-300 text-left">
         <div className="font-black text-slate-900 tracking-wider uppercase text-xs sm:text-sm">
           ABU SAID COMPUTER
         </div>
@@ -42,7 +42,7 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
       </div>
 
       {/* Signatures */}
-      <div className="pt-6 pb-2 flex justify-between items-end text-center">
+      <div className="pt-4 sm:pt-6 print:pt-2.5 pb-1 sm:pb-2 print:pb-1 flex justify-between items-end text-center">
         {showCustomerSignature ? (
           <div className="w-52 sm:w-60 text-center">
             <div className="border-b border-dashed border-slate-400 pb-1 mb-1.5" />
@@ -75,8 +75,7 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
           {reportTitle} - Printed : {printTimestamp} {currentUser ? `• ${currentUser}` : ''}
         </div>
         <div className="font-bold text-slate-700 whitespace-nowrap">
-          <span className="print:hidden">{pageInfo}</span>
-          <span className="hidden print:inline auto-page-counter">Page <span className="page-number-val"></span></span>
+          {pageInfo || 'Page 1 of 1'}
         </div>
       </div>
     </div>

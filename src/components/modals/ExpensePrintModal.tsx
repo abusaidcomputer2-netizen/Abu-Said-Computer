@@ -75,8 +75,8 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
         </div>
 
         {/* Printable Area */}
-        <div className="print-page-container text-slate-900 bg-white overflow-y-auto flex-grow p-6 sm:p-8 flex flex-col justify-between print:min-h-0 print:p-0 print:shadow-none print:border-none">
-          <div className="print-content-body space-y-4">
+        <div className="print-page-container text-slate-900 bg-white overflow-y-auto flex-grow p-6 sm:p-8 flex flex-col justify-between min-h-[270mm] print:min-h-[270mm] print:p-0 print:shadow-none print:border-none">
+          <div className="print-content-body space-y-4 flex-grow">
             {/* Header */}
             <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3">
               <div className="flex items-center gap-3">
@@ -196,16 +196,17 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
               </tfoot>
             </table>
           )}
+        </div>
 
-            {/* Unified Report Footer matching exact user sample */}
-            <ReportFooter
-              reportTitle="Operating Expenses Statement"
-              printTimestamp={nowFormatted}
-              currentUser={currentUser}
-              leftSignatureLabel="APPROVED BY"
-              rightSignatureLabel="AUTHORIZED SIGNATURE"
-            />
-          </div>
+        {/* Unified Report Footer matching exact user sample as direct child of print container */}
+        <ReportFooter
+          reportTitle="Operating Expenses Statement"
+          printTimestamp={nowFormatted}
+          currentUser={currentUser}
+          leftSignatureLabel="APPROVED BY"
+          rightSignatureLabel="AUTHORIZED SIGNATURE"
+          className="mt-auto pt-2"
+        />
         </div>
       </div>
     </div>

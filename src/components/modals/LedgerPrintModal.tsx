@@ -107,8 +107,8 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
         </div>
 
         {/* Printable Statement Area */}
-        <div className="print-page-container text-slate-900 bg-white overflow-y-auto flex-grow p-6 sm:p-8 flex flex-col justify-between print:min-h-0 print:p-0 print:shadow-none print:border-none">
-          <div className="print-content-body space-y-4">
+        <div className="print-page-container text-slate-900 bg-white overflow-y-auto flex-grow p-6 sm:p-8 flex flex-col justify-between min-h-[270mm] print:min-h-[270mm] print:p-0 print:shadow-none print:border-none">
+          <div className="print-content-body space-y-4 flex-grow">
             {/* Header */}
             <div className="flex justify-between items-start border-b border-slate-300 pb-2">
               <div className="flex items-center gap-3">
@@ -281,16 +281,17 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
                 </tr>
               </tfoot>
             </table>
-
-            {/* Unified Report Footer matching exact user sample */}
-            <ReportFooter
-              reportTitle="Customer Due Ledger Statement"
-              printTimestamp={nowFormatted}
-              currentUser={currentUser}
-              leftSignatureLabel="CUSTOMER SIGNATURE"
-              rightSignatureLabel="AUTHORIZED SIGNATURE"
-            />
           </div>
+
+          {/* Unified Report Footer matching exact user sample as direct child of print container */}
+          <ReportFooter
+            reportTitle="Customer Due Ledger Statement"
+            printTimestamp={nowFormatted}
+            currentUser={currentUser}
+            leftSignatureLabel="CUSTOMER SIGNATURE"
+            rightSignatureLabel="AUTHORIZED SIGNATURE"
+            className="mt-auto pt-2"
+          />
         </div>
       </div>
     </div>

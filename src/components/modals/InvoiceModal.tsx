@@ -48,7 +48,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
         </div>
 
         {/* Printable Cash Memo Sheet */}
-        <div className="print-page-container invoice-print-container p-6 sm:p-8 text-slate-900 bg-white print:p-0 print:shadow-none print:border-none">
+        <div className="print-page-container invoice-print-container p-6 sm:p-8 text-slate-900 bg-white print:p-0 print:shadow-none print:border-none min-h-[750px] flex flex-col justify-between">
           <div className="space-y-4">
             {/* Header Lockup - Colors matched to sample image */}
             <div className="flex justify-between items-start border-b-2 border-slate-900 pb-3">
@@ -213,17 +213,17 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                 </tfoot>
               </table>
             </div>
-
-
-            {/* Exact Sample Matched Footer */}
-            <ReportFooter
-              reportTitle="Sales Invoice"
-              printTimestamp={printTimestamp}
-              currentUser={sale.user}
-              showCustomerSignature={true}
-              showAuthorizedSignature={true}
-            />
           </div>
+
+          {/* Exact Sample Matched Footer at bottom of page */}
+          <ReportFooter
+            reportTitle="Sales Invoice"
+            printTimestamp={printTimestamp}
+            currentUser={sale.user}
+            showCustomerSignature={true}
+            showAuthorizedSignature={true}
+            className="mt-auto"
+          />
         </div>
       </div>
     </div>
