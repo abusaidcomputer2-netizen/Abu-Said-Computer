@@ -6,7 +6,7 @@ interface CustomerModalProps {
   customers: Customer[];
   onClose: () => void;
   onSubmitCustomer: (data: any) => Promise<void>;
-  onDeleteCustomer: (id: number) => Promise<void>;
+  onDeleteCustomer: (id: number | string) => Promise<void>;
   showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 

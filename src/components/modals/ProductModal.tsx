@@ -7,7 +7,7 @@ interface ProductModalProps {
   products: Product[];
   onClose: () => void;
   onSubmitProduct: (data: any) => Promise<void>;
-  onDeleteProduct: (id: number) => Promise<void>;
+  onDeleteProduct: (id: number | string) => Promise<void>;
   showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 

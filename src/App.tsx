@@ -178,8 +178,8 @@ export default function App() {
     try {
       const cachedStr = localStorage.getItem('as_computer_cached_bootstrap');
       let curr = cachedStr ? JSON.parse(cachedStr) : {};
-      const updated = updater(curr);
-      localStorage.setItem('as_computer_cached_bootstrap', JSON.stringify(updated));
+      const updated = updater({ cacheVersion: CACHE_VERSION, ...curr });
+      localStorage.setItem('as_computer_cached_bootstrap', JSON.stringify({ ...updated, cacheVersion: CACHE_VERSION }));
     } catch (e) {
       console.error('Failed to update cached bootstrap', e);
     }
@@ -208,6 +208,19 @@ export default function App() {
         }
       }
 
+      // Read persisted deleted IDs so deleted items never resurrect on reloads or fallback
+      let deletedProdIds: string[] = [];
+      let deletedCustIds: string[] = [];
+      try {
+        deletedProdIds = JSON.parse(localStorage.getItem('as_computer_deleted_products') || '[]').map(String);
+      } catch {}
+      try {
+        deletedCustIds = JSON.parse(localStorage.getItem('as_computer_deleted_customers') || '[]').map(String);
+      } catch {}
+
+      const filterOutDeletedProds = (list: any[]) => list.filter(p => p && !deletedProdIds.includes(String(p.id)));
+      const filterOutDeletedCusts = (list: any[]) => list.filter(c => c && !deletedCustIds.includes(String(c.id)));
+
       try {
         const res = await fetch(`/api/bootstrap?_t=${Date.now()}`, {
           cache: 'no-store',
@@ -218,11 +231,16 @@ export default function App() {
           const data = JSON.parse(rawText);
           if (data.status === 'success') {
             const apiSales = data.records || data.sales || [];
-            const apiProducts = data.products || [];
-            const apiCustomers = data.customers || [];
+            const apiProducts = filterOutDeletedProds(data.products || []);
+            const apiCustomers = filterOutDeletedCusts(data.customers || []);
 
-            const mergedProducts = apiProducts.length > 0 ? apiProducts : (cached?.products?.length > 0 ? cached.products : FALLBACK_PRODUCTS);
-            const mergedCustomers = apiCustomers.length > 0 ? apiCustomers : (cached?.customers?.length > 0 ? cached.customers : FALLBACK_CUSTOMERS);
+            const cleanCachedProds = filterOutDeletedProds(cached?.products || []);
+            const cleanCachedCusts = filterOutDeletedCusts(cached?.customers || []);
+            const cleanFallbackProds = filterOutDeletedProds(FALLBACK_PRODUCTS);
+            const cleanFallbackCusts = filterOutDeletedCusts(FALLBACK_CUSTOMERS);
+
+            const mergedProducts = apiProducts.length > 0 ? apiProducts : (cleanCachedProds.length > 0 ? cleanCachedProds : cleanFallbackProds);
+            const mergedCustomers = apiCustomers.length > 0 ? apiCustomers : (cleanCachedCusts.length > 0 ? cleanCachedCusts : cleanFallbackCusts);
             const mergedSales = apiSales;
 
             setUsers(data.users || FALLBACK_USERS);
@@ -260,8 +278,10 @@ export default function App() {
       if (!isLoaded) {
         const source = cached || {};
         const initialUsers = source.users && source.users.length > 0 ? source.users : FALLBACK_USERS;
-        const initialProducts = source.products && source.products.length > 0 ? source.products : FALLBACK_PRODUCTS;
-        const initialCustomers = source.customers && source.customers.length > 0 ? source.customers : FALLBACK_CUSTOMERS;
+        const rawProds = source.products && source.products.length > 0 ? source.products : FALLBACK_PRODUCTS;
+        const rawCusts = source.customers && source.customers.length > 0 ? source.customers : FALLBACK_CUSTOMERS;
+        const initialProducts = filterOutDeletedProds(rawProds);
+        const initialCustomers = filterOutDeletedCusts(rawCusts);
         const initialSales = (source.records || source.sales || []).length > 0 ? (source.records || source.sales) : FALLBACK_SALES;
         const initialExpenses = source.expenses && source.expenses.length > 0 ? source.expenses : FALLBACK_EXPENSES;
         let initialDue = source.dueRecords && source.dueRecords.length > 0 ? source.dueRecords : FALLBACK_DUE_RECORDS;
@@ -1009,23 +1029,30 @@ export default function App() {
 
     // 1. Immediately save to React State
     setCustomers(prev => {
-      const exists = prev.some(c => c.id === cid);
+      const exists = prev.some(c => String(c.id) === String(cid));
       if (isEdit || exists) {
-        return prev.map(c => c.id === cid ? custRecord : c);
+        return prev.map(c => String(c.id) === String(cid) ? custRecord : c);
       }
       return [...prev, custRecord];
     });
 
-    // 2. Immediately save to LocalStorage
+    // 2. Remove from deleted customers list if user re-added/edited it
+    try {
+      const deletedIds = JSON.parse(localStorage.getItem('as_computer_deleted_customers') || '[]');
+      const filtered = deletedIds.filter((dId: any) => String(dId) !== String(cid));
+      localStorage.setItem('as_computer_deleted_customers', JSON.stringify(filtered));
+    } catch {}
+
+    // 3. Immediately save to LocalStorage
     updateCachedBootstrap(prev => {
       const list = prev.customers || [];
       const updatedList = isEdit
-        ? list.map((c: any) => c.id === cid ? custRecord : c)
-        : [...list.filter((c: any) => c.id !== cid), custRecord];
+        ? list.map((c: any) => String(c.id) === String(cid) ? custRecord : c)
+        : [...list.filter((c: any) => String(c.id) !== String(cid)), custRecord];
       return { ...prev, customers: updatedList };
     });
 
-    // 3. Persist to Backend API
+    // 4. Persist to Backend API
     const url = isEdit ? `/api/customers/${payload.id}` : '/api/customers';
     const method = isEdit ? 'PUT' : 'POST';
     try {
@@ -1036,10 +1063,10 @@ export default function App() {
       if (data && data.status === 'success') {
         showToast(data.message || (isEdit ? 'Customer updated!' : 'Customer saved!'), 'success');
         if (data.customer) {
-          setCustomers(prev => prev.map(c => c.id === cid ? data.customer : c));
+          setCustomers(prev => prev.map(c => String(c.id) === String(cid) ? data.customer : c));
           updateCachedBootstrap(prev => ({
             ...prev,
-            customers: (prev.customers || []).map((c: any) => c.id === cid ? data.customer : c)
+            customers: (prev.customers || []).map((c: any) => String(c.id) === String(cid) ? data.customer : c)
           }));
         }
       } else {
@@ -1047,29 +1074,38 @@ export default function App() {
       }
     } catch {
       showToast(isEdit ? 'Customer updated!' : 'Customer saved!', 'success');
-    } finally {
-      await fetchBootstrapData();
     }
   };
 
-  const handleDeleteCustomer = async (id: number) => {
-    setCustomers(prev => prev.filter(c => c.id !== id));
+  const handleDeleteCustomer = async (id: number | string) => {
+    // 1. Immediately remove from React state
+    setCustomers(prev => prev.filter(c => String(c.id) !== String(id)));
+
+    // 2. Track deleted ID in localStorage so fallback never resurrects it
+    try {
+      const deletedIds: any[] = JSON.parse(localStorage.getItem('as_computer_deleted_customers') || '[]');
+      if (!deletedIds.some(d => String(d) === String(id))) {
+        deletedIds.push(id);
+        localStorage.setItem('as_computer_deleted_customers', JSON.stringify(deletedIds));
+      }
+    } catch {}
+
+    // 3. Remove from cached bootstrap
     updateCachedBootstrap(prev => ({
       ...prev,
-      customers: (prev.customers || []).filter((c: any) => c.id !== id)
+      customers: (prev.customers || []).filter((c: any) => String(c.id) !== String(id))
     }));
 
+    // 4. Send DELETE to backend database
     try {
       const { data } = await safeFetchJson<any>(`/api/customers/${id}`, { method: 'DELETE' });
       if (data && data.status === 'success') {
-        showToast(data.message, 'success');
+        showToast(data.message || 'Customer deleted successfully', 'success');
       } else {
         showToast('Customer deleted', 'info');
       }
     } catch {
       showToast('Customer deleted', 'info');
-    } finally {
-      await fetchBootstrapData();
     }
   };
 
@@ -1090,23 +1126,30 @@ export default function App() {
 
     // 1. Immediately save to React State
     setProducts(prev => {
-      const exists = prev.some(p => p.id === pid);
+      const exists = prev.some(p => String(p.id) === String(pid));
       if (isEdit || exists) {
-        return prev.map(p => p.id === pid ? prodRecord : p);
+        return prev.map(p => String(p.id) === String(pid) ? prodRecord : p);
       }
       return [...prev, prodRecord];
     });
 
-    // 2. Immediately save to LocalStorage
+    // 2. Remove from deleted products list if user re-added/edited it
+    try {
+      const deletedIds = JSON.parse(localStorage.getItem('as_computer_deleted_products') || '[]');
+      const filtered = deletedIds.filter((dId: any) => String(dId) !== String(pid));
+      localStorage.setItem('as_computer_deleted_products', JSON.stringify(filtered));
+    } catch {}
+
+    // 3. Immediately save to LocalStorage
     updateCachedBootstrap(prev => {
       const list = prev.products || [];
       const updatedList = isEdit
-        ? list.map((p: any) => p.id === pid ? prodRecord : p)
-        : [...list.filter((p: any) => p.id !== pid), prodRecord];
+        ? list.map((p: any) => String(p.id) === String(pid) ? prodRecord : p)
+        : [...list.filter((p: any) => String(p.id) !== String(pid)), prodRecord];
       return { ...prev, products: updatedList };
     });
 
-    // 3. Persist to Backend API
+    // 4. Persist to Backend API
     const url = isEdit ? `/api/products/${payload.id}` : '/api/products';
     const method = isEdit ? 'PUT' : 'POST';
     try {
@@ -1117,10 +1160,10 @@ export default function App() {
       if (data && data.status === 'success') {
         showToast(data.message || (isEdit ? 'Product updated!' : 'Product saved!'), 'success');
         if (data.product) {
-          setProducts(prev => prev.map(p => p.id === pid ? data.product : p));
+          setProducts(prev => prev.map(p => String(p.id) === String(pid) ? data.product : p));
           updateCachedBootstrap(prev => ({
             ...prev,
-            products: (prev.products || []).map((p: any) => p.id === pid ? data.product : p)
+            products: (prev.products || []).map((p: any) => String(p.id) === String(pid) ? data.product : p)
           }));
         }
       } else {
@@ -1128,29 +1171,38 @@ export default function App() {
       }
     } catch {
       showToast(isEdit ? 'Product updated!' : 'Product saved!', 'success');
-    } finally {
-      await fetchBootstrapData();
     }
   };
 
-  const handleDeleteProduct = async (id: number) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
+  const handleDeleteProduct = async (id: number | string) => {
+    // 1. Immediately remove from React state
+    setProducts(prev => prev.filter(p => String(p.id) !== String(id)));
+
+    // 2. Track deleted ID in localStorage so fallback never resurrects it
+    try {
+      const deletedIds = JSON.parse(localStorage.getItem('as_computer_deleted_products') || '[]');
+      if (!deletedIds.some((d: any) => String(d) === String(id))) {
+        deletedIds.push(id);
+        localStorage.setItem('as_computer_deleted_products', JSON.stringify(deletedIds));
+      }
+    } catch {}
+
+    // 3. Remove from cached bootstrap
     updateCachedBootstrap(prev => ({
       ...prev,
-      products: (prev.products || []).filter((p: any) => p.id !== id)
+      products: (prev.products || []).filter((p: any) => String(p.id) !== String(id))
     }));
 
+    // 4. Send DELETE to backend database
     try {
       const { data } = await safeFetchJson<any>(`/api/products/${id}`, { method: 'DELETE' });
       if (data && data.status === 'success') {
-        showToast(data.message, 'success');
+        showToast(data.message || 'Product deleted successfully', 'success');
       } else {
         showToast('Product deleted', 'info');
       }
     } catch {
       showToast('Product deleted', 'info');
-    } finally {
-      await fetchBootstrapData();
     }
   };
 
