@@ -123,16 +123,16 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
               <tbody className="divide-y divide-slate-100 font-medium">
                 {categoriesSorted.map((c, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
-                    <td className="py-1.5 px-2 text-center border-r border-slate-200 font-bold text-slate-500">
+                    <td className="py-2.5 px-3 print:py-2 print:px-2.5 text-center border-r border-slate-200 font-bold text-slate-500 font-tabular">
                       {idx + 1}
                     </td>
-                    <td className="py-1.5 px-3 border-r border-slate-200 font-bold text-slate-900">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 font-bold text-slate-900">
                       {c.category}
                     </td>
-                    <td className="py-1.5 px-2 text-center border-r border-slate-200 text-blue-700 font-bold">
+                    <td className="py-2.5 px-3 print:py-2 print:px-2 text-center border-r border-slate-200 text-blue-700 font-bold">
                       {c.count} Entries
                     </td>
-                    <td className="py-2 px-3 text-right font-black text-rose-700 font-tabular text-sm">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right font-black text-rose-700 font-tabular text-sm">
                       Tk {formatCurrency(c.amount)}
                     </td>
                   </tr>
@@ -166,19 +166,19 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
               <tbody className="divide-y divide-slate-100 font-medium">
                 {expenses.map((e, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
-                    <td className="py-1.5 px-2 text-center border-r border-slate-200 font-bold text-slate-500">
+                    <td className="py-2.5 px-3 print:py-2 print:px-2.5 text-center border-r border-slate-200 font-bold text-slate-500 font-tabular">
                       {idx + 1}
                     </td>
-                    <td className="py-1.5 px-3 border-r border-slate-200 font-semibold text-slate-800 whitespace-nowrap">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 font-semibold text-slate-800 whitespace-nowrap">
                       {formatDateDisplay(e.date)}
                     </td>
-                    <td className="py-1.5 px-3 border-r border-slate-200 font-bold text-rose-800">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 font-bold text-rose-800">
                       {e.category}
                     </td>
-                    <td className="py-1.5 px-3 border-r border-slate-200 text-slate-700 text-xs">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 text-slate-700 text-xs">
                       {e.desc || '--'}
                     </td>
-                    <td className="py-1.5 px-3 text-right font-black text-rose-700 font-tabular">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right font-black text-rose-700 font-tabular">
                       {e.amount > 0 ? `Tk ${formatCurrency(e.amount)}` : '--'}
                     </td>
                   </tr>

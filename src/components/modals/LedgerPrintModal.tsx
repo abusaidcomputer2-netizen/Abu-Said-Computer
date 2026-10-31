@@ -239,28 +239,28 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
                 ) : (
                   filteredRecords.map((r, i) => (
                     <tr key={i} className="hover:bg-slate-50">
-                      <td className="py-1.5 px-2 text-center border-r border-slate-200 font-bold text-slate-500">
+                      <td className="py-2.5 px-3 print:py-2 print:px-2.5 text-center border-r border-slate-200 font-bold text-slate-500 font-tabular">
                         {i + 1}
                       </td>
-                      <td className="py-1.5 px-3 border-r border-slate-200 font-semibold text-slate-800 whitespace-nowrap">
+                      <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 font-semibold text-slate-800 whitespace-nowrap">
                         {formatDateDisplay(r.date)}
                       </td>
                       {!isSingle && (
-                        <td className="py-1.5 px-3 border-r border-slate-200 font-bold text-slate-900">
+                        <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 font-bold text-slate-900">
                           <div>{r.customer}</div>
                           <div className="text-[10px] text-slate-500 font-normal">{r.phone}</div>
                         </td>
                       )}
-                      <td className="py-1.5 px-3 border-r border-slate-200 font-bold text-amber-800 text-center whitespace-nowrap">
+                      <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 font-bold text-amber-800 text-center whitespace-nowrap">
                         {r.id.startsWith('INV-') ? `#${r.id.replace('INV-', '')}` : r.type}
                       </td>
-                      <td className="py-1.5 px-3 border-r border-slate-200 text-slate-700 text-xs">
+                      <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 text-slate-700 text-xs">
                         {r.desc || '--'}
                       </td>
-                      <td className="py-1.5 px-3 text-right border-r border-slate-200 text-rose-700 font-bold font-tabular">
+                      <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right border-r border-slate-200 text-rose-700 font-bold font-tabular">
                         {r.due > 0 ? `Tk ${formatCurrency(r.due)}` : '-'}
                       </td>
-                      <td className="py-1.5 px-3 text-right text-emerald-700 font-bold font-tabular">
+                      <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right text-emerald-700 font-bold font-tabular">
                         {r.paid > 0 ? `Tk ${formatCurrency(r.paid)}` : '-'}
                       </td>
                     </tr>

@@ -346,29 +346,29 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
                   ) : (
                     filteredSales.map((s, idx) => (
                       <tr key={s.id} className="hover:bg-slate-50">
-                        <td className="py-1.5 px-2 text-center border-r border-slate-200 font-bold text-slate-500">
+                        <td className="py-2.5 px-2.5 print:py-2 print:px-2 text-center border-r border-slate-200 font-bold text-slate-500 font-tabular">
                           {idx + 1}
                         </td>
-                        <td className="py-1.5 px-2.5 border-r border-slate-200 text-center font-black text-slate-900">
+                        <td className="py-2.5 px-3 print:py-2 print:px-2.5 border-r border-slate-200 text-center font-black text-slate-900">
                           #{s.invoiceNo}
                         </td>
-                        <td className="py-1.5 px-3 border-r border-slate-200 font-semibold text-slate-800 whitespace-nowrap">
+                        <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 font-semibold text-slate-800 whitespace-nowrap">
                           {formatDateDisplay(s.rawDate || s.date)}
                         </td>
                         {!isSingle && (
-                          <td className="py-1.5 px-3 border-r border-slate-200">
+                          <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200">
                             <div className="font-bold text-slate-900">{s.customer}</div>
                             <div className="text-[10px] text-slate-500">{s.phone}</div>
                           </td>
                         )}
-                        <td className="py-1.5 px-3 border-r border-slate-200 text-slate-700">{s.desc || s.category}</td>
-                        <td className="py-1.5 px-3 text-right border-r border-slate-200 font-black text-emerald-900 font-tabular">
+                        <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 text-slate-700">{s.desc || s.category}</td>
+                        <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right border-r border-slate-200 font-black text-emerald-900 font-tabular">
                           Tk {formatCurrency(s.grandTotal)}
                         </td>
-                        <td className="py-1.5 px-2.5 text-right border-r border-slate-200 font-medium text-slate-800 font-tabular">
+                        <td className="py-2.5 px-3 print:py-2 print:px-2.5 text-right border-r border-slate-200 font-medium text-slate-800 font-tabular">
                           Tk {formatCurrency(s.paid)}
                         </td>
-                        <td className="py-1.5 px-2.5 text-right font-black text-rose-700 font-tabular">
+                        <td className="py-2.5 px-3 print:py-2 print:px-2.5 text-right font-black text-rose-700 font-tabular">
                           {s.due > 0 ? `Tk ${formatCurrency(s.due)}` : '-'}
                         </td>
                       </tr>

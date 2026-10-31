@@ -245,8 +245,8 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
         </div>
 
         {/* Printable Business Statement Content */}
-        <div className="print-page-container bg-white text-slate-900 p-5 sm:p-7 print:p-0 rounded-2xl shadow-sm flex flex-col justify-between min-h-[270mm]">
-          <div className="print-content-body space-y-3 sm:space-y-4 print:space-y-2 flex-grow">
+        <div className="print-page-container bg-white text-slate-900 p-6 sm:p-8 print:p-0 rounded-2xl shadow-sm flex flex-col justify-between min-h-0 print:min-h-[250mm]">
+          <div className="print-content-body space-y-4 print:space-y-3 flex-grow">
             {/* Header */}
             <div className="flex justify-between items-start border-b-2 border-slate-800 pb-2.5 print:pb-1.5">
               <div className="flex items-center gap-3">
@@ -345,76 +345,76 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
               <table className="w-full text-left text-xs print:text-[11px] border border-slate-200 bg-white border-collapse">
                 <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
                   <tr>
-                    <th className="py-2 px-3 print:py-1 print:px-2 border-r border-slate-200">Category / Source</th>
-                    <th className="py-2 px-3 print:py-1 print:px-2 text-right">Amount</th>
+                    <th className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200">Category / Source</th>
+                    <th className="py-2.5 px-3.5 print:py-2 print:px-3 text-right">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-semibold text-slate-800">
                   <tr>
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 border-r border-slate-200">Photocopy Services</td>
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 text-right font-black text-blue-900 font-tabular">
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 border-r border-slate-200">Photocopy Services</td>
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-blue-900 font-tabular">
                       Tk {formatCurrency(pSales)}
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 border-r border-slate-200">Online Applications</td>
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 text-right font-black text-blue-900 font-tabular">
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 border-r border-slate-200">Online Applications</td>
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-blue-900 font-tabular">
                       Tk {formatCurrency(oSales)}
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 border-r border-slate-200">Stationery Products</td>
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 text-right font-black text-blue-900 font-tabular">
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 border-r border-slate-200">Stationery Products</td>
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-blue-900 font-tabular">
                       Tk {formatCurrency(sSales)}
                     </td>
                   </tr>
                   <tr className="bg-slate-50">
-                    <td className="py-1 px-3 print:py-0.5 print:px-2 text-right font-bold text-slate-700 border-r border-slate-200">
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-bold text-slate-700 border-r border-slate-200">
                       Gross Subtotal:
                     </td>
-                    <td className="py-1 px-3 print:py-0.5 print:px-2 text-right font-black text-slate-900 font-tabular">
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-slate-900 font-tabular">
                       Tk {formatCurrency(subtotal)}
                     </td>
                   </tr>
                   <tr className="bg-slate-50">
-                    <td className="py-1 px-3 print:py-0.5 print:px-2 text-right font-bold text-rose-600 border-r border-slate-200">
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-bold text-rose-600 border-r border-slate-200">
                       Less Discounts:
                     </td>
-                    <td className="py-1 px-3 print:py-0.5 print:px-2 text-right font-black text-rose-600 font-tabular">
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-rose-600 font-tabular">
                       -Tk {formatCurrency(discounts)}
                     </td>
                   </tr>
                   <tr className="bg-blue-50/50">
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 border-r border-slate-200 font-black text-blue-900">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 font-black text-blue-900">
                       Net Sales Billed:
                     </td>
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 text-right font-black text-blue-900 font-tabular text-sm print:text-xs">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right font-black text-blue-900 font-tabular text-sm print:text-xs">
                       Tk {formatCurrency(netSalesBilled)}
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 border-r border-slate-200 font-bold text-slate-800">
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 border-r border-slate-200 font-bold text-slate-800">
                       Cash Received from Sales:
                     </td>
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 text-right font-black text-slate-900 font-tabular">
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-slate-900 font-tabular">
                       Tk {formatCurrency(cashFromSales)}
                     </td>
                   </tr>
                   <tr>
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 border-r border-slate-200 font-bold text-emerald-700">
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 border-r border-slate-200 font-bold text-emerald-700">
                       Previous Due Collected:
                     </td>
-                    <td className="py-1.5 px-3 print:py-0.5 print:px-2 text-right font-black text-emerald-700 font-tabular">
+                    <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-emerald-700 font-tabular">
                       Tk {formatCurrency(dueCollected)}
                     </td>
                   </tr>
                 </tbody>
                 <tfoot className="border-t-2 border-slate-300 bg-emerald-50 font-black text-xs">
                   <tr>
-                    <td className="py-2 px-3 print:py-1 print:px-2 border-r border-slate-200 text-xs sm:text-sm print:text-xs text-emerald-950">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 text-xs sm:text-sm print:text-xs text-emerald-950">
                       Total Cash Inflow (Drawer):
                     </td>
-                    <td className="py-2 px-3 print:py-1 print:px-2 text-right font-black text-sm sm:text-base print:text-sm text-emerald-900 font-tabular">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right font-black text-sm sm:text-base print:text-sm text-emerald-900 font-tabular">
                       Tk {formatCurrency(totalCashInflow)}
                     </td>
                   </tr>
@@ -423,8 +423,8 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
             </div>
 
             {/* Right: Outflow */}
-            <div className="border border-slate-200 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 print:p-2.5 space-y-2.5 print:space-y-1.5 bg-slate-50/60">
-              <div className="flex justify-between items-center border-b border-slate-300 pb-1.5 print:pb-1">
+            <div className="border border-slate-200 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 print:p-3 space-y-3 print:space-y-2 bg-slate-50/60">
+              <div className="flex justify-between items-center border-b border-slate-300 pb-2 print:pb-1.5">
                 <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                   <Receipt className="w-4 h-4 text-rose-600" /> OPERATING EXPENSES & PURCHASES
                 </h4>
@@ -436,22 +436,22 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
               <table className="w-full text-left text-xs print:text-[11px] border border-slate-200 bg-white border-collapse">
                 <thead className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
                   <tr>
-                    <th className="py-2 px-3 print:py-1 print:px-2 border-r border-slate-200">Expense Category</th>
-                    <th className="py-2 px-3 print:py-1 print:px-2 text-right">Amount</th>
+                    <th className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200">Expense Category</th>
+                    <th className="py-2.5 px-3.5 print:py-2 print:px-3 text-right">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {Object.keys(expCatMap).length === 0 ? (
                     <tr>
-                      <td colSpan={2} className="py-3 px-3 print:py-1.5 text-center text-slate-400">
+                      <td colSpan={2} className="py-6 px-3.5 text-center text-slate-400 font-medium">
                         No expense records in this period
                       </td>
                     </tr>
                   ) : (
                     Object.keys(expCatMap).map(c => (
                       <tr key={c}>
-                        <td className="py-1.5 px-3 print:py-0.5 print:px-2 border-r border-slate-200 font-bold text-slate-700">{c}</td>
-                        <td className="py-1.5 px-3 print:py-0.5 print:px-2 text-right font-black text-rose-700 font-tabular">
+                        <td className="py-2 px-3.5 print:py-1.5 print:px-3 border-r border-slate-200 font-bold text-slate-700">{c}</td>
+                        <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-rose-700 font-tabular">
                           Tk {formatCurrency(expCatMap[c])}
                         </td>
                       </tr>
@@ -460,10 +460,10 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                 </tbody>
                 <tfoot className="border-t-2 border-slate-300 bg-rose-50 font-black text-xs">
                   <tr>
-                    <td className="py-2 px-3 print:py-1 print:px-2 border-r border-slate-200 text-xs sm:text-sm print:text-xs text-rose-950">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 text-xs sm:text-sm print:text-xs text-rose-950">
                       Total Outflow (Expenses + Purchases):
                     </td>
-                    <td className="py-2 px-3 print:py-1 print:px-2 text-right font-black text-sm sm:text-base print:text-sm text-rose-800 font-tabular">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right font-black text-sm sm:text-base print:text-sm text-rose-800 font-tabular">
                       Tk {formatCurrency(totalOutflow)}
                     </td>
                   </tr>

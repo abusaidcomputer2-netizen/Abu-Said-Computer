@@ -138,22 +138,18 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
       const wsCustomers = XLSX.utils.aoa_to_sheet(customerData);
       XLSX.utils.book_append_sheet(wb, wsCustomers, 'Customers');
 
-      // 3. Products / Stock
-      const productHeaders = ['SL', 'Category', 'Product / Service Name', 'Selling Price', 'Cost Price', 'In Stock Qty', 'Low Stock Limit'];
+      // 3. Products Sheet (Only Serial Code, Name, Price)
+      const productHeaders = ['SL / Code', 'Product / Service Name', 'Price (Tk)'];
       const productData = [
         productHeaders,
         ...products.map((p, idx) => [
-          idx + 1,
-          p.category,
+          p.sl || (idx + 1),
           p.name,
-          p.price,
-          p.costPrice,
-          p.stockQty !== null && p.stockQty !== undefined ? p.stockQty : 'Unlimited / Service',
-          p.lowStockLimit || 0
+          p.price
         ])
       ];
       const wsProducts = XLSX.utils.aoa_to_sheet(productData);
-      XLSX.utils.book_append_sheet(wb, wsProducts, 'Stock Inventory');
+      XLSX.utils.book_append_sheet(wb, wsProducts, 'Products');
 
       // 4. Due Ledger
       const dueHeaders = ['Entry ID', 'Date', 'Customer Name', 'Mobile', 'Transaction Type', 'Description', 'Due (Debit)', 'Paid (Credit)', 'Operator'];
@@ -593,70 +589,32 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
             <table className="w-full text-left text-xs text-slate-300 border-collapse">
               <thead className="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800 sticky top-0 z-10">
                 <tr>
-                  <th className="p-3 text-center w-14">SL</th>
-                  <th className="p-3">Category</th>
-                  <th className="p-3">Product / Service Name</th>
-                  <th className="p-3 text-right">Selling Price</th>
-                  <th className="p-3 text-right">Cost Price</th>
-                  <th className="p-3 text-center">In-Stock Qty</th>
-                  <th className="p-3 text-center">Status</th>
+                  <th className="py-3 px-4 text-center w-24">SL / Code</th>
+                  <th className="py-3 px-4">Product / Service Name</th>
+                  <th className="py-3 px-4 text-right w-44">Price (Tk)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
                 {filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-500 font-medium">
+                    <td colSpan={3} className="py-10 text-center text-slate-500 font-medium">
                       No product records found matching filter.
                     </td>
                   </tr>
                 ) : (
-                  filteredProducts.map((p, idx) => {
-                    const hasStock = p.stockQty !== null && p.stockQty !== undefined;
-                    const isLow = hasStock && (p.stockQty || 0) <= (p.lowStockLimit || 5);
-                    return (
-                      <tr key={p.id} className="hover:bg-slate-800/40 transition">
-                        <td className="p-3 text-center text-slate-500 font-bold font-tabular">{idx + 1}</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/25 text-[10px] font-bold">
-                            {p.category}
-                          </span>
-                        </td>
-                        <td className="p-3 font-black text-white text-sm">{p.name}</td>
-                        <td className="p-3 text-right font-black font-tabular text-emerald-400">
-                          Tk {formatCurrency(p.price)}
-                        </td>
-                        <td className="p-3 text-right font-tabular text-slate-400">
-                          Tk {formatCurrency(p.costPrice)}
-                        </td>
-                        <td className="p-3 text-center font-black font-tabular">
-                          {hasStock ? (
-                            <span className={isLow ? 'text-rose-400' : 'text-white'}>
-                              {p.stockQty}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500">Service</span>
-                          )}
-                        </td>
-                        <td className="p-3 text-center">
-                          {hasStock ? (
-                            isLow ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                                Low Stock
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                In Stock
-                              </span>
-                            )
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400">
-                              Active
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
+                  filteredProducts.map((p, idx) => (
+                    <tr key={p.id} className="hover:bg-slate-800/40 transition">
+                      <td className="py-3 px-4 text-center text-amber-400 font-black font-tabular text-sm">
+                        {p.sl || (idx + 1)}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-white text-sm">
+                        {p.name}
+                      </td>
+                      <td className="py-3 px-4 text-right font-black font-tabular text-emerald-400 text-sm">
+                        Tk {formatCurrency(p.price)}
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>

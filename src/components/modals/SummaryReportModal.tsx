@@ -221,31 +221,31 @@ export const SummaryReportModal: React.FC<SummaryReportModalProps> = ({
                 const g = dateGroups[dStr];
                 return (
                   <tr key={idx} className="hover:bg-slate-50">
-                    <td className="py-1.5 px-2 text-center border-r border-slate-200 font-bold text-slate-500">
+                    <td className="py-2.5 px-2.5 print:py-2 print:px-2 text-center border-r border-slate-200 font-bold text-slate-500 font-tabular">
                       {idx + 1}
                     </td>
-                    <td className="py-1.5 px-3 border-r border-slate-200 font-semibold text-slate-800 whitespace-nowrap">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-2.5 border-r border-slate-200 font-semibold text-slate-800 whitespace-nowrap">
                       {formatDateDisplay(g.date)}
                     </td>
-                    <td className="py-1.5 px-2 border-r border-slate-200 text-center font-bold text-blue-700">
+                    <td className="py-2.5 px-3 print:py-2 print:px-2 border-r border-slate-200 text-center font-bold text-blue-700">
                       {g.memoCount} Memos
                     </td>
-                    <td className="py-1.5 px-2 text-right border-r border-slate-200 font-tabular">
+                    <td className="py-2.5 px-3 print:py-2 print:px-2 text-right border-r border-slate-200 font-tabular">
                       {g.photocopy > 0 ? formatCurrency(g.photocopy) : '-'}
                     </td>
-                    <td className="py-1.5 px-2 text-right border-r border-slate-200 font-tabular">
+                    <td className="py-2.5 px-3 print:py-2 print:px-2 text-right border-r border-slate-200 font-tabular">
                       {g.online > 0 ? formatCurrency(g.online) : '-'}
                     </td>
-                    <td className="py-1.5 px-2 text-right border-r border-slate-200 font-tabular">
+                    <td className="py-2.5 px-3 print:py-2 print:px-2 text-right border-r border-slate-200 font-tabular">
                       {g.stationery > 0 ? formatCurrency(g.stationery) : '-'}
                     </td>
-                    <td className="py-1.5 px-2 text-right border-r border-slate-200 text-red-600 font-tabular">
+                    <td className="py-2.5 px-3 print:py-2 print:px-2 text-right border-r border-slate-200 text-red-600 font-tabular">
                       {g.discount > 0 ? `-${formatCurrency(g.discount)}` : '-'}
                     </td>
-                    <td className="py-1.5 px-2 text-right border-r border-slate-200 text-rose-700 font-bold font-tabular">
+                    <td className="py-2.5 px-3 print:py-2 print:px-2 text-right border-r border-slate-200 text-rose-700 font-bold font-tabular">
                       {g.due > 0 ? formatCurrency(g.due) : '-'}
                     </td>
-                    <td className="py-1.5 px-3 text-right font-black text-blue-900 font-tabular">
+                    <td className="py-2.5 px-3.5 print:py-2 print:px-2.5 text-right font-black text-blue-900 font-tabular">
                       Tk {formatCurrency(g.grandTotal)}
                     </td>
                   </tr>

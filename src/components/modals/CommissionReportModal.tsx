@@ -686,14 +686,16 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
           </div>
         </div>
 
-        {/* Unified Report Footer for Print & Display */}
-        <ReportFooter
-          reportTitle="Staff Commission & Leave Report"
-          printTimestamp={nowFormatted}
-          currentUser={selectedStaff}
-          leftSignatureLabel="STAFF SIGNATURE"
-          rightSignatureLabel="AUTHORIZED SIGNATURE"
-        />
+        {/* Report Footer - Only visible on physical print/PDF, hidden on interactive screen form */}
+        <div className="hidden print:block pt-6">
+          <ReportFooter
+            reportTitle="Staff Commission & Leave Report"
+            printTimestamp={nowFormatted}
+            currentUser={selectedStaff}
+            leftSignatureLabel="STAFF SIGNATURE"
+            rightSignatureLabel="AUTHORIZED SIGNATURE"
+          />
+        </div>
         </div>
       </div>
     </div>
