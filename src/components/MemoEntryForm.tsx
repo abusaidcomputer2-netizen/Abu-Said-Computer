@@ -453,34 +453,25 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                     >
                       <option value="">Select Item / Service...</option>
                       {categoryProducts.map(p => {
-                        const hasStock = p.stockQty !== null && p.stockQty !== undefined;
-                        const isStationery = it.category === 'Stationery Products';
-                        const isOut = isStationery && hasStock && (p.stockQty || 0) <= 0;
-
+                        const hasTrackedStock = p.stockQty !== null && p.stockQty !== undefined && p.stockQty > 0;
                         return (
                           <option
                             key={p.id}
                             value={p.name}
-                            disabled={isOut}
-                            className={isOut ? 'text-rose-400 bg-slate-900 font-bold' : ''}
                           >
-                            {isOut
-                              ? `❌ ${p.name} [Out of Stock]`
-                              : `${p.name}${hasStock ? ` [Stock: ${p.stockQty}]` : ''}`}
+                            {hasTrackedStock ? `${p.name} [Stock: ${p.stockQty}]` : p.name}
                           </option>
                         );
                       })}
-                      {it.category !== 'Stationery Products' && (
-                        <option value="__custom__">✍️ Custom Item Name...</option>
-                      )}
+                      <option value="__custom__">✍️ Custom Item Name...</option>
                     </select>
 
-                    {it.name === '__custom__' && it.category !== 'Stationery Products' && (
+                    {it.name === '__custom__' && (
                       <input
                         type="text"
                         value={it.customName}
                         onChange={e => updateItemCustomName(idx, e.target.value)}
-                        placeholder="Type custom service..."
+                        placeholder="Type custom service / product..."
                         className="w-full bg-slate-950 border border-blue-500/60 text-xs text-white rounded-lg px-2 py-1 font-semibold focus:outline-none"
                       />
                     )}

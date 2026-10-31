@@ -185,7 +185,7 @@ export default function App() {
     }
   };
 
-  const CACHE_VERSION = 'v7_clean_slate_nov1';
+  const CACHE_VERSION = 'v8_clean_slate_nov1';
 
   // Bootstrap data fetch with intelligent merge so state is never lost
   const fetchBootstrapData = async () => {
@@ -221,8 +221,8 @@ export default function App() {
             const apiProducts = data.products || [];
             const apiCustomers = data.customers || [];
 
-            const mergedProducts = apiProducts.length > 0 ? apiProducts : (cached?.products || []);
-            const mergedCustomers = apiCustomers.length > 0 ? apiCustomers : (cached?.customers || []);
+            const mergedProducts = apiProducts.length > 0 ? apiProducts : (cached?.products?.length > 0 ? cached.products : FALLBACK_PRODUCTS);
+            const mergedCustomers = apiCustomers.length > 0 ? apiCustomers : (cached?.customers?.length > 0 ? cached.customers : FALLBACK_CUSTOMERS);
             const mergedSales = apiSales;
 
             setUsers(data.users || FALLBACK_USERS);
