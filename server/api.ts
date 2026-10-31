@@ -466,7 +466,7 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
         category_summary, description, subtotal, discount, grand_total, paid, due, items_json
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      invoiceNo, timestampStr, dateStr, user || 'Staff', customer || 'New Customer',
+      invoiceNo, timestampStr, dateStr, user || 'Staff', customer || 'Cash Customer',
       phone || '01904142370', address || 'Paduar Bazar, Cumilla', categorySummary,
       desc || '', parseFloat(subtotal) || 0, parseFloat(discount) || 0,
       parseFloat(grandTotal) || 0, parseFloat(paid) || 0, parseFloat(due) || 0,
@@ -520,7 +520,7 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
         INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        `INV-${invoiceNo}`, dateStr, customer || 'New Customer', phone || '01904142370',
+        `INV-${invoiceNo}`, dateStr, customer || 'Cash Customer', phone || '01904142370',
         address || 'Paduar Bazar, Cumilla', 'Memo / Bill', dueDesc, dueVal, 0,
         user || 'Staff', `${dateStr} ${now.toTimeString().split(' ')[0]}`
       ]);
@@ -535,7 +535,7 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
       rawDate: dateStr,
       date: dateStr,
       user,
-      customer: customer || 'New Customer',
+      customer: customer || 'Cash Customer',
       phone: phone || '01904142370',
       address: address || 'Paduar Bazar, Cumilla',
       category: categorySummary,
@@ -618,7 +618,7 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
         grand_total = ?, paid = ?, due = ?, items_json = ?
       WHERE id = ?
     `, [
-      customer || 'New Customer', phone || '01904142370', address || 'Paduar Bazar, Cumilla',
+      customer || 'Cash Customer', phone || '01904142370', address || 'Paduar Bazar, Cumilla',
       categorySummary, desc || '', parseFloat(subtotal) || 0, parseFloat(discount) || 0,
       parseFloat(grandTotal) || 0, parseFloat(paid) || 0, parseFloat(due) || 0,
       JSON.stringify(items || []), saleId
@@ -648,13 +648,13 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
         runSql(`
           UPDATE due_ledger SET customer_name = ?, customer_phone = ?, customer_address = ?, description = ?, due_dr = ?, paid_cr = 0
           WHERE id = ?
-        `, [customer || 'New Customer', phone || '01904142370', address || 'Paduar Bazar, Cumilla', dueDesc, dueVal, existingDue.id]);
+        `, [customer || 'Cash Customer', phone || '01904142370', address || 'Paduar Bazar, Cumilla', dueDesc, dueVal, existingDue.id]);
       } else {
         runSql(`
           INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-          invNoStr, existing.date, customer || 'New Customer', phone || '01904142370',
+          invNoStr, existing.date, customer || 'Cash Customer', phone || '01904142370',
           address || 'Paduar Bazar, Cumilla', 'Memo / Bill', dueDesc, dueVal, 0,
           user || existing.user_name, existing.timestamp
         ]);
@@ -1220,7 +1220,7 @@ apiRouter.post('/migrate/import-sheets', (req: Request, res: Response) => {
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `, [
               invNo, s.timestamp || '', s.date || s.rawDate || '', s.user || s.user_name || 'Staff',
-              s.customer || s.customer_name || 'New Customer', s.phone || s.customer_phone || '',
+              s.customer || s.customer_name || 'Cash Customer', s.phone || s.customer_phone || '',
               s.address || s.customer_address || '', s.category || s.category_summary || 'Photocopy',
               s.desc || s.description || '', s.subtotal || 0, s.discount || 0, s.grandTotal || s.grand_total || 0,
               s.paid || 0, s.due || 0, JSON.stringify(s.items || [])

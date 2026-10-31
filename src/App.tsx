@@ -185,7 +185,7 @@ export default function App() {
     }
   };
 
-  const CACHE_VERSION = 'v5_all_prods_custs_854';
+  const CACHE_VERSION = 'v7_clean_slate_nov1';
 
   // Bootstrap data fetch with intelligent merge so state is never lost
   const fetchBootstrapData = async () => {
@@ -197,8 +197,8 @@ export default function App() {
       if (cachedStr) {
         try {
           cached = JSON.parse(cachedStr);
-          // If cached data is from an older version or incomplete, clear it
-          if (cached?.cacheVersion !== CACHE_VERSION || !cached?.records || cached?.records?.length < 800) {
+          // If cached data is from an older version, clear it completely
+          if (cached?.cacheVersion !== CACHE_VERSION) {
             cached = null;
             localStorage.removeItem('as_computer_cached_bootstrap');
           }
@@ -223,18 +223,18 @@ export default function App() {
 
             const mergedProducts = apiProducts.length > 0 ? apiProducts : (cached?.products || []);
             const mergedCustomers = apiCustomers.length > 0 ? apiCustomers : (cached?.customers || []);
-            const mergedSales = apiSales.length > 0 ? apiSales : (cached?.records || cached?.sales || []);
+            const mergedSales = apiSales;
 
             setUsers(data.users || FALLBACK_USERS);
             setProducts(mergedProducts);
             setCustomers(mergedCustomers);
             setSales(mergedSales);
-            setExpenses(data.expenses || cached?.expenses || []);
-            setDueRecords(data.dueRecords || cached?.dueRecords || []);
-            setCustomerSummaries(data.customerSummaries || cached?.customerSummaries || []);
-            setDueTotals(data.dueTotals || cached?.dueTotals || { shopTotalDue: 0, shopTotalPaid: 0, netDue: 0 });
-            setPurchases(data.purchases || cached?.purchases || []);
-            setCashClosings(data.cashClosings || cached?.cashClosings || []);
+            setExpenses(data.expenses || []);
+            setDueRecords(data.dueRecords || []);
+            setCustomerSummaries(data.customerSummaries || []);
+            setDueTotals(data.dueTotals || { shopTotalDue: 0, shopTotalPaid: 0, netDue: 0 });
+            setPurchases(data.purchases || []);
+            setCashClosings(data.cashClosings || []);
 
             if (data.googleDriveBackup) {
               if (data.googleDriveBackup.linkedSheetId) setLinkedSheetId(data.googleDriveBackup.linkedSheetId);
@@ -483,14 +483,6 @@ export default function App() {
     setFilterEndDate('');
     setSearchMemo('');
     setActiveFilterBadge(`Month (${ym})`);
-  };
-
-  const handleFilterAll = () => {
-    setFilterMonth('');
-    setFilterStartDate('');
-    setFilterEndDate('');
-    setSearchMemo('');
-    setActiveFilterBadge('সকল মেমো (All)');
   };
 
   // Tab switching handler that opens modals or switches active sections
@@ -1449,7 +1441,7 @@ export default function App() {
                 onOpenSummaryReport={() => setSummaryReportOpen(true)}
                 onEditSale={sale => {
                   if (!isMemoEditable(sale.rawDate || sale.date)) {
-                    showToast('শুধুমাত্র আজ এবং গতকালের মেমো এডিট করা যাবে!', 'warning');
+                    showToast("Only today's and yesterday's memos can be edited!", 'warning');
                     return;
                   }
                   setEditingSale(sale);

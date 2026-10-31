@@ -273,14 +273,14 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                       <button
                         onClick={() => onEditSale(s)}
                         className="p-1.5 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white rounded-lg transition cursor-pointer"
-                        title="Edit Memo (আজ বা গতকালের মেমো)"
+                        title="Edit Memo (Today or Yesterday)"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                       </button>
                     ) : (
                       <span
                         className="p-1.5 bg-slate-800/40 text-slate-600 rounded-lg cursor-not-allowed inline-flex items-center justify-center opacity-30"
-                        title="শুধুমাত্র আজ এবং গতকালের মেমো এডিট করা যাবে (Locked)"
+                        title="Only today's and yesterday's memos can be edited (Locked)"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
                       </span>
