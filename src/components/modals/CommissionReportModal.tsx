@@ -312,8 +312,8 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
         </div>
 
         {/* Printable & Interactive Area */}
-        <div className="print-page-container bg-slate-950/80 border border-slate-800/80 text-slate-100 p-5 sm:p-6 rounded-2xl print:bg-white print:text-slate-900 print:p-0 print:border-none print:shadow-none flex flex-col justify-between min-h-[270mm] print:min-h-[270mm]">
-          <div className="print-content-body space-y-5 flex-grow">
+        <div className="print-page-container bg-slate-950/80 border border-slate-800/80 text-slate-100 p-5 sm:p-6 rounded-2xl print:bg-white print:text-slate-900 print:p-0 print:border-none print:shadow-none flex flex-col justify-start print:justify-between print:min-h-[270mm]">
+          <div className="print-content-body space-y-5">
           
           {/* Printable Report Header */}
           <div className="hidden print:flex justify-between items-start border-b-2 border-slate-800 pb-3 mb-4">

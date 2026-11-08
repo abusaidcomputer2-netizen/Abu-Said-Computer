@@ -185,7 +185,7 @@ export default function App() {
     }
   };
 
-  const CACHE_VERSION = 'v8_clean_slate_nov1';
+  const CACHE_VERSION = 'v9_products_nov8';
 
   // Bootstrap data fetch with intelligent merge so state is never lost
   const fetchBootstrapData = async () => {
@@ -201,6 +201,7 @@ export default function App() {
           if (cached?.cacheVersion !== CACHE_VERSION) {
             cached = null;
             localStorage.removeItem('as_computer_cached_bootstrap');
+            localStorage.removeItem('as_computer_deleted_products');
           }
         } catch (e) {
           console.error('Error parsing cached data', e);
