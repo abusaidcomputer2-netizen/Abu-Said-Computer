@@ -249,7 +249,7 @@ apiRouter.get('/bootstrap', (req: Request, res: Response) => {
 // ---------------- PRODUCTS ----------------
 apiRouter.post('/products', (req: Request, res: Response) => {
   try {
-    const { sl, category, name, price, costPrice, stockQty, lowStockLimit } = req.body;
+    const { sl, category, name, price, costPrice, lowStockLimit } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ status: 'error', message: 'Product name required' });
 
     const cat = category || 'Photocopy';
@@ -266,9 +266,13 @@ apiRouter.post('/products', (req: Request, res: Response) => {
       }
     }
 
+    // New products start with 0 stock for stationery/inventory, stock can ONLY be added via Purchases Khata
+    const isStationery = cat.includes('Stationery');
+    const initialStock = isStationery ? 0 : null;
+
     runSql(
       'INSERT INTO products (sl, category, name, selling_price, cost_price, stock_qty, low_stock_limit) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [finalSl, cat, name.trim(), parseFloat(price) || 0, parseFloat(costPrice) || 0, stockQty !== '' && stockQty !== null && stockQty !== undefined ? parseFloat(stockQty) : null, parseFloat(lowStockLimit) || 5]
+      [finalSl, cat, name.trim(), parseFloat(price) || 0, parseFloat(costPrice) || 0, initialStock, parseFloat(lowStockLimit) || 5]
     );
 
     const inserted = queryOne('SELECT id FROM products WHERE category = ? AND sl = ? ORDER BY id DESC', [cat, finalSl]);
@@ -280,7 +284,7 @@ apiRouter.post('/products', (req: Request, res: Response) => {
       name: name.trim(),
       price: parseFloat(price) || 0,
       costPrice: parseFloat(costPrice) || 0,
-      stockQty: stockQty !== '' && stockQty !== null && stockQty !== undefined ? parseFloat(stockQty) : null,
+      stockQty: initialStock,
       lowStockLimit: parseFloat(lowStockLimit) || 5
     };
 
@@ -292,7 +296,7 @@ apiRouter.post('/products', (req: Request, res: Response) => {
 
     return res.json({
       status: 'success',
-      message: 'Product added successfully',
+      message: 'Product added successfully (Stock will increase upon purchase entry)',
       product: productRecord
     });
   } catch (err: any) {
@@ -303,15 +307,19 @@ apiRouter.post('/products', (req: Request, res: Response) => {
 apiRouter.put('/products/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { sl, category, name, price, costPrice, stockQty, lowStockLimit } = req.body;
+    const { sl, category, name, price, costPrice, lowStockLimit } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ status: 'error', message: 'Product name required' });
 
     const cat = category || 'Photocopy';
     let finalSl = parseInt(sl, 10) || 1;
 
+    // Preserve existing stock strictly — stock only changes via purchase, sale, or usage
+    const existing = queryOne('SELECT stock_qty FROM products WHERE id = ?', [id]);
+    const preservedStock = existing ? existing.stock_qty : null;
+
     runSql(
-      'UPDATE products SET sl = ?, category = ?, name = ?, selling_price = ?, cost_price = ?, stock_qty = ?, low_stock_limit = ? WHERE id = ?',
-      [finalSl, cat, name.trim(), parseFloat(price) || 0, parseFloat(costPrice) || 0, stockQty !== '' && stockQty !== null && stockQty !== undefined ? parseFloat(stockQty) : null, parseFloat(lowStockLimit) || 5, id]
+      'UPDATE products SET sl = ?, category = ?, name = ?, selling_price = ?, cost_price = ?, low_stock_limit = ? WHERE id = ?',
+      [finalSl, cat, name.trim(), parseFloat(price) || 0, parseFloat(costPrice) || 0, parseFloat(lowStockLimit) || 5, id]
     );
 
     const updatedRecord = {
@@ -322,7 +330,7 @@ apiRouter.put('/products/:id', (req: Request, res: Response) => {
       name: name.trim(),
       price: parseFloat(price) || 0,
       costPrice: parseFloat(costPrice) || 0,
-      stockQty: stockQty !== '' && stockQty !== null && stockQty !== undefined ? parseFloat(stockQty) : null,
+      stockQty: preservedStock,
       lowStockLimit: parseFloat(lowStockLimit) || 5
     };
 
@@ -987,9 +995,17 @@ apiRouter.post('/photocopy-paper', (req: Request, res: Response) => {
 apiRouter.delete('/purchases/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
+    const pur = queryOne('SELECT * FROM purchases WHERE id = ?', [id]);
+    if (pur) {
+      const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = LOWER(?)', [pur.product_name]);
+      if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
+        const newStock = Math.max(0, (prod.stock_qty || 0) - (parseFloat(pur.qty) || 0));
+        runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
+      }
+    }
     runSql('DELETE FROM purchases WHERE id = ?', [id]);
     saveDatabase();
-    return res.json({ status: 'success', message: 'Purchase record deleted' });
+    return res.json({ status: 'success', message: 'Purchase record deleted and stock adjusted' });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
   }

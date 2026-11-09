@@ -37,6 +37,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     category: Category;
     name: string;
     customName: string;
+    itemNote?: string;
     price: number;
     costPrice: number;
     qty: number;
@@ -47,6 +48,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       category: 'Photocopy',
       name: '',
       customName: '',
+      itemNote: '',
       price: 0,
       costPrice: 0,
       qty: 1,
@@ -70,11 +72,21 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         setItems(
           editingSale.items.map(it => {
             const cat = normalizeCategory(it.category);
-            const matched = products.find(p => p.name.toLowerCase() === it.name.toLowerCase());
+            let prodName = it.name;
+            let note = '';
+            if (it.name.toLowerCase().startsWith('scan & email')) {
+              prodName = 'Scan & Email Service';
+              const match = it.name.match(/\((.*?)\)/);
+              if (match) {
+                note = match[1];
+              }
+            }
+            const matched = products.find(p => p.name.toLowerCase() === prodName.toLowerCase());
             return {
               category: cat,
-              name: it.name,
+              name: prodName,
               customName: '',
+              itemNote: note,
               price: it.price,
               costPrice: it.costPrice || matched?.costPrice || 0,
               qty: it.qty,
@@ -102,6 +114,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         category: 'Photocopy',
         name: '',
         customName: '',
+        itemNote: '',
         price: 0,
         costPrice: 0,
         qty: 1,
@@ -145,6 +158,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         category: 'Photocopy',
         name: '',
         customName: '',
+        itemNote: '',
         price: 0,
         costPrice: 0,
         qty: 1,
@@ -168,6 +182,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       copy[idx].category = category;
       copy[idx].name = '';
       copy[idx].customName = '';
+      copy[idx].itemNote = '';
       copy[idx].price = 0;
       copy[idx].costPrice = 0;
       copy[idx].total = 0;
@@ -180,6 +195,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     setItems(prev => {
       const copy = [...prev];
       const item = copy[idx];
+      item.itemNote = '';
 
       if (prodName === '__custom__') {
         item.name = '__custom__';
@@ -250,6 +266,14 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     });
   };
 
+  const updateItemNote = (idx: number, note: string) => {
+    setItems(prev => {
+      const copy = [...prev];
+      copy[idx].itemNote = note;
+      return copy;
+    });
+  };
+
   // Calculations
   const subtotal = items.reduce((sum, it) => sum + (it.total || 0), 0);
   const grandTotal = Math.max(0, Math.round(subtotal - discount));
@@ -278,6 +302,12 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       let finalName = it.name;
       if (it.name === '__custom__') {
         finalName = it.customName.trim() || 'Custom Service';
+      } else if (it.name === 'Scan & Email Service' || it.name.toLowerCase().startsWith('scan & email')) {
+        if (it.itemNote && it.itemNote.trim()) {
+          finalName = `Scan & Email Service (${it.itemNote.trim()})`;
+        } else {
+          finalName = 'Scan & Email Service';
+        }
       }
       if (!finalName) {
         showToast('Please select or specify item names for all rows!', 'warning');
@@ -498,11 +528,26 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                           </option>
                         );
                       })}
-                      <option value="__custom__">✍️ Custom Item Name...</option>
+                      {normalizeCategory(it.category) !== 'Stationery Products' && (
+                        <option value="__custom__">✍️ Custom Item Name...</option>
+                      )}
                     </select>
 
+                    {/* Note input box for Scan & Email Service */}
+                    {(it.name === 'Scan & Email Service' || it.name.toLowerCase().startsWith('scan & email')) && (
+                      <div className="pt-1">
+                        <input
+                          type="text"
+                          value={it.itemNote || ''}
+                          onChange={e => updateItemNote(idx, e.target.value)}
+                          placeholder="ইমেইল বা কাজের নোট লিখুন (যেমন: name@gmail.com / 3 pages)..."
+                          className="w-full bg-slate-950 border border-blue-500/70 text-xs text-white rounded-lg px-2.5 py-1.5 font-medium focus:outline-none focus:border-blue-400 placeholder:text-slate-500 shadow-inner"
+                        />
+                      </div>
+                    )}
+
                     {/* Stock badge indicator */}
-                    {normalizeCategory(it.category) === 'Stationery Products' && it.name && it.name !== '__custom__' && (
+                    {normalizeCategory(it.category) === 'Stationery Products' && it.name && (
                       <div className="pt-0.5">
                         {it.stockAvailable <= 0 ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold text-[10px] border border-rose-500/30">
@@ -516,7 +561,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                       </div>
                     )}
 
-                    {it.name === '__custom__' && (
+                    {it.name === '__custom__' && normalizeCategory(it.category) !== 'Stationery Products' && (
                       <input
                         type="text"
                         value={it.customName}

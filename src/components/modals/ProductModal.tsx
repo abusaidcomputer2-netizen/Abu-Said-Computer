@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Tags, Plus, Edit3, Trash2, Check } from 'lucide-react';
+import { X, Tags, Plus, Edit3, Trash2, Check, Lock } from 'lucide-react';
 import { Product, Category } from '../../types';
 import { formatCurrency, normalizeCategory } from '../../utils/helpers';
 
@@ -71,6 +71,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
     setIsSubmitting(true);
     try {
+      const isStationery = normalizeCategory(category) === 'Stationery Products';
+      const existingProd = editingId ? products.find(p => p.id === editingId) : null;
+      const safeStock = editingId ? (existingProd ? existingProd.stockQty : null) : (isStationery ? 0 : null);
+
       await onSubmitProduct({
         id: editingId,
         sl: editingId ? sl : (sl || getNextSlForCategory(category)),
@@ -78,7 +82,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         name: name.trim(),
         price: parseFloat(sellingPrice) || 0,
         costPrice: parseFloat(costPrice) || 0,
-        stockQty: stockQty !== '' ? parseFloat(stockQty) : null,
+        stockQty: safeStock,
         lowStockLimit: parseFloat(lowStockLimit) || 5
       });
       setFilterCat(category);
@@ -295,16 +299,18 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             </div>
 
             <div className="sm:col-span-3">
-              <label className="block text-[11px] font-bold text-blue-400 mb-1">Initial Stock Qty</label>
-              <input
-                type="number"
-                step="any"
-                min="0"
-                value={stockQty}
-                onChange={e => setStockQty(e.target.value)}
-                placeholder="Optional"
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2 text-sm text-white text-center font-bold focus:outline-none font-tabular"
-              />
+              <label className="block text-[11px] font-bold text-blue-400 mb-1 flex items-center gap-1">
+                <Lock className="w-3 h-3 text-amber-400" />
+                <span>Current Stock</span>
+              </label>
+              <div className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-center font-bold text-blue-300 flex items-center justify-center gap-1 cursor-not-allowed select-none">
+                <span>
+                  {editingId
+                    ? (stockQty !== '' && stockQty !== null && stockQty !== undefined ? `${stockQty} টি` : '০ টি')
+                    : '০ টি (ক্রয় খাতা থেকে বাড়বে)'}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500 text-center mt-0.5">ক্রয় ও বিক্রয়/ইউজে স্বয়ংক্রিয়</p>
             </div>
 
             <div className="sm:col-span-3">

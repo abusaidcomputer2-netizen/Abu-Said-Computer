@@ -858,6 +858,20 @@ export default function App() {
   };
 
   const handleDeletePurchase = async (id: string | number) => {
+    const targetPur = purchases.find(p => String(p.id) === String(id));
+    if (targetPur) {
+      setProducts(prev => {
+        const updated = prev.map(prod => {
+          if (prod.name.toLowerCase() === targetPur.product.toLowerCase() && prod.stockQty !== null && prod.stockQty !== undefined) {
+            return { ...prod, stockQty: Math.max(0, prod.stockQty - targetPur.qty) };
+          }
+          return prod;
+        });
+        updateCachedBootstrap(c => ({ ...c, products: updated }));
+        return updated;
+      });
+    }
+
     setPurchases(prev => prev.filter(p => String(p.id) !== String(id)));
     updateCachedBootstrap(prev => ({
       ...prev,
@@ -1122,6 +1136,11 @@ export default function App() {
   const handleSubmitProduct = async (payload: any) => {
     const isEdit = !!payload.id;
     const pid = payload.id || Date.now();
+    const existingProd = isEdit ? products.find(p => String(p.id) === String(pid)) : null;
+    const isStationery = normalizeCategory(payload.category || 'Photocopy') === 'Stationery Products';
+    // Strictly preserve stock: stock can only increase via purchases, decrease via sales/usage
+    const safeStock = isEdit ? (existingProd ? existingProd.stockQty : null) : (isStationery ? 0 : null);
+
     const prodRecord: Product = {
       id: pid,
       rowId: pid,
@@ -1130,7 +1149,7 @@ export default function App() {
       name: payload.name.trim(),
       price: parseFloat(payload.price) || 0,
       costPrice: parseFloat(payload.costPrice) || 0,
-      stockQty: payload.stockQty !== '' && payload.stockQty !== null && payload.stockQty !== undefined ? parseFloat(payload.stockQty) : null,
+      stockQty: safeStock,
       lowStockLimit: parseFloat(payload.lowStockLimit) || 5
     };
 
