@@ -54,19 +54,31 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       showToast('Customer name is required!', 'warning');
       return;
     }
+
+    const isCashCust = trimmedName.toLowerCase() === 'cash customer';
+    const trimmedPhone = phone.trim();
+
+    // All customers except Cash Customer MUST have a phone number
+    if (!isCashCust && !trimmedPhone) {
+      showToast('কাস্টমারের নাম এবং মোবাইল নাম্বার অবশ্যই দিতে হবে!', 'warning');
+      return;
+    }
+
+    const finalAddress = address.trim() || (isCashCust ? '' : 'Paduar Bazar, Cumilla');
 
     setIsSubmitting(true);
     try {
       await onSubmitCustomer({
         id: editingId,
         sl: editingId ? sl : (sl || nextSuggestedSl),
-        name: name.trim(),
-        phone: phone.trim(),
-        address: address.trim()
+        name: trimmedName,
+        phone: trimmedPhone,
+        address: finalAddress
       });
       setEditingId(null);
       setName('');
@@ -198,23 +210,28 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
             </div>
 
             <div className="sm:col-span-3">
-              <label className="block text-[11px] font-bold text-slate-400 mb-1">Mobile Number</label>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Mobile Number {name.trim().toLowerCase() !== 'cash customer' && <span className="text-rose-400 font-bold">*</span>}
+              </label>
               <input
                 type="text"
+                required={name.trim().toLowerCase() !== 'cash customer'}
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                placeholder="017xxxxxxxx"
+                placeholder={name.trim().toLowerCase() === 'cash customer' ? 'ঐচ্ছিক (খালি থাকবে)' : '017xxxxxxxx *'}
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
               />
             </div>
 
             <div className="sm:col-span-3">
-              <label className="block text-[11px] font-bold text-slate-400 mb-1">Address</label>
+              <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                Address (অটো: Paduar Bazar, Cumilla)
+              </label>
               <input
                 type="text"
                 value={address}
                 onChange={e => setAddress(e.target.value)}
-                placeholder="e.g. Paduar Bazar, Cumilla"
+                placeholder="Paduar Bazar, Cumilla"
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
               />
             </div>

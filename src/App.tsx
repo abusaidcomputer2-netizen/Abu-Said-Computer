@@ -185,7 +185,7 @@ export default function App() {
     }
   };
 
-  const CACHE_VERSION = 'v9_products_nov8';
+  const CACHE_VERSION = 'v10_cash_cust_clean';
 
   // Bootstrap data fetch with intelligent merge so state is never lost
   const fetchBootstrapData = async () => {
@@ -625,9 +625,9 @@ export default function App() {
       rawDate: now.toISOString().split('T')[0],
       date: now.toISOString().split('T')[0],
       user: payload.user || currentUser?.username || 'Md Abu Said',
-      customer: payload.customer || 'General Customer',
+      customer: payload.customer || 'Cash Customer',
       phone: payload.phone || '',
-      address: payload.address || 'Paduar Bazar, Cumilla',
+      address: payload.address || (payload.customer?.toLowerCase() === 'cash customer' ? '' : 'Paduar Bazar, Cumilla'),
       category: payload.items?.map((i: any) => i.category).join(', ') || 'Photocopy',
       desc: payload.desc || '',
       subtotal: payload.subtotal || 0,
@@ -1042,13 +1042,21 @@ export default function App() {
     } else {
       if (!finalSl || finalSl <= 0) finalSl = 1;
     }
+    const isCashCustomer = payload.name.trim().toLowerCase() === 'cash customer';
+    const cleanPhone = payload.phone ? payload.phone.trim() : '';
+    if (!isCashCustomer && !cleanPhone) {
+      showToast('কাস্টমারের নাম এবং মোবাইল নাম্বার অবশ্যই দিতে হবে!', 'warning');
+      return;
+    }
+    const finalAddress = payload.address && payload.address.trim() ? payload.address.trim() : (isCashCustomer ? '' : 'Paduar Bazar, Cumilla');
+
     const custRecord: Customer = {
       id: cid,
       rowId: cid,
       sl: finalSl,
       name: payload.name.trim(),
-      phone: payload.phone ? payload.phone.trim() : '',
-      address: payload.address ? payload.address.trim() : 'Paduar Bazar, Cumilla'
+      phone: cleanPhone,
+      address: finalAddress
     };
 
     // 1. Immediately save to React State

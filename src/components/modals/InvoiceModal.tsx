@@ -93,14 +93,17 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                   CUSTOMER INFO:
                 </span>
                 <div className="text-base sm:text-lg font-black text-slate-900 leading-tight uppercase">
-                  {sale.customer || 'General Customer'}
+                  {sale.customer || 'Cash Customer'}
                 </div>
                 <div className="text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-1.5">
                   <span className="font-semibold text-slate-600">Mobile:</span>
-                  <span className="font-bold text-slate-900 font-tabular text-sm">{sale.phone || '01904142370'}</span>
+                  <span className="font-bold text-slate-900 font-tabular text-sm">
+                    {sale.phone || (sale.customer?.toLowerCase() === 'cash customer' ? '-' : '')}
+                  </span>
                 </div>
                 <div className="text-slate-700 font-medium text-xs sm:text-sm">
-                  <span className="font-semibold text-slate-600">Address:</span> {sale.address || 'Paduar Bazar, Cumilla'}
+                  <span className="font-semibold text-slate-600">Address:</span>{' '}
+                  {sale.address || (sale.customer?.toLowerCase() === 'cash customer' ? '-' : 'Paduar Bazar, Cumilla')}
                 </div>
               </div>
 

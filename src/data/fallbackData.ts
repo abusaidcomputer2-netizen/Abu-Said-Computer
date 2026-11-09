@@ -556,8 +556,8 @@ export const FALLBACK_CUSTOMERS: Customer[] = [
     "rowId": 5,
     "sl": 1,
     "name": "Cash Customer",
-    "phone": "01904142370",
-    "address": "Paduar Bazar, Cumilla"
+    "phone": "",
+    "address": ""
   },
   {
     "id": 6,

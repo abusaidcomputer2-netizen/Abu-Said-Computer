@@ -360,6 +360,16 @@ apiRouter.post('/customers', (req: Request, res: Response) => {
     const { sl, name, phone, address } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ status: 'error', message: 'Customer name required' });
 
+    const trimmedName = name.trim();
+    const isCashCust = trimmedName.toLowerCase() === 'cash customer';
+    const cleanPhone = phone ? phone.trim() : '';
+
+    if (!isCashCust && !cleanPhone) {
+      return res.status(400).json({ status: 'error', message: 'কাস্টমারের নাম এবং মোবাইল নাম্বার অবশ্যই দিতে হবে!' });
+    }
+
+    const cleanAddress = address && address.trim() ? address.trim() : (isCashCust ? '' : 'Paduar Bazar, Cumilla');
+
     let finalSl = parseInt(sl, 10);
     const maxSlObj = queryOne('SELECT MAX(sl) as m FROM customers');
     const maxSl = maxSlObj?.m || 0;
@@ -374,17 +384,17 @@ apiRouter.post('/customers', (req: Request, res: Response) => {
 
     runSql(
       'INSERT INTO customers (sl, name, phone, address) VALUES (?, ?, ?, ?)',
-      [finalSl, name.trim(), phone ? phone.trim() : '', address ? address.trim() : 'Paduar Bazar, Cumilla']
+      [finalSl, trimmedName, cleanPhone, cleanAddress]
     );
 
-    const inserted = queryOne('SELECT id FROM customers WHERE name = ? ORDER BY id DESC', [name.trim()]);
+    const inserted = queryOne('SELECT id FROM customers WHERE name = ? ORDER BY id DESC', [trimmedName]);
     const customerRecord = {
       id: inserted?.id || Date.now(),
       rowId: inserted?.id || Date.now(),
       sl: finalSl,
-      name: name.trim(),
-      phone: phone ? phone.trim() : '',
-      address: address ? address.trim() : 'Paduar Bazar, Cumilla'
+      name: trimmedName,
+      phone: cleanPhone,
+      address: cleanAddress
     };
 
     // Real-time automatic background backup to Google Apps Script
@@ -409,20 +419,29 @@ apiRouter.put('/customers/:id', (req: Request, res: Response) => {
     const { sl, name, phone, address } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ status: 'error', message: 'Customer name required' });
 
+    const trimmedName = name.trim();
+    const isCashCust = trimmedName.toLowerCase() === 'cash customer';
+    const cleanPhone = phone ? phone.trim() : '';
+
+    if (!isCashCust && !cleanPhone) {
+      return res.status(400).json({ status: 'error', message: 'কাস্টমারের নাম এবং মোবাইল নাম্বার অবশ্যই দিতে হবে!' });
+    }
+
+    const cleanAddress = address && address.trim() ? address.trim() : (isCashCust ? '' : 'Paduar Bazar, Cumilla');
     let finalSl = parseInt(sl, 10) || 1;
 
     runSql(
       'UPDATE customers SET sl = ?, name = ?, phone = ?, address = ? WHERE id = ?',
-      [finalSl, name.trim(), phone ? phone.trim() : '', address ? address.trim() : 'Paduar Bazar, Cumilla', id]
+      [finalSl, trimmedName, cleanPhone, cleanAddress, id]
     );
 
     const updatedCustomer = {
       id,
       rowId: id,
       sl: finalSl,
-      name: name.trim(),
-      phone: phone ? phone.trim() : '',
-      address: address ? address.trim() : 'Paduar Bazar, Cumilla'
+      name: trimmedName,
+      phone: cleanPhone,
+      address: cleanAddress
     };
 
     return res.json({
@@ -509,6 +528,19 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
       }
     }
 
+    const finalCustName = (customer || '').trim() || 'Cash Customer';
+    const isCashCustomer = finalCustName.toLowerCase() === 'cash customer';
+    const cleanPhone = phone ? phone.trim() : '';
+
+    if (!isCashCustomer && !cleanPhone) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'কাস্টমারের নাম এবং মোবাইল নাম্বার উভয়ই দিতে হবে!'
+      });
+    }
+
+    const cleanAddress = address && address.trim() ? address.trim() : (isCashCustomer ? '' : 'Paduar Bazar, Cumilla');
+
     // 1. Insert into sales
     runSql(`
       INSERT INTO sales (
@@ -516,8 +548,8 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
         category_summary, description, subtotal, discount, grand_total, paid, due, items_json
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      invoiceNo, timestampStr, dateStr, user || 'Staff', customer || 'Cash Customer',
-      phone || '01904142370', address || 'Paduar Bazar, Cumilla', categorySummary,
+      invoiceNo, timestampStr, dateStr, user || 'Staff', finalCustName,
+      cleanPhone, cleanAddress, categorySummary,
       desc || '', parseFloat(subtotal) || 0, parseFloat(discount) || 0,
       parseFloat(grandTotal) || 0, parseFloat(paid) || 0, parseFloat(due) || 0,
       JSON.stringify(items || [])
@@ -526,19 +558,18 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
     const createdSale = queryOne('SELECT id FROM sales WHERE invoice_no = ?', [invoiceNo]);
     const saleId = createdSale?.id || 0;
 
-    // Auto-save customer into customers database if not already exists
-    const trimmedCustomer = (customer || '').trim();
-    if (trimmedCustomer && trimmedCustomer.toLowerCase() !== 'general customer') {
-      const existingCust = queryOne('SELECT id, phone, address FROM customers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [trimmedCustomer]);
+    // Auto-save customer into customers database if not already exists (only for real customers with phone)
+    if (!isCashCustomer && cleanPhone) {
+      const existingCust = queryOne('SELECT id, phone, address FROM customers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [finalCustName]);
       if (!existingCust) {
         const maxCustObj = queryOne('SELECT MAX(sl) as m FROM customers');
         const nextCustSl = (maxCustObj?.m || 0) + 1;
         runSql(
           'INSERT INTO customers (sl, name, phone, address) VALUES (?, ?, ?, ?)',
-          [nextCustSl, trimmedCustomer, phone ? phone.trim() : '', address ? address.trim() : 'Paduar Bazar, Cumilla']
+          [nextCustSl, finalCustName, cleanPhone, cleanAddress]
         );
-      } else if (phone && !existingCust.phone) {
-        runSql('UPDATE customers SET phone = ?, address = ? WHERE id = ?', [phone.trim(), address ? address.trim() : existingCust.address, existingCust.id]);
+      } else if (cleanPhone && !existingCust.phone) {
+        runSql('UPDATE customers SET phone = ?, address = ? WHERE id = ?', [cleanPhone, cleanAddress, existingCust.id]);
       }
     }
 

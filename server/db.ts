@@ -250,7 +250,7 @@ function seedInitialData(): void {
   if (custCount === 0) {
     db.run(`
       INSERT INTO customers (sl, name, phone, address) VALUES
-      (1, 'Cash Customer', '01904142370', 'Paduar Bazar, Cumilla'),
+      (1, 'Cash Customer', '', ''),
       (2, 'Md Abu Said', '01904142370', 'Paduar Bazar, Cumilla'),
       (3, 'Md Sujon', '01812345678', 'Paduar Bazar, Cumilla'),
       (4, 'Al-Amin Traders', '01711223344', 'Paduar Bazar Biswa Road, Cumilla'),

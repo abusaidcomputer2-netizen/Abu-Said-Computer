@@ -24,9 +24,9 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
   onSubmitSale,
   showToast
 }) => {
-  const [customerName, setCustomerName] = useState('');
+  const [customerName, setCustomerName] = useState('Cash Customer');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('Paduar Bazar, Cumilla');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [workDesc, setWorkDesc] = useState('');
   const [discount, setDiscount] = useState<number>(0);
   const [paid, setPaid] = useState<string>('');
@@ -102,9 +102,9 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
   }, [editingSale]);
 
   const resetForm = () => {
-    setCustomerName('');
+    setCustomerName('Cash Customer');
     setCustomerPhone('');
-    setCustomerAddress('Paduar Bazar, Cumilla');
+    setCustomerAddress('');
     setWorkDesc('');
     setDiscount(0);
     setPaid('');
@@ -127,15 +127,24 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
   const handleCustomerSelect = (val: string) => {
     setCustomerName(val);
     const trimmed = val.trim().toLowerCase();
-    if (!trimmed) return;
+    if (!trimmed || trimmed === 'cash customer') {
+      setCustomerName('Cash Customer');
+      setCustomerPhone('');
+      setCustomerAddress('');
+      return;
+    }
 
     const found = customers.find(
       c => c.name.toLowerCase() === trimmed || (c.phone && c.phone.trim() === trimmed)
     );
     if (found) {
       setCustomerName(found.name);
-      if (found.phone) setCustomerPhone(found.phone);
-      if (found.address) setCustomerAddress(found.address);
+      setCustomerPhone(found.phone || '');
+      setCustomerAddress(found.address || 'Paduar Bazar, Cumilla');
+    } else {
+      if (!customerAddress || customerAddress.trim() === '') {
+        setCustomerAddress('Paduar Bazar, Cumilla');
+      }
     }
   };
 
@@ -144,9 +153,9 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     const cleanPhone = val.trim();
     if (cleanPhone.length >= 6) {
       const match = customers.find(c => c.phone && c.phone.trim() === cleanPhone);
-      if (match && (!customerName || customerName.trim() === '' || customerName.toLowerCase() === 'general customer' || customerName.toLowerCase() === 'new customer')) {
+      if (match && (!customerName || customerName.trim() === '' || customerName.toLowerCase() === 'cash customer')) {
         setCustomerName(match.name);
-        if (match.address) setCustomerAddress(match.address);
+        setCustomerAddress(match.address || 'Paduar Bazar, Cumilla');
       }
     }
   };
@@ -338,14 +347,26 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       });
     }
 
+    const finalCustName = (customerName || '').trim() || 'Cash Customer';
+    const isCashCustomer = finalCustName.toLowerCase() === 'cash customer';
+
+    // All customers except Cash Customer MUST have a mobile phone number
+    if (!isCashCustomer && (!customerPhone || !customerPhone.trim())) {
+      showToast('কাস্টমারের নাম এবং মোবাইল নাম্বার অবশ্যই দিতে হবে!', 'warning');
+      return;
+    }
+
+    const finalPhone = isCashCustomer ? (customerPhone ? customerPhone.trim() : '') : customerPhone.trim();
+    const finalAddress = isCashCustomer ? (customerAddress ? customerAddress.trim() : '') : (customerAddress.trim() || 'Paduar Bazar, Cumilla');
+
     setIsSubmitting(true);
     try {
       await onSubmitSale({
         id: editingSale?.id,
         user: currentUser,
-        customer: customerName.trim() || 'Cash Customer',
-        phone: customerPhone.trim() || '01904142370',
-        address: customerAddress.trim() || 'Paduar Bazar, Cumilla',
+        customer: finalCustName,
+        phone: finalPhone,
+        address: finalAddress,
         desc: workDesc.trim(),
         subtotal,
         discount,
@@ -415,7 +436,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
 
       <form onSubmit={handleSubmit} className="space-y-3.5">
         {/* Customer Info */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <div className="flex justify-between items-center mb-1">
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -423,7 +444,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
               </label>
               {currentCustomerDue > 0 && (
                 <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">
-                  Previous Due: Tk {formatCurrency(currentCustomerDue)}
+                  Due: Tk {formatCurrency(currentCustomerDue)}
                 </span>
               )}
             </div>
@@ -452,13 +473,26 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
 
           <div>
             <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
-              Customer Mobile
+              Customer Mobile {(customerName || '').trim().toLowerCase() !== 'cash customer' && <span className="text-rose-400 font-bold">*</span>}
             </label>
             <input
               type="text"
               value={customerPhone}
               onChange={e => handlePhoneChange(e.target.value)}
-              placeholder="01904142370"
+              placeholder={(customerName || '').trim().toLowerCase() === 'cash customer' ? 'খালি (ঐচ্ছিক)' : '017xxxxxxxx *'}
+              className="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
+              Customer Address
+            </label>
+            <input
+              type="text"
+              value={customerAddress}
+              onChange={e => setCustomerAddress(e.target.value)}
+              placeholder={(customerName || '').trim().toLowerCase() === 'cash customer' ? 'খালি (ঐচ্ছিক)' : 'Paduar Bazar, Cumilla'}
               className="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
             />
           </div>
