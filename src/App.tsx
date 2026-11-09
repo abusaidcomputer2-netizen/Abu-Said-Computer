@@ -1019,10 +1019,19 @@ export default function App() {
   const handleSubmitCustomer = async (payload: any) => {
     const isEdit = !!payload.id;
     const cid = payload.id || Date.now();
+    let finalSl = parseInt(payload.sl, 10);
+    if (!isEdit) {
+      const maxSl = customers.reduce((m, c) => Math.max(m, Number(c.sl) || 0), 0);
+      if (!finalSl || finalSl <= 0 || customers.some(c => Number(c.sl) === finalSl)) {
+        finalSl = maxSl + 1;
+      }
+    } else {
+      if (!finalSl || finalSl <= 0) finalSl = 1;
+    }
     const custRecord: Customer = {
       id: cid,
       rowId: cid,
-      sl: payload.sl || (customers.length + 1),
+      sl: finalSl,
       name: payload.name.trim(),
       phone: payload.phone ? payload.phone.trim() : '',
       address: payload.address ? payload.address.trim() : 'Paduar Bazar, Cumilla'

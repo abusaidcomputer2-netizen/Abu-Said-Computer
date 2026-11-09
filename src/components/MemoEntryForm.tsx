@@ -190,10 +190,10 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       } else {
         const prod = products.find(p => p.name === prodName);
         if (prod) {
-          // Check stock for stationery
-          const stock = prod.stockQty !== null && prod.stockQty !== undefined ? prod.stockQty : 999999;
-          if (item.category === 'Stationery Products' && stock <= 0) {
-            showToast(`"${prod.name}" is out of stock!`, 'error');
+          const isStationery = normalizeCategory(item.category) === 'Stationery Products';
+          const stock = prod.stockQty !== null && prod.stockQty !== undefined ? prod.stockQty : (isStationery ? 0 : 999999);
+          if (isStationery && stock <= 0) {
+            showToast(`"${prod.name}" এ কোনো স্টক নেই (Stock: 0)! স্টক না থাকায় মেমো করা যাবে না।`, 'error');
             return prev;
           }
           item.name = prod.name;
@@ -224,10 +224,16 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       const it = copy[idx];
       let validQty = Math.max(1, qty);
 
-      // Check stock limit for stationery
-      if (it.category === 'Stationery Products' && it.stockAvailable < 999999 && validQty > it.stockAvailable) {
-        showToast(`Only ${it.stockAvailable} units available in stock!`, 'warning');
-        validQty = it.stockAvailable;
+      const isStationery = normalizeCategory(it.category) === 'Stationery Products';
+      if (isStationery) {
+        if (it.stockAvailable <= 0) {
+          showToast(`"${it.name}" এর কোনো স্টক নেই (Stock: 0)! মেমো করা যাবে না।`, 'error');
+          return prev;
+        }
+        if (it.stockAvailable < 999999 && validQty > it.stockAvailable) {
+          showToast(`"${it.name}" এর সর্বোচ্চ স্টক ${it.stockAvailable} টি রয়েছে!`, 'warning');
+          validQty = it.stockAvailable;
+        }
       }
 
       it.qty = validQty;
@@ -250,6 +256,15 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
   const paidVal = isPaidAuto ? grandTotal : (paid === '' ? 0 : parseFloat(paid) || 0);
   const dueVal = Math.max(0, Math.round(grandTotal - paidVal));
 
+  const hasOutOfStockStationery = items.some(it => {
+    if (normalizeCategory(it.category) !== 'Stationery Products') return false;
+    const prodName = it.name === '__custom__' ? it.customName.trim() : it.name.trim();
+    if (!prodName) return false;
+    const prod = products.find(p => p.name.toLowerCase() === prodName.toLowerCase());
+    const stock = prod ? (prod.stockQty !== null && prod.stockQty !== undefined ? prod.stockQty : 0) : it.stockAvailable;
+    return stock <= 0 || it.qty > stock;
+  });
+
   const handlePaidChange = (val: string) => {
     setIsPaidAuto(false);
     setPaid(val);
@@ -268,9 +283,19 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         showToast('Please select or specify item names for all rows!', 'warning');
         return;
       }
-      if (it.category === 'Stationery Products' && it.stockAvailable <= 0) {
-        showToast(`"${finalName}" is out of stock!`, 'error');
-        return;
+
+      const isStationery = normalizeCategory(it.category) === 'Stationery Products';
+      if (isStationery) {
+        const prod = products.find(p => p.name.toLowerCase() === finalName.toLowerCase());
+        const stock = prod ? (prod.stockQty !== null && prod.stockQty !== undefined ? prod.stockQty : 0) : it.stockAvailable;
+        if (stock <= 0) {
+          showToast(`"${finalName}" এ কোনো স্টক নেই (Stock: 0)! স্টক না থাকায় মেমো করা যাবে না।`, 'error');
+          return;
+        }
+        if (it.qty > stock) {
+          showToast(`"${finalName}" এর পর্যাপ্ত স্টক নেই (বর্তমান স্টক: ${stock}, চাহিদা: ${it.qty})!`, 'error');
+          return;
+        }
       }
 
       formattedItems.push({
@@ -453,18 +478,43 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                     >
                       <option value="">Select Item / Service...</option>
                       {categoryProducts.map(p => {
-                        const hasTrackedStock = p.stockQty !== null && p.stockQty !== undefined && p.stockQty > 0;
+                        const isStationery = normalizeCategory(p.category) === 'Stationery Products';
+                        const stock = p.stockQty !== null && p.stockQty !== undefined ? p.stockQty : (isStationery ? 0 : null);
+                        const isOutOfStock = isStationery && (stock === null || stock <= 0);
+                        let label = p.name;
+                        if (isStationery) {
+                          label = `${p.name} [Stock: ${stock ?? 0}]${isOutOfStock ? ' (স্টক নেই)' : ''}`;
+                        } else if (p.stockQty !== null && p.stockQty !== undefined && p.stockQty > 0) {
+                          label = `${p.name} [Stock: ${p.stockQty}]`;
+                        }
                         return (
                           <option
                             key={p.id}
                             value={p.name}
+                            disabled={isOutOfStock}
+                            className={isOutOfStock ? 'text-rose-400 font-bold bg-slate-900' : ''}
                           >
-                            {hasTrackedStock ? `${p.name} [Stock: ${p.stockQty}]` : p.name}
+                            {label}
                           </option>
                         );
                       })}
                       <option value="__custom__">✍️ Custom Item Name...</option>
                     </select>
+
+                    {/* Stock badge indicator */}
+                    {normalizeCategory(it.category) === 'Stationery Products' && it.name && it.name !== '__custom__' && (
+                      <div className="pt-0.5">
+                        {it.stockAvailable <= 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold text-[10px] border border-rose-500/30">
+                            ⚠️ স্টক নেই (Stock: 0) — মেমো করা যাবে না
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold text-[10px] border border-emerald-500/25">
+                            ✓ বর্তমান স্টক: {it.stockAvailable} টি
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     {it.name === '__custom__' && (
                       <input
@@ -614,11 +664,24 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isSubmitting}
-          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-blue-600/25 transition flex items-center justify-center gap-2.5 text-base cursor-pointer disabled:opacity-50"
+          disabled={isSubmitting || hasOutOfStockStationery}
+          className={`w-full text-white font-black py-3.5 rounded-2xl shadow-lg transition flex items-center justify-center gap-2.5 text-base cursor-pointer disabled:opacity-60 ${
+            hasOutOfStockStationery
+              ? 'bg-rose-950/80 border border-rose-500/60 text-rose-300 cursor-not-allowed shadow-none'
+              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-600/25'
+          }`}
         >
-          <Check className="w-5 h-5 text-amber-300" />
-          <span>{editingSale ? 'Update Invoice & Adjust Stock' : 'Save Transaction & Print Memo'}</span>
+          {hasOutOfStockStationery ? (
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+              <span>⚠️ স্টেশনারি পণ্যে স্টক নেই (মেমো করা যাবে না)</span>
+            </span>
+          ) : (
+            <>
+              <Check className="w-5 h-5 text-amber-300" />
+              <span>{editingSale ? 'Update Invoice & Adjust Stock' : 'Save Transaction & Print Memo'}</span>
+            </>
+          )}
         </button>
       </form>
     </div>

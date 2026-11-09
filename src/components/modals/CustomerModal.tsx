@@ -18,17 +18,19 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   showToast
 }) => {
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [sl, setSl] = useState(() => {
-    const max = customers.reduce((m, c) => Math.max(m, c.sl || 0), 0);
+  const nextSuggestedSl = React.useMemo(() => {
+    const max = customers.reduce((m, c) => Math.max(m, Number(c.sl) || 0), 0);
     return max + 1;
-  });
+  }, [customers]);
+
+  const [sl, setSl] = useState<number>(nextSuggestedSl);
 
   React.useEffect(() => {
     if (!editingId) {
-      const max = customers.reduce((m, c) => Math.max(m, c.sl || 0), 0);
-      setSl(max + 1);
+      setSl(nextSuggestedSl);
     }
-  }, [customers, editingId]);
+  }, [nextSuggestedSl, editingId]);
+
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('Paduar Bazar, Cumilla');
@@ -39,13 +41,12 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
     setName('');
     setPhone('');
     setAddress('Paduar Bazar, Cumilla');
-    const max = customers.reduce((m, c) => Math.max(m, c.sl || 0), 0);
-    setSl(max + 1);
+    setSl(nextSuggestedSl);
   };
 
   const handleEdit = (c: Customer) => {
     setEditingId(c.id);
-    setSl(c.sl);
+    setSl(Number(c.sl) || 1);
     setName(c.name);
     setPhone(c.phone || '');
     setAddress(c.address || 'Paduar Bazar, Cumilla');
@@ -62,12 +63,15 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
     try {
       await onSubmitCustomer({
         id: editingId,
-        sl,
+        sl: editingId ? sl : (sl || nextSuggestedSl),
         name: name.trim(),
         phone: phone.trim(),
         address: address.trim()
       });
-      resetForm();
+      setEditingId(null);
+      setName('');
+      setPhone('');
+      setAddress('Paduar Bazar, Cumilla');
     } catch (err: any) {
       showToast(err.message || 'Error saving customer', 'error');
     } finally {

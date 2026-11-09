@@ -30,6 +30,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [lowStockLimit, setLowStockLimit] = useState('5');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const getNextSlForCategory = React.useCallback((cat: Category) => {
+    const catProds = products.filter(p => normalizeCategory(p.category) === cat);
+    const max = catProds.reduce((m, p) => Math.max(m, Number(p.sl) || 0), 0);
+    return max + 1;
+  }, [products]);
+
   const resetForm = () => {
     setEditingId(null);
     setName('');
@@ -37,24 +43,18 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     setCostPrice('');
     setStockQty('');
     setLowStockLimit('5');
-    suggestSl(category);
-  };
-
-  const suggestSl = (cat: Category) => {
-    const catProds = products.filter(p => normalizeCategory(p.category) === cat);
-    const max = catProds.reduce((m, p) => Math.max(m, p.sl || 0), 0);
-    setSl(max + 1);
+    setSl(getNextSlForCategory(category));
   };
 
   const handleCategoryChange = (cat: Category) => {
     setCategory(cat);
-    suggestSl(cat);
+    setSl(getNextSlForCategory(cat));
   };
 
   const handleEdit = (p: Product) => {
     setEditingId(p.id);
-    setSl(p.sl);
-    setCategory(p.category);
+    setSl(Number(p.sl) || 1);
+    setCategory(normalizeCategory(p.category) as Category);
     setName(p.name);
     setSellingPrice(String(p.price));
     setCostPrice(String(p.costPrice));
@@ -73,7 +73,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
     try {
       await onSubmitProduct({
         id: editingId,
-        sl,
+        sl: editingId ? sl : (sl || getNextSlForCategory(category)),
         category,
         name: name.trim(),
         price: parseFloat(sellingPrice) || 0,
@@ -82,7 +82,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         lowStockLimit: parseFloat(lowStockLimit) || 5
       });
       setFilterCat(category);
-      resetForm();
+      setEditingId(null);
+      setName('');
+      setSellingPrice('');
+      setCostPrice('');
+      setStockQty('');
+      setLowStockLimit('5');
     } catch (err: any) {
       showToast(err.message || 'Error saving product', 'error');
     } finally {
@@ -92,9 +97,9 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   React.useEffect(() => {
     if (!editingId) {
-      suggestSl(category);
+      setSl(getNextSlForCategory(category));
     }
-  }, [category, products, editingId]);
+  }, [category, products, editingId, getNextSlForCategory]);
 
   const filteredProducts = products.filter(p => {
     if (filterCat !== 'ALL' && normalizeCategory(p.category) !== filterCat) return false;

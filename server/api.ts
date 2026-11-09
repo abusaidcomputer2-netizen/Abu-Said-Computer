@@ -357,6 +357,11 @@ apiRouter.post('/customers', (req: Request, res: Response) => {
     const maxSl = maxSlObj?.m || 0;
     if (!finalSl || finalSl <= 0) {
       finalSl = maxSl + 1;
+    } else {
+      const existing = queryOne('SELECT id FROM customers WHERE sl = ?', [finalSl]);
+      if (existing) {
+        finalSl = maxSl + 1;
+      }
     }
 
     runSql(
@@ -458,6 +463,43 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
       if (it.category) categorySet.add(it.category);
     });
     const categorySummary = Array.from(categorySet).join(', ') || 'Photocopy';
+
+    // Validate stationery stock availability
+    for (const it of items) {
+      const isStationery = it.category && (
+        it.category === 'Stationery Products' ||
+        it.category.toLowerCase().includes('stationery') ||
+        it.category.includes('স্টেশনারি')
+      );
+      if (isStationery) {
+        let prod = queryOne('SELECT id, name, stock_qty FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [it.name]);
+        if (!prod && it.productId) {
+          prod = queryOne('SELECT id, name, stock_qty FROM products WHERE id = ?', [it.productId]);
+        }
+        if (prod) {
+          const availableStock = prod.stock_qty !== null && prod.stock_qty !== undefined ? prod.stock_qty : 0;
+          const reqQty = parseFloat(it.qty) || 1;
+          if (availableStock <= 0) {
+            return res.status(400).json({
+              status: 'error',
+              message: `"${prod.name}" এ কোনো স্টক নেই (Stock: 0)! স্টক না থাকায় মেমো করা যাবে না।`
+            });
+          }
+          if (reqQty > availableStock) {
+            return res.status(400).json({
+              status: 'error',
+              message: `"${prod.name}" এর পর্যাপ্ত স্টক নেই (বর্তমান স্টক: ${availableStock}, চাহিদা: ${reqQty})!`
+            });
+          }
+        } else {
+          // Unlisted custom stationery without recorded inventory
+          return res.status(400).json({
+            status: 'error',
+            message: `"${it.name}" স্টেশনারি পণ্যের স্টক ইনভেন্টরিতে পাওয়া যায়নি! স্টক ছাড়া মেমো করা যাবে না।`
+          });
+        }
+      }
+    }
 
     // 1. Insert into sales
     runSql(`
