@@ -76,6 +76,18 @@ interface Toast {
   type: 'success' | 'error' | 'warning' | 'info';
 }
 
+export const formatMmmYyyy = (ym: string): string => {
+  if (!ym) return '';
+  const parts = ym.split('-');
+  if (parts.length !== 2) return ym;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  if (isNaN(year) || isNaN(month)) return ym;
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const mmm = monthNames[month - 1] || '';
+  return `${mmm}-${year}`;
+};
+
 export default function App() {
   // Passwords Map State (Persists across restarts & offline)
   const [userPasswords, setUserPasswords] = useState<Record<string, string>>(() => {
@@ -116,12 +128,13 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
   // Filters State
+  const initialCurrentYm = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
-  const [filterMonth, setFilterMonth] = useState('');
+  const [filterMonth, setFilterMonth] = useState(initialCurrentYm);
   const [searchMemo, setSearchMemo] = useState('');
   const [filterStaff, setFilterStaff] = useState('ALL');
-  const [activeFilterBadge, setActiveFilterBadge] = useState('Running Month');
+  const [activeFilterBadge, setActiveFilterBadge] = useState(() => formatMmmYyyy(initialCurrentYm));
 
   // Modals & Action States
   const [editingSale, setEditingSale] = useState<SaleRecord | null>(null);
@@ -503,7 +516,7 @@ export default function App() {
     setFilterStartDate('');
     setFilterEndDate('');
     setSearchMemo('');
-    setActiveFilterBadge(`Month (${ym})`);
+    setActiveFilterBadge(formatMmmYyyy(ym));
   };
 
   // Tab switching handler that opens modals or switches active sections
@@ -617,6 +630,9 @@ export default function App() {
     const isEdit = !!payload.id;
     const now = new Date();
     const invoiceNo = payload.id || (sales.length > 0 ? Math.max(...sales.map(s => s.invoiceNo)) + 1 : 4001);
+    const matchedCust = customers.find(c => c.name.toLowerCase() === (payload.customer || '').trim().toLowerCase());
+    const finalCustAddress = payload.address || matchedCust?.address || '';
+
     const newRecord: SaleRecord = {
       rowId: invoiceNo,
       id: invoiceNo,
@@ -627,7 +643,7 @@ export default function App() {
       user: payload.user || currentUser?.username || 'Md Abu Said',
       customer: payload.customer || 'Cash Customer',
       phone: payload.phone || '',
-      address: payload.address || (payload.customer?.toLowerCase() === 'cash customer' ? '' : 'Paduar Bazar, Cumilla'),
+      address: finalCustAddress,
       category: payload.items?.map((i: any) => i.category).join(', ') || 'Photocopy',
       desc: payload.desc || '',
       subtotal: payload.subtotal || 0,
@@ -659,7 +675,7 @@ export default function App() {
           sl: customers.length + 1,
           name: custName,
           phone: payload.phone || '',
-          address: payload.address || 'Paduar Bazar, Cumilla'
+          address: finalCustAddress || ''
         };
         setCustomers(prev => [...prev, nextCust]);
         updateCachedBootstrap(prev => ({
@@ -1044,10 +1060,6 @@ export default function App() {
     }
     const isCashCustomer = payload.name.trim().toLowerCase() === 'cash customer';
     const cleanPhone = payload.phone ? payload.phone.trim() : '';
-    if (!isCashCustomer && !cleanPhone) {
-      showToast('Customer Name and Mobile Number are required!', 'warning');
-      return;
-    }
     const finalAddress = payload.address && payload.address.trim() ? payload.address.trim() : (isCashCustomer ? '' : 'Paduar Bazar, Cumilla');
 
     const custRecord: Customer = {
@@ -1519,7 +1531,7 @@ export default function App() {
                   setFilterMonth(val);
                   setFilterStartDate('');
                   setFilterEndDate('');
-                  setActiveFilterBadge(`Month (${val})`);
+                  setActiveFilterBadge(val ? formatMmmYyyy(val) : 'All Records');
                 }}
                 onSearchMemoChange={setSearchMemo}
                 onFilterStaffChange={setFilterStaff}

@@ -18,7 +18,7 @@ interface StatsCardsProps {
 
 export const StatsCards: React.FC<StatsCardsProps> = ({ totals, isAdmin, onOpenDueLedger }) => {
   return (
-    <section className="flex flex-wrap gap-3 w-full">
+    <section className="flex flex-wrap gap-3 w-full mb-6">
       {/* 1. Photocopy */}
       <div className="flex-1 min-w-[145px] sm:min-w-[160px] bg-slate-900 border border-blue-500/30 p-3.5 rounded-2xl shadow-sm flex items-center justify-between transition-all hover:-translate-y-0.5 hover:border-blue-500/50">
         <div>

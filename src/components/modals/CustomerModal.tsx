@@ -62,13 +62,6 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
 
     const isCashCust = trimmedName.toLowerCase() === 'cash customer';
     const trimmedPhone = phone.trim();
-
-    // All customers except Cash Customer MUST have a phone number
-    if (!isCashCust && !trimmedPhone) {
-      showToast('Customer Name and Mobile Number are required!', 'warning');
-      return;
-    }
-
     const finalAddress = address.trim() || (isCashCust ? '' : 'Paduar Bazar, Cumilla');
 
     setIsSubmitting(true);
@@ -211,14 +204,13 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
 
             <div className="sm:col-span-3">
               <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                Mobile Number {name.trim().toLowerCase() !== 'cash customer' && <span className="text-rose-400 font-bold">*</span>}
+                Mobile Number
               </label>
               <input
                 type="text"
-                required={name.trim().toLowerCase() !== 'cash customer'}
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                placeholder={name.trim().toLowerCase() === 'cash customer' ? 'Optional (empty)' : '017xxxxxxxx *'}
+                placeholder="Optional (017xxxxxxxx)"
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
               />
             </div>

@@ -24,7 +24,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
   onSubmitSale,
   showToast
 }) => {
-  const [customerName, setCustomerName] = useState('Cash Customer');
+  const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [workDesc, setWorkDesc] = useState('');
@@ -102,7 +102,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
   }, [editingSale]);
 
   const resetForm = () => {
-    setCustomerName('Cash Customer');
+    setCustomerName('');
     setCustomerPhone('');
     setCustomerAddress('');
     setWorkDesc('');
@@ -128,7 +128,6 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     setCustomerName(val);
     const trimmed = val.trim().toLowerCase();
     if (!trimmed || trimmed === 'cash customer') {
-      setCustomerName('Cash Customer');
       setCustomerPhone('');
       setCustomerAddress('');
       return;
@@ -140,11 +139,9 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     if (found) {
       setCustomerName(found.name);
       setCustomerPhone(found.phone || '');
-      setCustomerAddress(found.address || 'Paduar Bazar, Cumilla');
+      setCustomerAddress(found.address || '');
     } else {
-      if (!customerAddress || customerAddress.trim() === '') {
-        setCustomerAddress('Paduar Bazar, Cumilla');
-      }
+      setCustomerAddress('');
     }
   };
 
@@ -153,9 +150,11 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     const cleanPhone = val.trim();
     if (cleanPhone.length >= 6) {
       const match = customers.find(c => c.phone && c.phone.trim() === cleanPhone);
-      if (match && (!customerName || customerName.trim() === '' || customerName.toLowerCase() === 'cash customer')) {
-        setCustomerName(match.name);
-        setCustomerAddress(match.address || 'Paduar Bazar, Cumilla');
+      if (match) {
+        if (!customerName || customerName.trim() === '' || customerName.toLowerCase() === 'cash customer') {
+          setCustomerName(match.name);
+        }
+        setCustomerAddress(match.address || '');
       }
     }
   };
@@ -347,17 +346,47 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       });
     }
 
-    const finalCustName = (customerName || '').trim() || 'Cash Customer';
+    const trimmedCustName = (customerName || '').trim();
+    const isBlankOrCash = !trimmedCustName || trimmedCustName.toLowerCase() === 'cash customer';
+    const finalCustName = isBlankOrCash ? 'Cash Customer' : trimmedCustName;
     const isCashCustomer = finalCustName.toLowerCase() === 'cash customer';
 
-    // All customers except Cash Customer MUST have a mobile phone number
-    if (!isCashCustomer && (!customerPhone || !customerPhone.trim())) {
-      showToast('Customer Name and Mobile Number are required!', 'warning');
-      return;
+    // Mobile no and address are ONLY mandatory for Due (বাকী) customers!
+    if (dueVal > 0) {
+      if (isCashCustomer) {
+        showToast('Customer Name is required for Due transactions (cannot be Cash Customer)!', 'warning');
+        return;
+      }
+      if (!customerPhone || !customerPhone.trim()) {
+        showToast('Mobile Number is required for Due customers!', 'warning');
+        return;
+      }
+      let addr = (customerAddress || '').trim();
+      if (!addr) {
+        const match = customers.find(c => c.name.toLowerCase() === finalCustName.toLowerCase());
+        if (match && match.address) {
+          addr = match.address.trim();
+        }
+      }
+      if (!addr) {
+        showToast('Customer Address is required for Due customers!', 'warning');
+        return;
+      }
     }
 
-    const finalPhone = isCashCustomer ? (customerPhone ? customerPhone.trim() : '') : customerPhone.trim();
-    const finalAddress = isCashCustomer ? (customerAddress ? customerAddress.trim() : '') : (customerAddress.trim() || 'Paduar Bazar, Cumilla');
+    const finalPhone = customerPhone ? customerPhone.trim() : '';
+
+    // Address only comes from customer list (or entered if due), otherwise empty
+    let finalAddress = (customerAddress || '').trim();
+    if (!finalAddress && !isCashCustomer) {
+      const match = customers.find(c => c.name.toLowerCase() === finalCustName.toLowerCase());
+      if (match && match.address) {
+        finalAddress = match.address.trim();
+      }
+    }
+    if (isCashCustomer) {
+      finalAddress = '';
+    }
 
     setIsSubmitting(true);
     try {
@@ -436,11 +465,11 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
 
       <form onSubmit={handleSubmit} className="space-y-3.5">
         {/* Customer Info */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className={`grid grid-cols-1 ${dueVal > 0 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3 transition-all`}>
           <div>
             <div className="flex justify-between items-center mb-1">
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Customer Name
+                Customer Name {dueVal > 0 && <span className="text-rose-400 font-bold">*</span>}
               </label>
               {currentCustomerDue > 0 && (
                 <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">
@@ -453,7 +482,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
               list="customerDatalist"
               value={customerName}
               onChange={e => handleCustomerSelect(e.target.value)}
-              placeholder="Cash Customer"
+              placeholder={dueVal > 0 ? "Customer Name *" : "Customer Name (Leave blank for Cash Customer)"}
               className="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
             />
             <datalist id="customerDatalist">
@@ -464,7 +493,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                 )?.netBalance || 0;
                 return (
                   <option key={c.id} value={c.name}>
-                    {c.phone ? `${c.phone} • ` : ''}{dueAmt > 0 ? `(Previous Due: Tk ${formatCurrency(dueAmt)})` : '(No Due)'}
+                    {c.phone ? `${c.phone} • ` : ''}{c.address ? `${c.address} • ` : ''}{dueAmt > 0 ? `(Previous Due: Tk ${formatCurrency(dueAmt)})` : '(No Due)'}
                   </option>
                 );
               })}
@@ -473,29 +502,32 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
 
           <div>
             <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
-              Customer Mobile {(customerName || '').trim().toLowerCase() !== 'cash customer' && <span className="text-rose-400 font-bold">*</span>}
+              Customer Mobile {dueVal > 0 && <span className="text-rose-400 font-bold">*</span>}
             </label>
             <input
               type="text"
               value={customerPhone}
               onChange={e => handlePhoneChange(e.target.value)}
-              placeholder={(customerName || '').trim().toLowerCase() === 'cash customer' ? 'Optional (empty)' : '017xxxxxxxx *'}
-              className="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
+              placeholder={dueVal > 0 ? "017xxxxxxxx *" : "Optional (empty)"}
+              className={`w-full bg-slate-950 border ${dueVal > 0 && !customerPhone.trim() ? 'border-amber-500/60' : 'border-slate-700/80'} rounded-2xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500`}
             />
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold text-slate-400 mb-1 uppercase tracking-wider">
-              Customer Address
-            </label>
-            <input
-              type="text"
-              value={customerAddress}
-              onChange={e => setCustomerAddress(e.target.value)}
-              placeholder={(customerName || '').trim().toLowerCase() === 'cash customer' ? 'Optional (empty)' : 'Paduar Bazar, Cumilla'}
-              className="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
-            />
-          </div>
+          {/* Address field is only displayed when there is Due (বাকী কাস্টমার) */}
+          {dueVal > 0 && (
+            <div>
+              <label className="block text-[11px] font-bold text-amber-400 mb-1 uppercase tracking-wider">
+                Customer Address <span className="text-rose-400 font-bold">*</span>
+              </label>
+              <input
+                type="text"
+                value={customerAddress}
+                onChange={e => setCustomerAddress(e.target.value)}
+                placeholder="Address (e.g. Paduar Bazar, Cumilla) *"
+                className={`w-full bg-slate-950 border ${!customerAddress.trim() ? 'border-amber-500/60' : 'border-slate-700/80'} rounded-2xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500`}
+              />
+            </div>
+          )}
         </div>
 
         {/* Product & Service Rows */}

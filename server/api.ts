@@ -363,12 +363,7 @@ apiRouter.post('/customers', (req: Request, res: Response) => {
     const trimmedName = name.trim();
     const isCashCust = trimmedName.toLowerCase() === 'cash customer';
     const cleanPhone = phone ? phone.trim() : '';
-
-    if (!isCashCust && !cleanPhone) {
-      return res.status(400).json({ status: 'error', message: 'Customer Name and Mobile Number are required!' });
-    }
-
-    const cleanAddress = address && address.trim() ? address.trim() : (isCashCust ? '' : 'Paduar Bazar, Cumilla');
+    const cleanAddress = address && address.trim() ? address.trim() : '';
 
     let finalSl = parseInt(sl, 10);
     const maxSlObj = queryOne('SELECT MAX(sl) as m FROM customers');
@@ -422,12 +417,7 @@ apiRouter.put('/customers/:id', (req: Request, res: Response) => {
     const trimmedName = name.trim();
     const isCashCust = trimmedName.toLowerCase() === 'cash customer';
     const cleanPhone = phone ? phone.trim() : '';
-
-    if (!isCashCust && !cleanPhone) {
-      return res.status(400).json({ status: 'error', message: 'Customer Name and Mobile Number are required!' });
-    }
-
-    const cleanAddress = address && address.trim() ? address.trim() : (isCashCust ? '' : 'Paduar Bazar, Cumilla');
+    const cleanAddress = address && address.trim() ? address.trim() : '';
     let finalSl = parseInt(sl, 10) || 1;
 
     runSql(
@@ -527,18 +517,40 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
       }
     }
 
+    const dueVal = parseFloat(due) || 0;
     const finalCustName = (customer || '').trim() || 'Cash Customer';
     const isCashCustomer = finalCustName.toLowerCase() === 'cash customer';
     const cleanPhone = phone ? phone.trim() : '';
 
-    if (!isCashCustomer && !cleanPhone) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Customer Name and Mobile Number are required!'
-      });
+    let cleanAddress = address && address.trim() ? address.trim() : '';
+    if (!cleanAddress && !isCashCustomer) {
+      const existingCust = queryOne('SELECT address FROM customers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [finalCustName]);
+      if (existingCust && existingCust.address) {
+        cleanAddress = existingCust.address.trim();
+      }
     }
 
-    const cleanAddress = address && address.trim() ? address.trim() : (isCashCustomer ? '' : 'Paduar Bazar, Cumilla');
+    // Mobile number and address are ONLY mandatory for Due (বাকী) customers!
+    if (dueVal > 0) {
+      if (isCashCustomer) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Customer Name is required for Due transactions!'
+        });
+      }
+      if (!cleanPhone) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Mobile Number is required for Due customers!'
+        });
+      }
+      if (!cleanAddress) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Customer Address is required for Due customers!'
+        });
+      }
+    }
 
     // 1. Insert into sales
     runSql(`
@@ -593,15 +605,14 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
     }
 
     // 3. Record in Due Ledger if due > 0
-    const dueVal = parseFloat(due) || 0;
     if (dueVal > 0) {
       const dueDesc = `Memo #${invoiceNo}${desc ? ` [${desc.trim()}]` : ''}`;
       runSql(`
         INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        `INV-${invoiceNo}`, dateStr, customer || 'Cash Customer', phone || '01904142370',
-        address || 'Paduar Bazar, Cumilla', 'Memo / Bill', dueDesc, dueVal, 0,
+        `INV-${invoiceNo}`, dateStr, finalCustName, cleanPhone,
+        cleanAddress, 'Memo / Bill', dueDesc, dueVal, 0,
         user || 'Staff', `${dateStr} ${now.toTimeString().split(' ')[0]}`
       ]);
     }
@@ -615,9 +626,9 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
       rawDate: dateStr,
       date: dateStr,
       user,
-      customer: customer || 'Cash Customer',
-      phone: phone || '01904142370',
-      address: address || 'Paduar Bazar, Cumilla',
+      customer: finalCustName,
+      phone: cleanPhone,
+      address: cleanAddress,
       category: categorySummary,
       desc,
       subtotal,
@@ -690,6 +701,40 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
     items.forEach((it: any) => { if (it.category) categorySet.add(it.category); });
     const categorySummary = Array.from(categorySet).join(', ') || 'Photocopy';
 
+    const dueVal = parseFloat(due) || 0;
+    const finalUpdateCust = customer || 'Cash Customer';
+    const isCashCust = finalUpdateCust.toLowerCase() === 'cash customer';
+    const cleanUpdatePhone = phone ? phone.trim() : '';
+    let cleanUpdateAddress = address && address.trim() ? address.trim() : '';
+    if (!cleanUpdateAddress && !isCashCust) {
+      const existingCust = queryOne('SELECT address FROM customers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [finalUpdateCust]);
+      if (existingCust && existingCust.address) {
+        cleanUpdateAddress = existingCust.address.trim();
+      }
+    }
+
+    // Mobile number and address are ONLY mandatory for Due (বাকী) customers!
+    if (dueVal > 0) {
+      if (isCashCust) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Customer Name is required for Due transactions!'
+        });
+      }
+      if (!cleanUpdatePhone) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Mobile Number is required for Due customers!'
+        });
+      }
+      if (!cleanUpdateAddress) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Customer Address is required for Due customers!'
+        });
+      }
+    }
+
     // Update sales record
     runSql(`
       UPDATE sales SET
@@ -698,7 +743,7 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
         grand_total = ?, paid = ?, due = ?, items_json = ?
       WHERE id = ?
     `, [
-      customer || 'Cash Customer', phone || '01904142370', address || 'Paduar Bazar, Cumilla',
+      finalUpdateCust, phone ? phone.trim() : '', cleanUpdateAddress,
       categorySummary, desc || '', parseFloat(subtotal) || 0, parseFloat(discount) || 0,
       parseFloat(grandTotal) || 0, parseFloat(paid) || 0, parseFloat(due) || 0,
       JSON.stringify(items || []), saleId
@@ -719,7 +764,6 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
 
     // Sync Due Ledger
     const invNoStr = `INV-${existing.invoice_no}`;
-    const dueVal = parseFloat(due) || 0;
     const existingDue = queryOne('SELECT id FROM due_ledger WHERE entry_id = ? OR description LIKE ?', [invNoStr, `%Memo #${existing.invoice_no}%`]);
 
     if (dueVal > 0) {
