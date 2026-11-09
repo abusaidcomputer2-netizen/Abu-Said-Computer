@@ -366,7 +366,7 @@ export const FALLBACK_PRODUCTS: Product[] = [
     "rowId": 31,
     "sl": 1,
     "category": "Stationery Products",
-    "name": "৳50 Stamp Paper",
+    "name": "50 Tk Stamp Paper",
     "price": 70,
     "costPrice": 0,
     "stockQty": null,
@@ -377,7 +377,7 @@ export const FALLBACK_PRODUCTS: Product[] = [
     "rowId": 32,
     "sl": 2,
     "category": "Stationery Products",
-    "name": "৳100 Stamp Paper",
+    "name": "100 Tk Stamp Paper",
     "price": 120,
     "costPrice": 0,
     "stockQty": null,
@@ -2628,7 +2628,7 @@ export const FALLBACK_CUSTOMERS: Customer[] = [
     "rowId": 264,
     "sl": 260,
     "name": "Harunur Rashid",
-    "phone": "মনে নেই",
+    "phone": "",
     "address": "Paduar Bazar, Cumilla"
   },
   {
@@ -2932,7 +2932,7 @@ export const FALLBACK_CUSTOMERS: Customer[] = [
     "rowId": 302,
     "sl": 298,
     "name": "Bandhupir Jamai",
-    "phone": "মনে নেই",
+    "phone": "",
     "address": "Paduar Bazar, Cumilla"
   },
   {

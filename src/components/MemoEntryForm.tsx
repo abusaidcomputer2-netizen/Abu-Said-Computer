@@ -218,7 +218,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
           const isStationery = normalizeCategory(item.category) === 'Stationery Products';
           const stock = prod.stockQty !== null && prod.stockQty !== undefined ? prod.stockQty : (isStationery ? 0 : 999999);
           if (isStationery && stock <= 0) {
-            showToast(`"${prod.name}" এ কোনো স্টক নেই (Stock: 0)! স্টক না থাকায় মেমো করা যাবে না।`, 'error');
+            showToast(`"${prod.name}" is out of stock (Stock: 0)! Cannot create memo.`, 'error');
             return prev;
           }
           item.name = prod.name;
@@ -252,11 +252,11 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       const isStationery = normalizeCategory(it.category) === 'Stationery Products';
       if (isStationery) {
         if (it.stockAvailable <= 0) {
-          showToast(`"${it.name}" এর কোনো স্টক নেই (Stock: 0)! মেমো করা যাবে না।`, 'error');
+          showToast(`"${it.name}" is out of stock (Stock: 0)! Cannot create memo.`, 'error');
           return prev;
         }
         if (it.stockAvailable < 999999 && validQty > it.stockAvailable) {
-          showToast(`"${it.name}" এর সর্বোচ্চ স্টক ${it.stockAvailable} টি রয়েছে!`, 'warning');
+          showToast(`"${it.name}" maximum available stock is ${it.stockAvailable} units!`, 'warning');
           validQty = it.stockAvailable;
         }
       }
@@ -328,11 +328,11 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         const prod = products.find(p => p.name.toLowerCase() === finalName.toLowerCase());
         const stock = prod ? (prod.stockQty !== null && prod.stockQty !== undefined ? prod.stockQty : 0) : it.stockAvailable;
         if (stock <= 0) {
-          showToast(`"${finalName}" এ কোনো স্টক নেই (Stock: 0)! স্টক না থাকায় মেমো করা যাবে না।`, 'error');
+          showToast(`"${finalName}" is out of stock (Stock: 0)! Cannot create memo.`, 'error');
           return;
         }
         if (it.qty > stock) {
-          showToast(`"${finalName}" এর পর্যাপ্ত স্টক নেই (বর্তমান স্টক: ${stock}, চাহিদা: ${it.qty})!`, 'error');
+          showToast(`Insufficient stock for "${finalName}" (Current stock: ${stock}, Requested: ${it.qty})!`, 'error');
           return;
         }
       }
@@ -352,7 +352,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
 
     // All customers except Cash Customer MUST have a mobile phone number
     if (!isCashCustomer && (!customerPhone || !customerPhone.trim())) {
-      showToast('কাস্টমারের নাম এবং মোবাইল নাম্বার অবশ্যই দিতে হবে!', 'warning');
+      showToast('Customer Name and Mobile Number are required!', 'warning');
       return;
     }
 
@@ -479,7 +479,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
               type="text"
               value={customerPhone}
               onChange={e => handlePhoneChange(e.target.value)}
-              placeholder={(customerName || '').trim().toLowerCase() === 'cash customer' ? 'খালি (ঐচ্ছিক)' : '017xxxxxxxx *'}
+              placeholder={(customerName || '').trim().toLowerCase() === 'cash customer' ? 'Optional (empty)' : '017xxxxxxxx *'}
               className="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -492,7 +492,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
               type="text"
               value={customerAddress}
               onChange={e => setCustomerAddress(e.target.value)}
-              placeholder={(customerName || '').trim().toLowerCase() === 'cash customer' ? 'খালি (ঐচ্ছিক)' : 'Paduar Bazar, Cumilla'}
+              placeholder={(customerName || '').trim().toLowerCase() === 'cash customer' ? 'Optional (empty)' : 'Paduar Bazar, Cumilla'}
               className="w-full bg-slate-950 border border-slate-700/80 rounded-2xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -547,7 +547,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                         const isOutOfStock = isStationery && (stock === null || stock <= 0);
                         let label = p.name;
                         if (isStationery) {
-                          label = `${p.name} [Stock: ${stock ?? 0}]${isOutOfStock ? ' (স্টক নেই)' : ''}`;
+                          label = `${p.name} [Stock: ${stock ?? 0}]${isOutOfStock ? ' (Out of Stock)' : ''}`;
                         } else if (p.stockQty !== null && p.stockQty !== undefined && p.stockQty > 0) {
                           label = `${p.name} [Stock: ${p.stockQty}]`;
                         }
@@ -574,7 +574,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                           type="text"
                           value={it.itemNote || ''}
                           onChange={e => updateItemNote(idx, e.target.value)}
-                          placeholder="ইমেইল বা কাজের নোট লিখুন (যেমন: name@gmail.com / 3 pages)..."
+                          placeholder="e.g. Email address or work notes (name@gmail.com / 3 pages)..."
                           className="w-full bg-slate-950 border border-blue-500/70 text-xs text-white rounded-lg px-2.5 py-1.5 font-medium focus:outline-none focus:border-blue-400 placeholder:text-slate-500 shadow-inner"
                         />
                       </div>
@@ -585,11 +585,11 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                       <div className="pt-0.5">
                         {it.stockAvailable <= 0 ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold text-[10px] border border-rose-500/30">
-                            ⚠️ স্টক নেই (Stock: 0) — মেমো করা যাবে না
+                            ⚠️ Out of Stock (Stock: 0) — Memo blocked
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold text-[10px] border border-emerald-500/25">
-                            ✓ বর্তমান স্টক: {it.stockAvailable} টি
+                            ✓ Current Stock: {it.stockAvailable} units
                           </span>
                         )}
                       </div>
@@ -753,7 +753,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
           {hasOutOfStockStationery ? (
             <span className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
-              <span>⚠️ স্টেশনারি পণ্যে স্টক নেই (মেমো করা যাবে না)</span>
+              <span>⚠️ Stationery Out of Stock (Memo Blocked)</span>
             </span>
           ) : (
             <>

@@ -306,11 +306,11 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               <div className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-center font-bold text-blue-300 flex items-center justify-center gap-1 cursor-not-allowed select-none">
                 <span>
                   {editingId
-                    ? (stockQty !== '' && stockQty !== null && stockQty !== undefined ? `${stockQty} টি` : '০ টি')
-                    : '০ টি (ক্রয় খাতা থেকে বাড়বে)'}
+                    ? (stockQty !== '' && stockQty !== null && stockQty !== undefined ? `${stockQty} Units` : '0 Units')
+                    : '0 Units (Auto-increased via Purchases)'}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-500 text-center mt-0.5">ক্রয় ও বিক্রয়/ইউজে স্বয়ংক্রিয়</p>
+              <p className="text-[10px] text-slate-500 text-center mt-0.5">Auto-synced via Purchases & Sales/Usage</p>
             </div>
 
             <div className="sm:col-span-3">

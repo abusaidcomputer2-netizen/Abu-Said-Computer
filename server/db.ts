@@ -225,8 +225,8 @@ function seedInitialData(): void {
       (11, 'Online Application', 'Income tax return', 500, 0, NULL, 5),
       (12, 'Online Application', 'Scan & Email Service', 10, 0, NULL, 5),
 
-      (1, 'Stationery Products', '৳50 Stamp Paper', 70, 0, NULL, 5),
-      (2, 'Stationery Products', '৳100 Stamp Paper', 120, 0, NULL, 5),
+      (1, 'Stationery Products', '50 Tk Stamp Paper', 70, 0, NULL, 5),
+      (2, 'Stationery Products', '100 Tk Stamp Paper', 120, 0, NULL, 5),
       (3, 'Stationery Products', 'Letter Envelope', 5, 0, NULL, 5),
       (4, 'Stationery Products', 'A4 Size Envelope', 5, 0, NULL, 5),
       (5, 'Stationery Products', 'Clear File Folder', 20, 0, NULL, 5),

@@ -365,7 +365,7 @@ apiRouter.post('/customers', (req: Request, res: Response) => {
     const cleanPhone = phone ? phone.trim() : '';
 
     if (!isCashCust && !cleanPhone) {
-      return res.status(400).json({ status: 'error', message: 'কাস্টমারের নাম এবং মোবাইল নাম্বার অবশ্যই দিতে হবে!' });
+      return res.status(400).json({ status: 'error', message: 'Customer Name and Mobile Number are required!' });
     }
 
     const cleanAddress = address && address.trim() ? address.trim() : (isCashCust ? '' : 'Paduar Bazar, Cumilla');
@@ -424,7 +424,7 @@ apiRouter.put('/customers/:id', (req: Request, res: Response) => {
     const cleanPhone = phone ? phone.trim() : '';
 
     if (!isCashCust && !cleanPhone) {
-      return res.status(400).json({ status: 'error', message: 'কাস্টমারের নাম এবং মোবাইল নাম্বার অবশ্যই দিতে হবে!' });
+      return res.status(400).json({ status: 'error', message: 'Customer Name and Mobile Number are required!' });
     }
 
     const cleanAddress = address && address.trim() ? address.trim() : (isCashCust ? '' : 'Paduar Bazar, Cumilla');
@@ -495,8 +495,7 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
     for (const it of items) {
       const isStationery = it.category && (
         it.category === 'Stationery Products' ||
-        it.category.toLowerCase().includes('stationery') ||
-        it.category.includes('স্টেশনারি')
+        it.category.toLowerCase().includes('stationery')
       );
       if (isStationery) {
         let prod = queryOne('SELECT id, name, stock_qty FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [it.name]);
@@ -509,20 +508,20 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
           if (availableStock <= 0) {
             return res.status(400).json({
               status: 'error',
-              message: `"${prod.name}" এ কোনো স্টক নেই (Stock: 0)! স্টক না থাকায় মেমো করা যাবে না।`
+              message: `"${prod.name}" is out of stock (Stock: 0)! Cannot create memo.`
             });
           }
           if (reqQty > availableStock) {
             return res.status(400).json({
               status: 'error',
-              message: `"${prod.name}" এর পর্যাপ্ত স্টক নেই (বর্তমান স্টক: ${availableStock}, চাহিদা: ${reqQty})!`
+              message: `Insufficient stock for "${prod.name}" (Current stock: ${availableStock}, Requested: ${reqQty})!`
             });
           }
         } else {
           // Unlisted custom stationery without recorded inventory
           return res.status(400).json({
             status: 'error',
-            message: `"${it.name}" স্টেশনারি পণ্যের স্টক ইনভেন্টরিতে পাওয়া যায়নি! স্টক ছাড়া মেমো করা যাবে না।`
+            message: `"${it.name}" stationery product stock was not found in inventory! Cannot create memo without stock.`
           });
         }
       }
@@ -535,7 +534,7 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
     if (!isCashCustomer && !cleanPhone) {
       return res.status(400).json({
         status: 'error',
-        message: 'কাস্টমারের নাম এবং মোবাইল নাম্বার উভয়ই দিতে হবে!'
+        message: 'Customer Name and Mobile Number are required!'
       });
     }
 

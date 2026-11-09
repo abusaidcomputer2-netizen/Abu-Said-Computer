@@ -65,7 +65,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
 
     // All customers except Cash Customer MUST have a phone number
     if (!isCashCust && !trimmedPhone) {
-      showToast('কাস্টমারের নাম এবং মোবাইল নাম্বার অবশ্যই দিতে হবে!', 'warning');
+      showToast('Customer Name and Mobile Number are required!', 'warning');
       return;
     }
 
@@ -218,14 +218,14 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 required={name.trim().toLowerCase() !== 'cash customer'}
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                placeholder={name.trim().toLowerCase() === 'cash customer' ? 'ঐচ্ছিক (খালি থাকবে)' : '017xxxxxxxx *'}
+                placeholder={name.trim().toLowerCase() === 'cash customer' ? 'Optional (empty)' : '017xxxxxxxx *'}
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500"
               />
             </div>
 
             <div className="sm:col-span-3">
               <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                Address (অটো: Paduar Bazar, Cumilla)
+                Address (Default: Paduar Bazar, Cumilla)
               </label>
               <input
                 type="text"

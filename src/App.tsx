@@ -1045,7 +1045,7 @@ export default function App() {
     const isCashCustomer = payload.name.trim().toLowerCase() === 'cash customer';
     const cleanPhone = payload.phone ? payload.phone.trim() : '';
     if (!isCashCustomer && !cleanPhone) {
-      showToast('কাস্টমারের নাম এবং মোবাইল নাম্বার অবশ্যই দিতে হবে!', 'warning');
+      showToast('Customer Name and Mobile Number are required!', 'warning');
       return;
     }
     const finalAddress = payload.address && payload.address.trim() ? payload.address.trim() : (isCashCustomer ? '' : 'Paduar Bazar, Cumilla');
