@@ -32,34 +32,38 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
   return (
     <div className={`report-footer-container flex-grow flex flex-col justify-between ${className}`}>
       <style>{`
-        @media print {
-          @page {
-            @bottom-left {
-              content: "${footerLeftText}";
-              font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
-              font-size: 9px;
-              font-weight: 500;
-              color: #475569;
-              border-top: 1px solid #cbd5e1;
-              vertical-align: middle;
-              padding-top: 4px;
-              white-space: nowrap;
-            }
-            @bottom-center {
-              content: "";
-              border-top: 1px solid #cbd5e1;
-            }
-            @bottom-right {
-              content: "Page " counter(page) " of " counter(pages);
-              font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
-              font-size: 9px;
-              font-weight: 700;
-              color: #334155;
-              border-top: 1px solid #cbd5e1;
-              vertical-align: middle;
-              padding-top: 4px;
-              white-space: nowrap;
-            }
+        @page {
+          @bottom-left {
+            content: "${footerLeftText}";
+            font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
+            font-size: 9px;
+            line-height: 1.3;
+            font-weight: 500;
+            color: #475569;
+            border-top: 1px solid #cbd5e1;
+            vertical-align: top;
+            padding-top: 5px;
+          }
+          @bottom-center {
+            content: "\\00a0";
+            font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
+            font-size: 9px;
+            line-height: 1.3;
+            border-top: 1px solid #cbd5e1;
+            vertical-align: top;
+            padding-top: 5px;
+          }
+          @bottom-right {
+            content: "Page " counter(page) " of " counter(pages);
+            font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
+            font-size: 9px;
+            line-height: 1.3;
+            font-weight: 700;
+            color: #334155;
+            border-top: 1px solid #cbd5e1;
+            vertical-align: top;
+            padding-top: 5px;
+            white-space: nowrap;
           }
         }
       `}</style>

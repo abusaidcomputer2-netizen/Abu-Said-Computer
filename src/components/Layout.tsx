@@ -325,14 +325,14 @@ export const Layout: React.FC<LayoutProps> = ({
                         onOpenCommissionReport();
                         setSidebarOpen(false);
                       }}
-                      title="Staff Commission & Leave Report"
+                      title="Staff Commission Report"
                       className={`w-full flex items-center ${
                         isSidebarCollapsed ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2'
                       } rounded-xl text-xs font-bold transition cursor-pointer group text-purple-300 hover:bg-slate-800/80 hover:text-white`}
                     >
                       <div className="flex items-center gap-2.5">
                         <Award className="w-4 h-4 flex-shrink-0 text-purple-400 group-hover:text-purple-300" />
-                        {!isSidebarCollapsed && <span>Commission & Leave</span>}
+                        {!isSidebarCollapsed && <span>Commission Report</span>}
                       </div>
                       {!isSidebarCollapsed && (
                         <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-purple-500/20 text-purple-300 border border-purple-500/30">
