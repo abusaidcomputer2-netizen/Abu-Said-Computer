@@ -18,7 +18,7 @@ import {
   Eye
 } from 'lucide-react';
 import { CashClosingRecord, SaleRecord, ExpenseRecord, DueRecord, DenominationCounts } from '../../types';
-import { formatCurrency } from '../../utils/helpers';
+import { formatCurrency, getLocalDateStr } from '../../utils/helpers';
 
 interface CashClosingModalProps {
   cashClosings: CashClosingRecord[];
@@ -43,13 +43,13 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
   onSubmitCashClosing,
   showToast
 }) => {
-  const [closingDate, setClosingDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [closingDate, setClosingDate] = useState(() => getLocalDateStr());
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<'form' | 'history'>('form');
   const [showTransactions, setShowTransactions] = useState(false);
 
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayStr = useMemo(() => getLocalDateStr(), []);
   const yesterdayStr = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
@@ -246,7 +246,6 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
         notes,
         denominations: denoms
       });
-      showToast(`Daily cash closing saved for ${closingDate}!`, 'success');
     } catch (err: any) {
       showToast(err.message || 'Error saving cash closing', 'error');
     } finally {

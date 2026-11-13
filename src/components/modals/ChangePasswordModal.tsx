@@ -6,7 +6,7 @@ interface ChangePasswordModalProps {
   currentUser: User;
   users: User[];
   onClose: () => void;
-  onPasswordChanged: (username: string, newPass: string) => Promise<void>;
+  onPasswordChanged: (username: string, newPass: string, currentPass?: string) => Promise<void>;
   showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
@@ -42,8 +42,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onPasswordChanged(selectedUsername, newPassword.trim());
-      showToast(`Password successfully updated for ${selectedUsername}!`, 'success');
+      await onPasswordChanged(selectedUsername, newPassword.trim(), currentPassword);
       onClose();
     } catch (err: any) {
       showToast(err.message || 'Failed to update password', 'error');

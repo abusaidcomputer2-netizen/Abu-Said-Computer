@@ -57,12 +57,39 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     }
   ]);
 
+  // Original stationery quantities in the sale currently being edited
+  const origEditQtyMap = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    if (editingSale?.items) {
+      editingSale.items.forEach(it => {
+        if (normalizeCategory(it.category) === 'Stationery Products' && it.name) {
+          const k = it.name.trim().toLowerCase();
+          map[k] = (map[k] || 0) + (Number(it.qty) || 0);
+        }
+      });
+    }
+    return map;
+  }, [editingSale]);
+
+  const getEffectiveStock = React.useCallback((prodName: string, fallback = 0) => {
+    const k = prodName.trim().toLowerCase();
+    const matched = products.find(p => p.name.toLowerCase() === k);
+    const dbStock = matched
+      ? (matched.stockQty !== null && matched.stockQty !== undefined ? matched.stockQty : 0)
+      : fallback;
+    return dbStock + (origEditQtyMap[k] || 0);
+  }, [products, origEditQtyMap]);
+
   // When editing sale changes
   useEffect(() => {
     if (editingSale) {
       setCustomerName(editingSale.customer);
-      setCustomerPhone(editingSale.phone);
-      setCustomerAddress(editingSale.address || 'Paduar Bazar, Cumilla');
+      setCustomerPhone(editingSale.phone || '');
+      setCustomerAddress(
+        (editingSale.customer || '').trim().toLowerCase() === 'cash customer'
+          ? ''
+          : (editingSale.address || '')
+      );
       setWorkDesc(editingSale.desc || '');
       setDiscount(editingSale.discount || 0);
       setPaid(String(editingSale.paid));
@@ -82,6 +109,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
               }
             }
             const matched = products.find(p => p.name.toLowerCase() === prodName.toLowerCase());
+            const origQty = origEditQtyMap[prodName.toLowerCase()] || 0;
             return {
               category: cat,
               name: prodName,
@@ -91,7 +119,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
               costPrice: it.costPrice || matched?.costPrice || 0,
               qty: it.qty,
               total: it.total,
-              stockAvailable: matched?.stockQty !== null && matched?.stockQty !== undefined ? matched.stockQty : 999999
+              stockAvailable: matched?.stockQty !== null && matched?.stockQty !== undefined ? matched.stockQty + origQty : 999999
             };
           })
         );
@@ -133,9 +161,10 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       return;
     }
 
-    const found = customers.find(
-      c => c.name.toLowerCase() === trimmed || (c.phone && c.phone.trim() === trimmed)
-    );
+    const curPhone = customerPhone.trim();
+    const found = customers.find(c => c.phone && c.phone.trim() === trimmed)
+      || (curPhone ? customers.find(c => c.name.toLowerCase() === trimmed && (c.phone || '').trim() === curPhone) : null)
+      || customers.find(c => c.name.toLowerCase() === trimmed);
     if (found) {
       setCustomerName(found.name);
       setCustomerPhone(found.phone || '');
@@ -215,15 +244,17 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         const prod = products.find(p => p.name === prodName);
         if (prod) {
           const isStationery = normalizeCategory(item.category) === 'Stationery Products';
-          const stock = prod.stockQty !== null && prod.stockQty !== undefined ? prod.stockQty : (isStationery ? 0 : 999999);
-          if (isStationery && stock <= 0) {
+          const effectiveStock = isStationery
+            ? getEffectiveStock(prod.name, 0)
+            : (prod.stockQty !== null && prod.stockQty !== undefined ? prod.stockQty : 999999);
+          if (isStationery && effectiveStock <= 0) {
             showToast(`"${prod.name}" is out of stock (Stock: 0)! Cannot create memo.`, 'error');
             return prev;
           }
           item.name = prod.name;
           item.price = prod.price;
           item.costPrice = prod.costPrice || 0;
-          item.stockAvailable = stock;
+          item.stockAvailable = effectiveStock;
           item.total = Math.round(prod.price * item.qty);
         } else {
           item.name = prodName;
@@ -288,14 +319,19 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
   const paidVal = isPaidAuto ? grandTotal : (paid === '' ? 0 : parseFloat(paid) || 0);
   const dueVal = Math.max(0, Math.round(grandTotal - paidVal));
 
-  const hasOutOfStockStationery = items.some(it => {
-    if (normalizeCategory(it.category) !== 'Stationery Products') return false;
-    const prodName = it.name === '__custom__' ? it.customName.trim() : it.name.trim();
-    if (!prodName) return false;
-    const prod = products.find(p => p.name.toLowerCase() === prodName.toLowerCase());
-    const stock = prod ? (prod.stockQty !== null && prod.stockQty !== undefined ? prod.stockQty : 0) : it.stockAvailable;
-    return stock <= 0 || it.qty > stock;
-  });
+  const hasOutOfStockStationery = (() => {
+    const requestedTotals: Record<string, number> = {};
+    for (const it of items) {
+      if (normalizeCategory(it.category) !== 'Stationery Products') continue;
+      const prodName = (it.name === '__custom__' ? it.customName : it.name).trim();
+      if (!prodName) continue;
+      const key = prodName.toLowerCase();
+      requestedTotals[key] = (requestedTotals[key] || 0) + (it.qty || 1);
+      const effectiveStock = getEffectiveStock(prodName, it.stockAvailable);
+      if (effectiveStock <= 0 || requestedTotals[key] > effectiveStock) return true;
+    }
+    return false;
+  })();
 
   const handlePaidChange = (val: string) => {
     setIsPaidAuto(false);
@@ -306,6 +342,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     e.preventDefault();
 
     const formattedItems: SaleItem[] = [];
+    const requestedTotals: Record<string, number> = {};
     for (const it of items) {
       let finalName = it.name;
       if (it.name === '__custom__') {
@@ -324,14 +361,15 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
 
       const isStationery = normalizeCategory(it.category) === 'Stationery Products';
       if (isStationery) {
-        const prod = products.find(p => p.name.toLowerCase() === finalName.toLowerCase());
-        const stock = prod ? (prod.stockQty !== null && prod.stockQty !== undefined ? prod.stockQty : 0) : it.stockAvailable;
-        if (stock <= 0) {
+        const key = finalName.trim().toLowerCase();
+        requestedTotals[key] = (requestedTotals[key] || 0) + (it.qty || 1);
+        const effectiveStock = getEffectiveStock(finalName, it.stockAvailable);
+        if (effectiveStock <= 0) {
           showToast(`"${finalName}" is out of stock (Stock: 0)! Cannot create memo.`, 'error');
           return;
         }
-        if (it.qty > stock) {
-          showToast(`Insufficient stock for "${finalName}" (Current stock: ${stock}, Requested: ${it.qty})!`, 'error');
+        if (requestedTotals[key] > effectiveStock) {
+          showToast(`Insufficient stock for "${finalName}" (Available stock: ${effectiveStock}, Requested: ${requestedTotals[key]})!`, 'error');
           return;
         }
       }
@@ -351,19 +389,29 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     const finalCustName = isBlankOrCash ? 'Cash Customer' : trimmedCustName;
     const isCashCustomer = finalCustName.toLowerCase() === 'cash customer';
 
+    const finalPhone = customerPhone ? customerPhone.trim() : '';
+    const normFinalPhone = finalPhone.replace(/[\s\-\(\)]/g, '');
+    const findCustMatch = () => {
+      if (normFinalPhone) {
+        const byPhone = customers.find(c => (c.phone || '').replace(/[\s\-\(\)]/g, '') === normFinalPhone);
+        if (byPhone) return byPhone;
+      }
+      return customers.find(c => c.name.toLowerCase() === finalCustName.toLowerCase());
+    };
+
     // Mobile no and address are ONLY mandatory for Due (বাকী) customers!
     if (dueVal > 0) {
       if (isCashCustomer) {
         showToast('Customer Name is required for Due transactions (cannot be Cash Customer)!', 'warning');
         return;
       }
-      if (!customerPhone || !customerPhone.trim()) {
+      if (!finalPhone) {
         showToast('Mobile Number is required for Due customers!', 'warning');
         return;
       }
       let addr = (customerAddress || '').trim();
       if (!addr) {
-        const match = customers.find(c => c.name.toLowerCase() === finalCustName.toLowerCase());
+        const match = findCustMatch();
         if (match && match.address) {
           addr = match.address.trim();
         }
@@ -374,12 +422,10 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       }
     }
 
-    const finalPhone = customerPhone ? customerPhone.trim() : '';
-
     // Address only comes from customer list (or entered if due), otherwise empty
     let finalAddress = (customerAddress || '').trim();
     if (!finalAddress && !isCashCustomer) {
-      const match = customers.find(c => c.name.toLowerCase() === finalCustName.toLowerCase());
+      const match = findCustMatch();
       if (match && match.address) {
         finalAddress = match.address.trim();
       }
@@ -432,26 +478,30 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     const phoneTrimmed = (customerPhone || '').trim();
     if (!nameTrimmed && !phoneTrimmed) return 0;
 
-    // 1. Match directly against customerSummaries
-    let summary = customerSummaries.find(cs => {
-      const matchName = nameTrimmed && cs.name.toLowerCase() === nameTrimmed;
-      const matchPhone = phoneTrimmed && cs.phone && cs.phone.trim() === phoneTrimmed;
-      return matchName || matchPhone;
-    });
+    // 1. Prefer exact phone match if phone is entered
+    if (phoneTrimmed) {
+      const byPhoneSummary = customerSummaries.find(cs => cs.phone && cs.phone.trim() === phoneTrimmed);
+      if (byPhoneSummary) return byPhoneSummary.netBalance || 0;
+    }
 
+    // 2. Match directly against customerSummaries by name (respecting phone if provided)
+    const summary = customerSummaries.find(cs => {
+      if (!nameTrimmed || cs.name.toLowerCase() !== nameTrimmed) return false;
+      if (phoneTrimmed && cs.phone && cs.phone.trim() !== phoneTrimmed) return false;
+      return true;
+    });
     if (summary) return summary.netBalance || 0;
 
-    // 2. Match via customer directory
-    const matchedCustomer = customers.find(c => {
-      const matchName = nameTrimmed && c.name.toLowerCase() === nameTrimmed;
-      const matchPhone = phoneTrimmed && c.phone && c.phone.trim() === phoneTrimmed;
-      return matchName || matchPhone;
-    });
+    // 3. Match via customer directory
+    const matchedCustomer = (phoneTrimmed
+      ? customers.find(c => c.phone && c.phone.trim() === phoneTrimmed)
+      : null)
+      || customers.find(c => nameTrimmed && c.name.toLowerCase() === nameTrimmed);
 
     if (matchedCustomer) {
-      const fallbackSummary = customerSummaries.find(cs => 
-        cs.name.toLowerCase() === matchedCustomer.name.toLowerCase() ||
-        (matchedCustomer.phone && cs.phone && cs.phone.trim() === matchedCustomer.phone.trim())
+      const fallbackSummary = customerSummaries.find(cs =>
+        (matchedCustomer.phone && cs.phone && cs.phone.trim() === matchedCustomer.phone.trim()) ||
+        (cs.name.toLowerCase() === matchedCustomer.name.toLowerCase() && (!matchedCustomer.phone || !cs.phone))
       );
       if (fallbackSummary) return fallbackSummary.netBalance || 0;
     }
@@ -599,7 +649,9 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                       <option value="">Select Item / Service...</option>
                       {categoryProducts.map(p => {
                         const isStationery = normalizeCategory(p.category) === 'Stationery Products';
-                        const stock = p.stockQty !== null && p.stockQty !== undefined ? p.stockQty : (isStationery ? 0 : null);
+                        const stock = isStationery
+                          ? getEffectiveStock(p.name, 0)
+                          : (p.stockQty !== null && p.stockQty !== undefined ? p.stockQty : null);
                         const isOutOfStock = isStationery && (stock === null || stock <= 0);
                         let label = p.name;
                         if (isStationery) {

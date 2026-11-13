@@ -11,7 +11,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import { SaleRecord } from '../types';
-import { formatCurrency, formatDateDisplay } from '../utils/helpers';
+import { formatCurrency, formatDateDisplay, isDateTodayOrYesterday } from '../utils/helpers';
 
 interface TransactionTableProps {
   sales: SaleRecord[];
@@ -38,28 +38,7 @@ interface TransactionTableProps {
   onDeleteSale: (sale: SaleRecord) => void;
 }
 
-export const isMemoEditable = (saleDateStr?: string) => {
-  if (!saleDateStr) return false;
-  const now = new Date();
-  
-  const getDates = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const bdTime = new Date(d.getTime() + (6 * 60 + d.getTimezoneOffset()) * 60000);
-    const bdy = bdTime.getFullYear();
-    const bdm = String(bdTime.getMonth() + 1).padStart(2, '0');
-    const bdDay = String(bdTime.getDate()).padStart(2, '0');
-    return [`${y}-${m}-${day}`, `${bdy}-${bdm}-${bdDay}`];
-  };
-
-  const todayVariants = getDates(now);
-  const yesterdayVariants = getDates(new Date(now.getTime() - 24 * 60 * 60 * 1000));
-  const allowed = new Set([...todayVariants, ...yesterdayVariants]);
-
-  const cleanDate = saleDateStr.substring(0, 10).replace(/\//g, '-');
-  return allowed.has(cleanDate);
-};
+export const isMemoEditable = isDateTodayOrYesterday;
 
 export const TransactionTable: React.FC<TransactionTableProps> = ({
   sales,
@@ -225,7 +204,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                   </td>
                   <td className="p-3">
                     <div className="font-bold text-white">{s.customer || 'Cash Customer'}</div>
-                    <div className="text-[10px] text-slate-400 font-mono">{s.phone || '01904142370'}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">{s.phone || '--'}</div>
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-1.5 flex-wrap">

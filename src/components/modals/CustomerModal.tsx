@@ -214,7 +214,9 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 {filteredCustomers.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-8 text-center text-slate-500 font-medium">
-                      No customer accounts found matching &quot;{searchTerm}&quot;.
+                      {searchTerm.trim()
+                        ? `No customer accounts found matching "${searchTerm}".`
+                        : 'No customer accounts saved in directory yet. Add a customer below.'}
                     </td>
                   </tr>
                 ) : (

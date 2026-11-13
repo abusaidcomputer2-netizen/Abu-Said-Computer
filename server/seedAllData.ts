@@ -104,7 +104,11 @@ export function populateMasterData(db: Database): boolean {
   for (const r of salesRows) {
     const invNo = parseInt(r[0], 10);
     const timestamp = (r[1] || '').trim();
-    const rawDate = timestamp.split(' ')[0] || '';
+    let rawDate = timestamp.split(' ')[0] || '';
+    const slashMatch = rawDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (slashMatch) {
+      rawDate = `${slashMatch[3]}-${slashMatch[1].padStart(2, '0')}-${slashMatch[2].padStart(2, '0')}`;
+    }
     const user = (r[2] || 'Md Abu Said').trim();
     const customer = (r[3] || 'Cash Customer').trim();
     const phone = (r[4] || '').trim();

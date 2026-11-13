@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { googleSignIn, googleLogout } from '../../services/googleAuth';
 import { User } from 'firebase/auth';
+import { safeFetchJson } from '../../utils/safeApi';
+import { clearLocalBootstrapSnapshot } from '../../utils/localPersistence';
 
 interface GoogleDriveBackupModalProps {
   isOpen: boolean;
@@ -91,20 +93,18 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
     setIsProcessing(true);
     setLastReport(null);
     try {
-      const res = await fetch('/api/google-drive/create-and-sync', {
+      const { data, error, backendUnavailable } = await safeFetchJson<any>('/api/google-drive/create-and-sync', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${googleToken}`
-        }
+        headers: { Authorization: `Bearer ${googleToken}` }
       });
-      const data = await res.json();
-      if (data.status === 'success') {
+      if (backendUnavailable) {
+        showToast('Google Drive server sync requires the Node.js backend server.', 'warning');
+      } else if (data?.status === 'success') {
         setLastReport(data.report);
         onBackupSuccess(data.report.spreadsheetId, data.report.spreadsheetUrl, data.report.syncedAt);
         showToast(data.message || 'Spreadsheet created and synced successfully!', 'success');
       } else {
-        showToast(data.message || 'Failed to create Google Spreadsheet.', 'error');
+        showToast(data?.message || error || 'Failed to create Google Spreadsheet.', 'error');
       }
     } catch (err: any) {
       showToast(err.message || 'Network error while creating spreadsheet.', 'error');
@@ -122,20 +122,18 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
     setConfirmDialog(null);
     setIsProcessing(true);
     try {
-      const res = await fetch('/api/google-drive/sync-now', {
+      const { data, error, backendUnavailable } = await safeFetchJson<any>('/api/google-drive/sync-now', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${googleToken}`
-        }
+        headers: { Authorization: `Bearer ${googleToken}` }
       });
-      const data = await res.json();
-      if (data.status === 'success') {
+      if (backendUnavailable) {
+        showToast('Google Drive server sync requires the Node.js backend server.', 'warning');
+      } else if (data?.status === 'success') {
         setLastReport(data.report);
         onBackupSuccess(data.report.spreadsheetId, data.report.spreadsheetUrl, data.report.syncedAt);
         showToast(data.message || 'Spreadsheet synced successfully!', 'success');
       } else {
-        showToast(data.message || 'Failed to sync spreadsheet.', 'error');
+        showToast(data?.message || error || 'Failed to sync spreadsheet.', 'error');
       }
     } catch (err: any) {
       showToast(err.message || 'Sync failed.', 'error');
@@ -148,11 +146,15 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
     setConfirmDialog(null);
     setIsProcessing(true);
     try {
-      const res = await fetch('/api/google-drive/unlink', { method: 'POST' });
-      const data = await res.json();
-      if (data.status === 'success') {
+      const { data, error, backendUnavailable } = await safeFetchJson<any>('/api/google-drive/unlink', { method: 'POST' });
+      if (backendUnavailable) {
+        onBackupSuccess('', '', '');
+        showToast('Google Sheet unlinked locally.', 'info');
+      } else if (data?.status === 'success') {
         onBackupSuccess('', '', '');
         showToast('Google Sheet unlinked successfully.', 'info');
+      } else {
+        showToast(data?.message || error || 'Failed to unlink spreadsheet.', 'error');
       }
     } catch (err: any) {
       showToast(err.message || 'Failed to unlink spreadsheet.', 'error');
@@ -174,19 +176,20 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
         headers['Authorization'] = `Bearer ${googleToken}`;
       }
 
-      const res = await fetch('/api/google-drive/link-sheet', {
+      const { data, error, backendUnavailable } = await safeFetchJson<any>('/api/google-drive/link-sheet', {
         method: 'POST',
         headers,
         body: JSON.stringify({ sheetUrlOrId: manualSheetInput.trim() })
       });
-      const data = await res.json();
-      if (data.status === 'success') {
+      if (backendUnavailable) {
+        showToast('Google Sheet linking requires the Node.js backend server.', 'warning');
+      } else if (data?.status === 'success') {
         onBackupSuccess(data.linkedSheetId, data.linkedSheetUrl, new Date().toISOString());
         if (data.report) setLastReport(data.report);
         setManualSheetInput('');
         showToast('Google Sheet linked and verified successfully!', 'success');
       } else {
-        showToast(data.message || 'Failed to link Google Sheet.', 'error');
+        showToast(data?.message || error || 'Failed to link Google Sheet.', 'error');
       }
     } catch (err: any) {
       showToast(err.message || 'Error linking sheet.', 'error');
@@ -204,20 +207,24 @@ export const GoogleDriveBackupModal: React.FC<GoogleDriveBackupModalProps> = ({
         headers['Authorization'] = `Bearer ${googleToken}`;
       }
 
-      const res = await fetch('/api/database/clear-all', {
+      const { data, error, backendUnavailable } = await safeFetchJson<any>('/api/database/clear-all', {
         method: 'POST',
         headers
       });
-      const data = await res.json();
-      if (data.status === 'success') {
-        localStorage.removeItem('as_computer_cached_bootstrap');
+      if (backendUnavailable) {
+        await clearLocalBootstrapSnapshot();
+        showToast('Local browser cache cleared!', 'success');
+        setTimeout(() => {
+          window.location.reload();
+        }, 800);
+      } else if (data?.status === 'success') {
+        await clearLocalBootstrapSnapshot();
         showToast('All site and sheet records successfully cleared!', 'success');
-        // Refresh page state
         setTimeout(() => {
           window.location.reload();
         }, 800);
       } else {
-        showToast(data.message || 'Failed to clear data.', 'error');
+        showToast(data?.message || error || 'Failed to clear data.', 'error');
       }
     } catch (err: any) {
       showToast(err.message || 'Error executing data clear.', 'error');

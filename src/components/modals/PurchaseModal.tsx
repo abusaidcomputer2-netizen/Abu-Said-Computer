@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, ShoppingCart, Plus, Trash2, Check, Copy } from 'lucide-react';
 import { Product, PurchaseRecord } from '../../types';
-import { formatCurrency, formatDateDisplay, normalizeCategory, isDateTodayOrYesterday } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, normalizeCategory, isDateTodayOrYesterday, getLocalDateStr } from '../../utils/helpers';
 
 interface PurchaseModalProps {
   purchases: PurchaseRecord[];
@@ -26,7 +26,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
   onDeletePurchase,
   showToast
 }) => {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => getLocalDateStr());
   const [supplier, setSupplier] = useState('');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,7 +130,6 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
         date,
         user: currentUser
       });
-      showToast('Purchases saved and stock updated!', 'success');
       setSupplier('');
       setNotes('');
       setItems([{ product: '', customProduct: '', qty: 1, unitCost: 0, totalCost: 0 }]);

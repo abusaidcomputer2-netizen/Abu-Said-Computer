@@ -36,6 +36,30 @@ function runSql(sql: string, params: any[] = []): void {
   saveDatabase();
 }
 
+export function getBdDateStr(d: Date = new Date()): string {
+  const bdTime = new Date(d.getTime() + (6 * 60 + d.getTimezoneOffset()) * 60000);
+  const yr = bdTime.getFullYear();
+  const mo = String(bdTime.getMonth() + 1).padStart(2, '0');
+  const da = String(bdTime.getDate()).padStart(2, '0');
+  return `${yr}-${mo}-${da}`;
+}
+
+function getNextPrefixedId(table: string, prefix: string): string {
+  const maxObj = queryOne<{ m: number }>(`SELECT MAX(id) as m FROM ${table}`);
+  return `${prefix}-${(maxObj?.m || 0) + 1001}`;
+}
+
+function lookupCustomerAddress(custName: string, phone: string): string {
+  const cleanPhone = (phone || '').trim().replace(/[\s\-\(\)]/g, '');
+  if (cleanPhone) {
+    const allCusts = queryAll<{ phone: string; address: string }>('SELECT phone, address FROM customers WHERE address IS NOT NULL AND TRIM(address) != ""');
+    const byPhone = allCusts.find(c => (c.phone || '').replace(/[\s\-\(\)]/g, '') === cleanPhone);
+    if (byPhone?.address) return byPhone.address.trim();
+  }
+  const byName = queryOne<{ address: string }>('SELECT address FROM customers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [custName]);
+  return byName?.address ? byName.address.trim() : '';
+}
+
 // ---------------- AUTH ----------------
 apiRouter.post('/auth/login', (req: Request, res: Response) => {
   const { username, password } = req.body;
@@ -121,30 +145,46 @@ apiRouter.get('/bootstrap', (req: Request, res: Response) => {
     let totalShopDue = 0;
     let totalShopPaid = 0;
 
+    const phonesByName: Record<string, Set<string>> = {};
     dueRecords.forEach(d => {
-      const cName = d.customer_name;
-      if (!custDueMap[cName]) {
-        custDueMap[cName] = {
+      const cName = (d.customer_name || '').trim();
+      const p = (d.customer_phone || '').trim();
+      if (!cName || !p) return;
+      const nl = cName.toLowerCase();
+      if (!phonesByName[nl]) phonesByName[nl] = new Set();
+      phonesByName[nl].add(p);
+    });
+
+    dueRecords.forEach(d => {
+      const cName = (d.customer_name || '').trim();
+      if (!cName) return;
+      const cPhone = (d.customer_phone || '').trim();
+      const nl = cName.toLowerCase();
+      const hasMultiplePhones = (phonesByName[nl]?.size || 0) > 1;
+      const key = hasMultiplePhones && cPhone ? `${nl}::${cPhone}` : nl;
+
+      if (!custDueMap[key]) {
+        custDueMap[key] = {
           name: cName,
-          phone: d.customer_phone || '',
+          phone: cPhone,
           address: d.customer_address || '',
           totalDue: 0,
           totalPaid: 0,
           netBalance: 0
         };
       }
-      custDueMap[cName].totalDue += (d.due_dr || 0);
-      custDueMap[cName].totalPaid += (d.paid_cr || 0);
-      custDueMap[cName].netBalance = custDueMap[cName].totalDue - custDueMap[cName].totalPaid;
-      if (d.customer_phone && !custDueMap[cName].phone) custDueMap[cName].phone = d.customer_phone;
-      if (d.customer_address && !custDueMap[cName].address) custDueMap[cName].address = d.customer_address;
+      custDueMap[key].totalDue += (d.due_dr || 0);
+      custDueMap[key].totalPaid += (d.paid_cr || 0);
+      custDueMap[key].netBalance = custDueMap[key].totalDue - custDueMap[key].totalPaid;
+      if (cPhone && !custDueMap[key].phone) custDueMap[key].phone = cPhone;
+      if (d.customer_address && !custDueMap[key].address) custDueMap[key].address = d.customer_address;
 
       totalShopDue += (d.due_dr || 0);
       totalShopPaid += (d.paid_cr || 0);
     });
 
     const activeDueCustomers = Object.values(custDueMap)
-      .filter(c => c.netBalance > 0)
+      .filter(c => c.netBalance > 0.01)
       .sort((a, b) => a.name.localeCompare(b.name, 'bn'));
 
     return res.json({
@@ -541,14 +581,18 @@ apiRouter.delete('/customers', (_req: Request, res: Response) => {
 apiRouter.post('/sales', (req: Request, res: Response) => {
   try {
     const { user, customer, phone, address, desc, subtotal, discount, grandTotal, paid, due, items } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'At least one item is required to create an invoice!' });
+    }
 
     // Get next invoice number >= 4001
     const maxInvObj = queryOne('SELECT MAX(invoice_no) as m FROM sales');
     const invoiceNo = Math.max(4000, maxInvObj?.m || 4000) + 1;
 
     const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
+    const dateStr = getBdDateStr(now);
     const timestampStr = now.toLocaleString('en-US', {
+      timeZone: 'Asia/Dhaka',
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -564,39 +608,50 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
     });
     const categorySummary = Array.from(categorySet).join(', ') || 'Photocopy';
 
-    // Validate stationery stock availability
+    // Validate stationery stock availability (aggregate quantities per product)
+    const stationeryReqMap: Record<string, { name: string; qty: number; productId?: number }> = {};
     for (const it of items) {
       const isStationery = it.category && (
         it.category === 'Stationery Products' ||
         it.category.toLowerCase().includes('stationery')
       );
       if (isStationery) {
-        let prod = queryOne('SELECT id, name, stock_qty FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [it.name]);
-        if (!prod && it.productId) {
-          prod = queryOne('SELECT id, name, stock_qty FROM products WHERE id = ?', [it.productId]);
+        const key = (it.name || '').trim().toLowerCase();
+        if (!key) {
+          return res.status(400).json({ status: 'error', message: 'Stationery item name is required!' });
         }
-        if (prod) {
-          const availableStock = prod.stock_qty !== null && prod.stock_qty !== undefined ? prod.stock_qty : 0;
-          const reqQty = parseFloat(it.qty) || 1;
-          if (availableStock <= 0) {
-            return res.status(400).json({
-              status: 'error',
-              message: `"${prod.name}" is out of stock (Stock: 0)! Cannot create memo.`
-            });
-          }
-          if (reqQty > availableStock) {
-            return res.status(400).json({
-              status: 'error',
-              message: `Insufficient stock for "${prod.name}" (Current stock: ${availableStock}, Requested: ${reqQty})!`
-            });
-          }
-        } else {
-          // Unlisted custom stationery without recorded inventory
+        if (!stationeryReqMap[key]) {
+          stationeryReqMap[key] = { name: it.name.trim(), qty: 0, productId: it.productId };
+        }
+        stationeryReqMap[key].qty += (parseFloat(it.qty) || 1);
+      }
+    }
+
+    for (const key of Object.keys(stationeryReqMap)) {
+      const entry = stationeryReqMap[key];
+      let prod = queryOne('SELECT id, name, stock_qty FROM products WHERE LOWER(TRIM(name)) = ?', [key]);
+      if (!prod && entry.productId) {
+        prod = queryOne('SELECT id, name, stock_qty FROM products WHERE id = ?', [entry.productId]);
+      }
+      if (prod) {
+        const availableStock = prod.stock_qty !== null && prod.stock_qty !== undefined ? prod.stock_qty : 0;
+        if (availableStock <= 0) {
           return res.status(400).json({
             status: 'error',
-            message: `"${it.name}" stationery product stock was not found in inventory! Cannot create memo without stock.`
+            message: `"${prod.name}" is out of stock (Stock: 0)! Cannot create memo.`
           });
         }
+        if (entry.qty > availableStock) {
+          return res.status(400).json({
+            status: 'error',
+            message: `Insufficient stock for "${prod.name}" (Current stock: ${availableStock}, Requested: ${entry.qty})!`
+          });
+        }
+      } else {
+        return res.status(400).json({
+          status: 'error',
+          message: `"${entry.name}" stationery product stock was not found in inventory! Cannot create memo without stock.`
+        });
       }
     }
 
@@ -605,12 +660,9 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
     const isCashCustomer = finalCustName.toLowerCase() === 'cash customer';
     const cleanPhone = phone ? phone.trim() : '';
 
-    let cleanAddress = address && address.trim() ? address.trim() : '';
+    let cleanAddress = isCashCustomer ? '' : (address && address.trim() ? address.trim() : '');
     if (!cleanAddress && !isCashCustomer) {
-      const existingCust = queryOne('SELECT address FROM customers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [finalCustName]);
-      if (existingCust && existingCust.address) {
-        cleanAddress = existingCust.address.trim();
-      }
+      cleanAddress = lookupCustomerAddress(finalCustName, cleanPhone);
     }
 
     // Mobile number and address are ONLY mandatory for Due (বাকী) customers!
@@ -737,6 +789,9 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
     if (!existing) return res.status(404).json({ status: 'error', message: 'Invoice not found' });
 
     const { customer, phone, address, desc, subtotal, discount, grandTotal, paid, due, items, user } = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'At least one item is required!' });
+    }
 
     // Rules:
     // Today or Yesterday: Edited freely without conditions
@@ -753,48 +808,13 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
       }
     }
 
-    const oldItems = JSON.parse(existing.items_json || '[]');
-
-    // Reconcile stock delta between old items and new items
-    const deltaMap: Record<string, number> = {};
-    oldItems.forEach((it: any) => {
-      if (it.category === 'Stationery Products' && it.name) {
-        const k = it.name.trim().toLowerCase();
-        deltaMap[k] = (deltaMap[k] || 0) - (parseFloat(it.qty) || 0);
-      }
-    });
-    items.forEach((it: any) => {
-      if (it.category === 'Stationery Products' && it.name) {
-        const k = it.name.trim().toLowerCase();
-        deltaMap[k] = (deltaMap[k] || 0) + (parseFloat(it.qty) || 0);
-      }
-    });
-
-    Object.keys(deltaMap).forEach(k => {
-      const diffSold = deltaMap[k];
-      if (diffSold !== 0) {
-        const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = ?', [k]);
-        if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
-          const newStock = Math.max(0, (prod.stock_qty || 0) - diffSold);
-          runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
-        }
-      }
-    });
-
-    const categorySet = new Set<string>();
-    items.forEach((it: any) => { if (it.category) categorySet.add(it.category); });
-    const categorySummary = Array.from(categorySet).join(', ') || 'Photocopy';
-
     const dueVal = parseFloat(due) || 0;
-    const finalUpdateCust = customer || 'Cash Customer';
+    const finalUpdateCust = (customer || '').trim() || 'Cash Customer';
     const isCashCust = finalUpdateCust.toLowerCase() === 'cash customer';
     const cleanUpdatePhone = phone ? phone.trim() : '';
-    let cleanUpdateAddress = address && address.trim() ? address.trim() : '';
+    let cleanUpdateAddress = isCashCust ? '' : (address && address.trim() ? address.trim() : '');
     if (!cleanUpdateAddress && !isCashCust) {
-      const existingCust = queryOne('SELECT address FROM customers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [finalUpdateCust]);
-      if (existingCust && existingCust.address) {
-        cleanUpdateAddress = existingCust.address.trim();
-      }
+      cleanUpdateAddress = lookupCustomerAddress(finalUpdateCust, cleanUpdatePhone);
     }
 
     // Mobile number and address are ONLY mandatory for Due (বাকী) customers!
@@ -819,6 +839,65 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
       }
     }
 
+    const oldItems = JSON.parse(existing.items_json || '[]');
+
+    // Reconcile stock delta between old items and new items (validate BEFORE modifying DB)
+    const deltaMap: Record<string, number> = {};
+    const newStationerySet = new Set<string>();
+    oldItems.forEach((it: any) => {
+      const isStat = it.category && it.category.toLowerCase().includes('stationery');
+      if (isStat && it.name) {
+        const k = it.name.trim().toLowerCase();
+        deltaMap[k] = (deltaMap[k] || 0) - (parseFloat(it.qty) || 0);
+      }
+    });
+    items.forEach((it: any) => {
+      const isStat = it.category && it.category.toLowerCase().includes('stationery');
+      if (isStat && it.name) {
+        const k = it.name.trim().toLowerCase();
+        newStationerySet.add(k);
+        deltaMap[k] = (deltaMap[k] || 0) + (parseFloat(it.qty) || 0);
+      }
+    });
+
+    const stockUpdates: Array<{ id: number; newStock: number }> = [];
+    for (const k of Object.keys(deltaMap)) {
+      const diffSold = deltaMap[k];
+      const prod = queryOne('SELECT id, name, stock_qty FROM products WHERE LOWER(TRIM(name)) = ?', [k]);
+      if (!prod && newStationerySet.has(k)) {
+        return res.status(400).json({
+          status: 'error',
+          message: `"${k}" stationery product stock was not found in inventory!`
+        });
+      }
+      if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
+        const currentStock = prod.stock_qty || 0;
+        if (diffSold > 0 && diffSold > currentStock) {
+          return res.status(400).json({
+            status: 'error',
+            message: `Insufficient stock for "${prod.name}" (Available additional stock: ${currentStock}, Additional requested: ${diffSold})!`
+          });
+        }
+        if (diffSold !== 0) {
+          stockUpdates.push({ id: prod.id, newStock: Math.max(0, currentStock - diffSold) });
+        }
+      }
+    }
+
+    stockUpdates.forEach(u => {
+      runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [u.newStock, u.id]);
+    });
+
+    const categorySet = new Set<string>();
+    items.forEach((it: any) => { if (it.category) categorySet.add(it.category); });
+    const categorySummary = Array.from(categorySet).join(', ') || 'Photocopy';
+
+    const cleanDesc = desc ? String(desc).trim() : '';
+    const subVal = parseFloat(subtotal) || 0;
+    const discVal = parseFloat(discount) || 0;
+    const grandVal = parseFloat(grandTotal) || 0;
+    const paidVal = parseFloat(paid) || 0;
+
     // Update sales record
     runSql(`
       UPDATE sales SET
@@ -827,9 +906,9 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
         grand_total = ?, paid = ?, due = ?, items_json = ?
       WHERE id = ?
     `, [
-      finalUpdateCust, phone ? phone.trim() : '', cleanUpdateAddress,
-      categorySummary, desc || '', parseFloat(subtotal) || 0, parseFloat(discount) || 0,
-      parseFloat(grandTotal) || 0, parseFloat(paid) || 0, parseFloat(due) || 0,
+      finalUpdateCust, cleanUpdatePhone, cleanUpdateAddress,
+      categorySummary, cleanDesc, subVal, discVal,
+      grandVal, paidVal, dueVal,
       JSON.stringify(items || []), saleId
     ]);
 
@@ -848,29 +927,32 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
 
     // Sync Due Ledger
     const invNoStr = `INV-${existing.invoice_no}`;
-    const existingDue = queryOne('SELECT id FROM due_ledger WHERE entry_id = ? OR description LIKE ?', [invNoStr, `%Memo #${existing.invoice_no}%`]);
+    const existingDue = queryOne<{ id: number; description: string }>(
+      'SELECT id, description FROM due_ledger WHERE entry_id = ? OR description LIKE ?',
+      [invNoStr, `%Memo #${existing.invoice_no}%`]
+    );
 
     if (dueVal > 0) {
-      const dueDesc = `Memo #${existing.invoice_no}${desc ? ` [${desc.trim()}]` : ''}`;
+      const dueDesc = `Memo #${existing.invoice_no}${cleanDesc ? ` [${cleanDesc}]` : ''}`;
       if (existingDue) {
         runSql(`
           UPDATE due_ledger SET customer_name = ?, customer_phone = ?, customer_address = ?, description = ?, due_dr = ?, paid_cr = 0
           WHERE id = ?
-        `, [customer || 'Cash Customer', phone || '01904142370', address || 'Paduar Bazar, Cumilla', dueDesc, dueVal, existingDue.id]);
+        `, [finalUpdateCust, cleanUpdatePhone, cleanUpdateAddress, dueDesc, dueVal, existingDue.id]);
       } else {
         runSql(`
           INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-          invNoStr, existing.date, customer || 'Cash Customer', phone || '01904142370',
-          address || 'Paduar Bazar, Cumilla', 'Memo / Bill', dueDesc, dueVal, 0,
+          invNoStr, existing.date, finalUpdateCust, cleanUpdatePhone,
+          cleanUpdateAddress, 'Memo / Bill', dueDesc, dueVal, 0,
           user || existing.user_name, existing.timestamp
         ]);
       }
-    } else {
-      if (existingDue) {
-        runSql('UPDATE due_ledger SET due_dr = 0, description = description || " [Paid in Full]" WHERE id = ?', [existingDue.id]);
-      }
+    } else if (existingDue) {
+      const prevDesc = existingDue.description || '';
+      const nextDesc = prevDesc.includes('[Paid in Full]') ? prevDesc : `${prevDesc} [Paid in Full]`.trim();
+      runSql('UPDATE due_ledger SET due_dr = 0, description = ? WHERE id = ?', [nextDesc, existingDue.id]);
     }
     saveDatabase();
 
@@ -882,16 +964,16 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
       rawDate: existing.date,
       date: existing.date,
       user: existing.user_name,
-      customer,
-      phone,
-      address,
+      customer: finalUpdateCust,
+      phone: cleanUpdatePhone,
+      address: cleanUpdateAddress,
       category: categorySummary,
-      desc,
-      subtotal,
-      discount,
-      grandTotal,
-      paid,
-      due,
+      desc: cleanDesc,
+      subtotal: subVal,
+      discount: discVal,
+      grandTotal: grandVal,
+      paid: paidVal,
+      due: dueVal,
       items
     };
 
@@ -923,8 +1005,9 @@ apiRouter.delete('/sales/:id', (req: Request, res: Response) => {
     // 1. Restore product stock for stationery items
     const items = JSON.parse(existing.items_json || '[]');
     items.forEach((it: any) => {
-      if (it.category === 'Stationery Products' && it.name) {
-        const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = LOWER(?)', [it.name]);
+      const isStat = it.category && it.category.toLowerCase().includes('stationery');
+      if (isStat && it.name) {
+        const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [it.name]);
         if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
           const newStock = (prod.stock_qty || 0) + (parseFloat(it.qty) || 0);
           runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
@@ -933,10 +1016,15 @@ apiRouter.delete('/sales/:id', (req: Request, res: Response) => {
     });
 
     // 2. Mark due ledger record cancelled (never delete for permanent audit history)
-    runSql('UPDATE due_ledger SET due_dr = 0, description = description || " [Memo Deleted / Cancelled]" WHERE entry_id = ? OR description LIKE ?', [
-      `INV-${existing.invoice_no}`,
-      `%Memo #${existing.invoice_no}%`
-    ]);
+    const dueRow = queryOne<{ id: number; description: string }>(
+      'SELECT id, description FROM due_ledger WHERE entry_id = ? OR description LIKE ?',
+      [`INV-${existing.invoice_no}`, `%Memo #${existing.invoice_no}%`]
+    );
+    if (dueRow) {
+      const prevDesc = dueRow.description || '';
+      const nextDesc = prevDesc.includes('[Memo Deleted / Cancelled]') ? prevDesc : `${prevDesc} [Memo Deleted / Cancelled]`.trim();
+      runSql('UPDATE due_ledger SET due_dr = 0, description = ? WHERE id = ?', [nextDesc, dueRow.id]);
+    }
 
     // 3. Delete sale and items
     runSql('DELETE FROM sale_items WHERE sale_id = ?', [saleId]);
@@ -959,17 +1047,16 @@ apiRouter.post('/due-ledger/payment', (req: Request, res: Response) => {
     }
 
     const now = new Date();
-    const dateStr = date || now.toISOString().split('T')[0];
+    const dateStr = date || getBdDateStr(now);
     const timestampStr = `${dateStr} ${now.toTimeString().split(' ')[0]}`;
 
-    const countObj = queryOne('SELECT COUNT(*) as c FROM due_ledger');
-    const entryId = `PAY-${(countObj?.c || 0) + 1001}`;
+    const entryId = getNextPrefixedId('due_ledger', 'PAY');
 
     runSql(`
       INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      entryId, dateStr, customer.trim(), phone ? phone.trim() : '', address ? address.trim() : 'Paduar Bazar, Cumilla',
+      entryId, dateStr, customer.trim(), phone ? phone.trim() : '', address ? address.trim() : '',
       'Payment Received', desc ? desc.trim() : 'Cash / bKash Payment', 0, amt, user || 'Staff', timestampStr
     ]);
 
@@ -1016,7 +1103,7 @@ apiRouter.post('/purchases', (req: Request, res: Response) => {
     }
 
     const now = new Date();
-    const dateStr = date || now.toISOString().split('T')[0];
+    const dateStr = date || getBdDateStr(now);
     const timestampStr = `${dateStr} ${now.toTimeString().split(' ')[0]}`;
 
     let grandTotal = 0;
@@ -1032,8 +1119,7 @@ apiRouter.post('/purchases', (req: Request, res: Response) => {
       grandTotal += tCost;
       itemSummaries.push(`${pName} (${qVal} units)`);
 
-      const purCount = queryOne('SELECT COUNT(*) as c FROM purchases')?.c || 0;
-      const purId = `PUR-${purCount + 1001}`;
+      const purId = getNextPrefixedId('purchases', 'PUR');
 
       // Insert purchase
       runSql(`
@@ -1042,7 +1128,7 @@ apiRouter.post('/purchases', (req: Request, res: Response) => {
       `, [purId, dateStr, timestampStr, pName, cat, qVal, uCost, tCost, supplier || '', notes || '', user || 'Staff']);
 
       // Increment stock in products
-      const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = LOWER(?)', [pName]);
+      const prod = queryOne('SELECT id, stock_qty, cost_price FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [pName]);
       if (prod) {
         const curStock = (prod.stock_qty || 0) + qVal;
         runSql('UPDATE products SET stock_qty = ?, cost_price = ? WHERE id = ?', [curStock, uCost > 0 ? uCost : prod.cost_price, prod.id]);
@@ -1056,8 +1142,7 @@ apiRouter.post('/purchases', (req: Request, res: Response) => {
     }
 
     // Consolidated expense
-    const expCount = queryOne('SELECT COUNT(*) as c FROM expenses')?.c || 0;
-    const expId = `EXP-${expCount + 1001}`;
+    const expId = getNextPrefixedId('expenses', 'EXP');
     const expDesc = `Product Purchase: ${itemSummaries.join(', ')}${supplier ? ` [Supplier: ${supplier}]` : ''}`;
     runSql(`
       INSERT INTO expenses (expense_id, timestamp, date, category, description, amount, user_name)
@@ -1126,20 +1211,20 @@ apiRouter.post('/photocopy-paper', (req: Request, res: Response) => {
     const pName = (productName || '').trim();
     if (!pName) return res.status(400).json({ status: 'error', message: 'Product name required' });
 
-    const qVal = parseFloat(qty) || 1;
+    const qVal = parseFloat(qty) || 0;
+    if (qVal <= 0) return res.status(400).json({ status: 'error', message: 'Quantity must be greater than 0' });
 
     // 1. Deduct stock from products inventory
-    const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = LOWER(?)', [pName]);
+    const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [pName]);
     if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
       const newStock = Math.max(0, (prod.stock_qty || 0) - qVal);
       runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
     }
 
     // 2. Log in expenses list as non-monetary paper usage entry (amount = 0)
-    const count = queryOne('SELECT COUNT(*) as c FROM expenses')?.c || 0;
-    const expId = `EXP-${count + 1001}`;
+    const expId = getNextPrefixedId('expenses', 'EXP');
     const now = new Date();
-    const dateStr = date || now.toISOString().split('T')[0];
+    const dateStr = date || getBdDateStr(now);
     const timestampStr = `${dateStr} ${now.toTimeString().split(' ')[0]}`;
     const expDesc = `Paper Usage: ${qVal} unit(s) ${pName}${notes ? ` [${notes.trim()}]` : ''}`;
 
@@ -1172,7 +1257,7 @@ apiRouter.delete('/purchases/:id', (req: Request, res: Response) => {
       });
     }
 
-    const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = LOWER(?)', [pur.product_name]);
+    const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [pur.product_name]);
     if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
       const newStock = Math.max(0, (prod.stock_qty || 0) - (parseFloat(pur.qty) || 0));
       runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
@@ -1193,11 +1278,10 @@ apiRouter.post('/expenses', (req: Request, res: Response) => {
     if (amt <= 0) return res.status(400).json({ status: 'error', message: 'Valid amount required' });
 
     const now = new Date();
-    const dateStr = date || now.toISOString().split('T')[0];
+    const dateStr = date || getBdDateStr(now);
     const timestampStr = `${dateStr} ${now.toTimeString().split(' ')[0]}`;
 
-    const count = queryOne('SELECT COUNT(*) as c FROM expenses')?.c || 0;
-    const expId = `EXP-${count + 1001}`;
+    const expId = getNextPrefixedId('expenses', 'EXP');
     const cleanCategory = cleanExpenseCategory(category || 'Other Expenses');
 
     runSql(`
@@ -1232,15 +1316,18 @@ apiRouter.put('/expenses/:id', (req: Request, res: Response) => {
     if (!existing) return res.status(404).json({ status: 'error', message: 'Expense not found' });
 
     const { category, description, amount, date } = req.body;
-    const amt = parseFloat(amount) || 0;
-    if (amt <= 0) return res.status(400).json({ status: 'error', message: 'Valid amount required' });
+    const amt = parseFloat(amount);
+    const origAmtRaw = parseFloat(existing.amount) || 0;
+    if (isNaN(amt) || (origAmtRaw > 0 && amt <= 0) || amt < 0) {
+      return res.status(400).json({ status: 'error', message: 'Valid amount required' });
+    }
 
     // Rules:
     // Today or Yesterday: Edited freely
     // Old records: amount must remain identical!
     const isRecent = isDateTodayOrYesterday(existing.date);
     if (!isRecent) {
-      const origAmt = Math.round((parseFloat(existing.amount) || 0) * 100) / 100;
+      const origAmt = Math.round(origAmtRaw * 100) / 100;
       const newAmt = Math.round(amt * 100) / 100;
       if (Math.abs(newAmt - origAmt) > 0.01) {
         return res.status(400).json({
@@ -1253,7 +1340,7 @@ apiRouter.put('/expenses/:id', (req: Request, res: Response) => {
     const cleanCategory = cleanExpenseCategory(category || 'Other Expenses');
     runSql(`
       UPDATE expenses SET category = ?, description = ?, amount = ?, date = ? WHERE id = ?
-    `, [cleanCategory, description ? description.trim() : '', amt, date, id]);
+    `, [cleanCategory, description ? description.trim() : '', amt, date || existing.date, id]);
 
     saveDatabase();
     return res.json({ status: 'success', message: 'Expense updated successfully' });
@@ -1293,8 +1380,8 @@ apiRouter.post('/cash-closings', (req: Request, res: Response) => {
     } = req.body;
 
     const now = new Date();
-    const dateStr = date || now.toISOString().split('T')[0];
-    const closedAt = now.toLocaleString('en-US', { hour12: true });
+    const dateStr = date || getBdDateStr(now);
+    const closedAt = now.toLocaleString('en-US', { timeZone: 'Asia/Dhaka', hour12: true });
 
     const existing = queryOne('SELECT id FROM cash_closings WHERE date = ?', [dateStr]);
 
@@ -1316,8 +1403,7 @@ apiRouter.post('/cash-closings', (req: Request, res: Response) => {
       saveDatabase();
       return res.json({ status: 'success', message: `Cash closing updated for ${dateStr}!` });
     } else {
-      const count = queryOne('SELECT COUNT(*) as c FROM cash_closings')?.c || 0;
-      const closingId = `CC-${count + 1001}`;
+      const closingId = getNextPrefixedId('cash_closings', 'CC');
 
       runSql(`
         INSERT INTO cash_closings (
@@ -1372,13 +1458,13 @@ apiRouter.post('/users/change-password', (req: Request, res: Response) => {
 
     const user = queryOne<{ id: number; password_hash: string }>(
       'SELECT id, password_hash FROM users WHERE LOWER(username) = LOWER(?)',
-      [username.trim()]
+      [(username || '').trim()]
     );
     if (!user) {
       return res.status(404).json({ status: 'error', message: 'User not found' });
     }
 
-    if (currentPassword && user.password_hash !== currentPassword.trim()) {
+    if (!isAdminChange && (!currentPassword || user.password_hash !== currentPassword.trim())) {
       return res.status(400).json({ status: 'error', message: 'Current password is incorrect' });
     }
 
@@ -1392,7 +1478,14 @@ apiRouter.post('/users/change-password', (req: Request, res: Response) => {
 apiRouter.post('/users', (req: Request, res: Response) => {
   try {
     const { username, password, role, phone, permissions } = req.body;
-    if (!username || !password) return res.status(400).json({ status: 'error', message: 'Username and password required' });
+    if (!username || !username.trim() || !password || !password.trim()) {
+      return res.status(400).json({ status: 'error', message: 'Username and password required' });
+    }
+
+    const duplicate = queryOne('SELECT id FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(?))', [username.trim()]);
+    if (duplicate) {
+      return res.status(400).json({ status: 'error', message: `Username "${username.trim()}" already exists!` });
+    }
 
     runSql(`
       INSERT INTO users (username, password_hash, role, phone, permissions) VALUES (?, ?, ?, ?, ?)
@@ -1407,9 +1500,19 @@ apiRouter.post('/users', (req: Request, res: Response) => {
 apiRouter.put('/users/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { password, role, phone, permissions } = req.body;
+    const { username, password, role, phone, permissions } = req.body;
 
-    if (password) {
+    if (username && username.trim()) {
+      const duplicate = queryOne('SELECT id FROM users WHERE LOWER(TRIM(username)) = LOWER(TRIM(?)) AND id != ?', [username.trim(), id]);
+      if (duplicate) {
+        return res.status(400).json({ status: 'error', message: `Username "${username.trim()}" already exists!` });
+      }
+      if (password && password.trim()) {
+        runSql('UPDATE users SET username = ?, password_hash = ?, role = ?, phone = ?, permissions = ? WHERE id = ?', [username.trim(), password.trim(), role, phone || '', permissions, id]);
+      } else {
+        runSql('UPDATE users SET username = ?, role = ?, phone = ?, permissions = ? WHERE id = ?', [username.trim(), role, phone || '', permissions, id]);
+      }
+    } else if (password && password.trim()) {
       runSql('UPDATE users SET password_hash = ?, role = ?, phone = ?, permissions = ? WHERE id = ?', [password.trim(), role, phone || '', permissions, id]);
     } else {
       runSql('UPDATE users SET role = ?, phone = ?, permissions = ? WHERE id = ?', [role, phone || '', permissions, id]);
@@ -1570,7 +1673,7 @@ function parseNumber(val: any, fallback = 0): number {
 
 function parseDate(val: any): string {
   if (!val) {
-    return new Date().toISOString().split('T')[0];
+    return getBdDateStr();
   }
   const str = String(val)
     .replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d).toString())
@@ -1594,7 +1697,7 @@ function parseDate(val: any): string {
     return `${y}-${m}-${d}`;
   }
 
-  return new Date().toISOString().split('T')[0];
+  return getBdDateStr();
 }
 
 async function fetchGoogleSheetCsv(spreadsheetId: string, gid?: string, sheetName?: string): Promise<string> {
@@ -1971,7 +2074,7 @@ apiRouter.post('/google-sheets/sync', async (req: Request, res: Response) => {
         maxInvoiceNo = Math.max(maxInvoiceNo, invNo);
       }
 
-      const date = dateIndex >= 0 ? parseDate(row[dateIndex]) : new Date().toISOString().split('T')[0];
+      const date = dateIndex >= 0 ? parseDate(row[dateIndex]) : getBdDateStr();
       const customer = custIndex >= 0 && row[custIndex] ? row[custIndex].trim() : 'General Customer';
       const phone = phoneIndex >= 0 && row[phoneIndex] ? row[phoneIndex].trim() : '';
       const address = addressIndex >= 0 && row[addressIndex] ? row[addressIndex].trim() : '';

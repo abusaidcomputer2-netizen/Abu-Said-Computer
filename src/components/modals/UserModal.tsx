@@ -81,8 +81,8 @@ export const UserModal: React.FC<UserModalProps> = ({
       showToast('Username is required!', 'warning');
       return;
     }
-    if (!password.trim()) {
-      showToast('Password is required!', 'warning');
+    if (!editingId && !password.trim()) {
+      showToast('Password is required for new users!', 'warning');
       return;
     }
 
@@ -96,7 +96,6 @@ export const UserModal: React.FC<UserModalProps> = ({
         role,
         permissions: role === 'admin' ? 'all' : selectedPerms.join(',')
       });
-      showToast(editingId ? 'User updated!' : 'User created!', 'success');
       resetForm();
     } catch (err: any) {
       showToast(err.message || 'Error saving user', 'error');
@@ -195,14 +194,14 @@ export const UserModal: React.FC<UserModalProps> = ({
 
             <div>
               <label className="block text-[11px] font-bold text-slate-400 mb-1">
-                Password * (Required)
+                {editingId ? 'New Password (Optional)' : 'Password * (Required)'}
               </label>
               <input
                 type="password"
-                required
+                required={!editingId}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Enter password..."
+                placeholder={editingId ? 'Leave blank to keep current password' : 'Enter password...'}
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-white font-semibold focus:outline-none"
               />
             </div>

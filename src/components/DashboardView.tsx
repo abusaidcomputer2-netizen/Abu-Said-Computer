@@ -30,7 +30,7 @@ import {
   Award
 } from 'lucide-react';
 import { SaleRecord, DueRecord, ExpenseRecord, Product, CustomerDueSummary } from '../types';
-import { formatCurrency, normalizeCategory } from '../utils/helpers';
+import { formatCurrency, normalizeCategory, getLocalDateStr } from '../utils/helpers';
 
 interface DashboardViewProps {
   sales: SaleRecord[];
@@ -73,7 +73,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [activeMetric, setActiveMetric] = useState<'revenue' | 'memos'>('revenue');
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayStr = useMemo(() => getLocalDateStr(), []);
+  const sevenDaysAgoStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return getLocalDateStr(d);
+  }, []);
   const currentMonthStr = useMemo(() => todayStr.slice(0, 7), [todayStr]);
   const lastMonthStr = useMemo(() => {
     const d = new Date();
@@ -85,36 +90,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Filter sales according to selected period
   const filteredSales = useMemo(() => {
     return sales.filter(s => {
-      const d = s.rawDate || s.date;
+      const d = (s.rawDate || s.date || '').slice(0, 10);
       if (period === 'today') return d === todayStr;
       if (period === 'month') return d.startsWith(currentMonthStr);
       if (period === 'last_month') return d.startsWith(lastMonthStr);
       if (period === 'week') {
-        const saleTime = new Date(d).getTime();
-        const nowTime = new Date().getTime();
-        const diffDays = (nowTime - saleTime) / (1000 * 3600 * 24);
-        return diffDays >= 0 && diffDays <= 7;
+        return d >= sevenDaysAgoStr && d <= todayStr;
       }
       return true;
     });
-  }, [sales, period, todayStr, currentMonthStr, lastMonthStr]);
+  }, [sales, period, todayStr, sevenDaysAgoStr, currentMonthStr, lastMonthStr]);
 
   // Filter expenses according to selected period
   const filteredExpenses = useMemo(() => {
     return expenses.filter(e => {
-      const d = e.date;
+      const d = (e.date || '').slice(0, 10);
       if (period === 'today') return d === todayStr;
       if (period === 'month') return d.startsWith(currentMonthStr);
       if (period === 'last_month') return d.startsWith(lastMonthStr);
       if (period === 'week') {
-        const expTime = new Date(d).getTime();
-        const nowTime = new Date().getTime();
-        const diffDays = (nowTime - expTime) / (1000 * 3600 * 24);
-        return diffDays >= 0 && diffDays <= 7;
+        return d >= sevenDaysAgoStr && d <= todayStr;
       }
       return true;
     });
-  }, [expenses, period, todayStr, currentMonthStr, lastMonthStr]);
+  }, [expenses, period, todayStr, sevenDaysAgoStr, currentMonthStr, lastMonthStr]);
 
   // Aggregate high-level KPIs
   const totalBilled = useMemo(() => filteredSales.reduce((acc, s) => acc + (s.grandTotal || 0), 0), [filteredSales]);
@@ -127,18 +126,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Dues collected during selected period
   const dueCollectedInPeriod = useMemo(() => {
     return dueRecords.filter(d => {
-      if (period === 'today') return d.date === todayStr;
-      if (period === 'month') return d.date.startsWith(currentMonthStr);
-      if (period === 'last_month') return d.date.startsWith(lastMonthStr);
+      const dt = (d.date || '').slice(0, 10);
+      if (period === 'today') return dt === todayStr;
+      if (period === 'month') return dt.startsWith(currentMonthStr);
+      if (period === 'last_month') return dt.startsWith(lastMonthStr);
       if (period === 'week') {
-        const dueTime = new Date(d.date).getTime();
-        const nowTime = new Date().getTime();
-        const diffDays = (nowTime - dueTime) / (1000 * 3600 * 24);
-        return diffDays >= 0 && diffDays <= 7;
+        return dt >= sevenDaysAgoStr && dt <= todayStr;
       }
       return true;
     }).reduce((acc, d) => acc + (d.paid || 0), 0);
-  }, [dueRecords, period, todayStr, currentMonthStr, lastMonthStr]);
+  }, [dueRecords, period, todayStr, sevenDaysAgoStr, currentMonthStr, lastMonthStr]);
 
   // Total cash drawer inflow
   const totalCashInflow = totalCashPaid + dueCollectedInPeriod;
@@ -237,14 +234,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     for (let i = 13; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const dateKey = d.toISOString().split('T')[0];
+      const dateKey = getLocalDateStr(d);
       const dayLabel = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
       const fullDate = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
       dayMap[dateKey] = { date: dateKey, label: dayLabel, fullDate, revenue: 0, count: 0, paid: 0 };
     }
 
     sales.forEach(s => {
-      const d = s.rawDate || s.date;
+      const d = (s.rawDate || s.date || '').slice(0, 10);
       if (dayMap[d]) {
         dayMap[d].revenue += s.grandTotal;
         dayMap[d].count += 1;
@@ -510,7 +507,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {trendData.map((d, idx) => {
                 const val = activeMetric === 'revenue' ? d.revenue : d.count;
                 const max = activeMetric === 'revenue' ? maxRevenue : maxCount;
-                const pct = Math.max(8, Math.min(100, Math.round((val / max) * 100)));
+                const pct = val <= 0 ? 2 : Math.max(8, Math.min(100, Math.round((val / max) * 100)));
                 const isHovered = hoveredIndex === idx;
 
                 return (

@@ -1,3 +1,10 @@
+export function getLocalDateStr(d: Date = new Date()): string {
+  const yr = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const da = String(d.getDate()).padStart(2, '0');
+  return `${yr}-${mo}-${da}`;
+}
+
 export function formatCurrency(val: number | string | undefined | null): string {
   if (val === undefined || val === null || val === '' || isNaN(Number(val))) return '0';
   const n = Math.round(Number(val));
@@ -180,13 +187,29 @@ export function recalculateDueSummaries(dueRecords: any[] = []) {
   let totalShopDue = 0;
   let totalShopPaid = 0;
 
+  // Detect customer names that have multiple distinct non-empty phone numbers
+  const phonesByName: Record<string, Set<string>> = {};
   dueRecords.forEach(d => {
-    const cName = d.customer || d.customer_name;
+    const cName = (d.customer || d.customer_name || '').trim();
+    const p = (d.phone || d.customer_phone || '').trim();
+    if (!cName || !p) return;
+    const nl = cName.toLowerCase();
+    if (!phonesByName[nl]) phonesByName[nl] = new Set();
+    phonesByName[nl].add(p);
+  });
+
+  dueRecords.forEach(d => {
+    const cName = (d.customer || d.customer_name || '').trim();
     if (!cName) return;
-    if (!custDueMap[cName]) {
-      custDueMap[cName] = {
+    const cPhone = (d.phone || d.customer_phone || '').trim();
+    const nl = cName.toLowerCase();
+    const hasMultiplePhones = (phonesByName[nl]?.size || 0) > 1;
+    const key = hasMultiplePhones && cPhone ? `${nl}::${cPhone}` : nl;
+
+    if (!custDueMap[key]) {
+      custDueMap[key] = {
         name: cName,
-        phone: d.phone || d.customer_phone || '',
+        phone: cPhone,
         address: d.address || d.customer_address || '',
         totalDue: 0,
         totalPaid: 0,
@@ -195,14 +218,14 @@ export function recalculateDueSummaries(dueRecords: any[] = []) {
     }
     const dueAmt = Number(d.due ?? d.due_dr ?? 0) || 0;
     const paidAmt = Number(d.paid ?? d.paid_cr ?? 0) || 0;
-    custDueMap[cName].totalDue += dueAmt;
-    custDueMap[cName].totalPaid += paidAmt;
-    custDueMap[cName].netBalance = custDueMap[cName].totalDue - custDueMap[cName].totalPaid;
-    if ((d.phone || d.customer_phone) && !custDueMap[cName].phone) {
-      custDueMap[cName].phone = d.phone || d.customer_phone;
+    custDueMap[key].totalDue += dueAmt;
+    custDueMap[key].totalPaid += paidAmt;
+    custDueMap[key].netBalance = custDueMap[key].totalDue - custDueMap[key].totalPaid;
+    if (cPhone && !custDueMap[key].phone) {
+      custDueMap[key].phone = cPhone;
     }
-    if ((d.address || d.customer_address) && !custDueMap[cName].address) {
-      custDueMap[cName].address = d.address || d.customer_address;
+    if ((d.address || d.customer_address) && !custDueMap[key].address) {
+      custDueMap[key].address = d.address || d.customer_address;
     }
 
     totalShopDue += dueAmt;
@@ -210,7 +233,7 @@ export function recalculateDueSummaries(dueRecords: any[] = []) {
   });
 
   const activeDueCustomers = Object.values(custDueMap)
-    .filter(c => c.netBalance > 0)
+    .filter(c => c.netBalance > 0.01)
     .sort((a, b) => a.name.localeCompare(b.name, 'bn'));
 
   return {

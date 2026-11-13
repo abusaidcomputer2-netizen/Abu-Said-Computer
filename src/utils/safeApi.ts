@@ -1,12 +1,19 @@
 import { getCachedAccessToken } from '../services/googleAuth';
 
 /**
- * Safe API request helper that parses JSON reliably and never crashes on empty responses
+ * Safe API request helper that parses JSON reliably, distinguishes real backend errors
+ * from static-host SPA HTML fallbacks (e.g., Cloudflare Workers ./dist) or offline mode.
  */
 export async function safeFetchJson<T = any>(
   url: string,
   options: RequestInit = {}
-): Promise<{ ok: boolean; status: number; data: T | null; error?: string }> {
+): Promise<{
+  ok: boolean;
+  status: number;
+  data: T | null;
+  error?: string;
+  backendUnavailable?: boolean;
+}> {
   try {
     const token = getCachedAccessToken();
     const res = await fetch(url, {
@@ -19,27 +26,51 @@ export async function safeFetchJson<T = any>(
     });
 
     const rawText = await res.text();
-    if (!rawText || rawText.trim() === '') {
-      return { ok: res.ok, status: res.status, data: null };
+    const trimmed = (rawText || '').trim();
+
+    if (!trimmed) {
+      if (res.status === 404 || res.status === 405) {
+        return {
+          ok: false,
+          status: res.status,
+          data: null,
+          backendUnavailable: true,
+          error: 'API endpoint not available on static host'
+        };
+      }
+      return { ok: res.ok, status: res.status, data: null, backendUnavailable: false };
     }
 
-    if (rawText.trim().startsWith('{') || rawText.trim().startsWith('[')) {
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
       try {
-        const data = JSON.parse(rawText) as T;
-        return { ok: res.ok, status: res.status, data };
+        const data = JSON.parse(trimmed) as T;
+        return { ok: res.ok, status: res.status, data, backendUnavailable: false };
       } catch (parseErr: any) {
-        return { ok: false, status: res.status, data: null, error: parseErr.message };
+        return {
+          ok: false,
+          status: res.status,
+          data: null,
+          backendUnavailable: false,
+          error: parseErr.message
+        };
       }
     }
 
-    // Returned HTML or plain text (e.g., Cloudflare 404 or index.html SPA fallback)
+    // Returned HTML or plain text (e.g., Cloudflare Workers SPA fallback returning index.html with 200 or 404)
     return {
       ok: false,
       status: res.status,
       data: null,
-      error: 'Non-JSON server response (likely static host or network fallback)'
+      backendUnavailable: true,
+      error: 'Non-JSON server response (static host or SPA fallback)'
     };
   } catch (netErr: any) {
-    return { ok: false, status: 0, data: null, error: netErr.message || 'Network error' };
+    return {
+      ok: false,
+      status: 0,
+      data: null,
+      backendUnavailable: true,
+      error: netErr.message || 'Network error'
+    };
   }
 }

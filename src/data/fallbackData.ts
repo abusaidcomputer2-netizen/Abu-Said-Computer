@@ -1,4 +1,6 @@
-import { Product, Customer, User, SaleRecord, DueRecord, CustomerDueSummary, ExpenseRecord, PurchaseRecord, CashClosingRecord } from '../types';
+import { Product, Customer, User, SaleRecord, DueRecord, ExpenseRecord, PurchaseRecord, CashClosingRecord } from '../types';
+import seedSnapshot from './seedSnapshot.json';
+import { recalculateDueSummaries } from '../utils/helpers';
 
 export const INITIAL_USER_PASSWORDS: Record<string, string> = {
   'md abu said': '12345',
@@ -552,14 +554,11 @@ export const FALLBACK_PRODUCTS: Product[] = [
 
 export const FALLBACK_CUSTOMERS: Customer[] = [];
 
-export const FALLBACK_SALES: SaleRecord[] = [];
-export const FALLBACK_DUE_RECORDS: DueRecord[] = [];
-export const FALLBACK_CUSTOMER_SUMMARIES: CustomerDueSummary[] = [];
-export const FALLBACK_DUE_TOTALS = {
-  shopTotalDue: 0,
-  shopTotalPaid: 0,
-  netDue: 0
-};
+export const FALLBACK_SALES: SaleRecord[] = (seedSnapshot.sales || []) as SaleRecord[];
+export const FALLBACK_DUE_RECORDS: DueRecord[] = (seedSnapshot.dueRecords || []) as DueRecord[];
+const _calcFallbackDue = recalculateDueSummaries(FALLBACK_DUE_RECORDS);
+export const FALLBACK_CUSTOMER_SUMMARIES = _calcFallbackDue.customerSummaries;
+export const FALLBACK_DUE_TOTALS = _calcFallbackDue.dueTotals;
 export const FALLBACK_EXPENSES: ExpenseRecord[] = [];
 export const FALLBACK_PURCHASES: PurchaseRecord[] = [];
 export const FALLBACK_CASH_CLOSINGS: CashClosingRecord[] = [];

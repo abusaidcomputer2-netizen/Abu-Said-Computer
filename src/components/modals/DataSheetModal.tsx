@@ -15,7 +15,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 import { SaleRecord, Customer, Product, ExpenseRecord, DueRecord } from '../../types';
-import { formatCurrency, formatDateDisplay } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, getLocalDateStr } from '../../utils/helpers';
 import * as XLSX from 'xlsx';
 
 interface DataSheetModalProps {
@@ -59,36 +59,36 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
 
   const filteredSales = sales.filter(s => 
     !term || 
-    String(s.invoiceNo).includes(term) ||
-    s.customer.toLowerCase().includes(term) ||
+    String(s.invoiceNo || '').includes(term) ||
+    (s.customer || '').toLowerCase().includes(term) ||
     (s.phone && s.phone.includes(term)) ||
-    s.category.toLowerCase().includes(term) ||
-    s.user.toLowerCase().includes(term)
+    (s.category || '').toLowerCase().includes(term) ||
+    (s.user || '').toLowerCase().includes(term)
   );
 
   const filteredCustomers = customers.filter(c => 
     !term ||
-    c.name.toLowerCase().includes(term) ||
+    (c.name || '').toLowerCase().includes(term) ||
     (c.phone && c.phone.includes(term)) ||
     (c.address && c.address.toLowerCase().includes(term))
   );
 
   const filteredProducts = products.filter(p =>
     !term ||
-    p.name.toLowerCase().includes(term) ||
-    p.category.toLowerCase().includes(term)
+    (p.name || '').toLowerCase().includes(term) ||
+    (p.category || '').toLowerCase().includes(term)
   );
 
   const filteredExpenses = expenses.filter(e =>
     !term ||
-    e.category.toLowerCase().includes(term) ||
+    (e.category || '').toLowerCase().includes(term) ||
     (e.desc && e.desc.toLowerCase().includes(term)) ||
     (e.expId && e.expId.toLowerCase().includes(term))
   );
 
   const filteredDue = dueLedger.filter(d =>
     !term ||
-    d.customer.toLowerCase().includes(term) ||
+    (d.customer || '').toLowerCase().includes(term) ||
     (d.phone && d.phone.includes(term)) ||
     (d.desc && d.desc.toLowerCase().includes(term))
   );
@@ -97,7 +97,7 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
   const handleExportAllSheetsExcel = () => {
     try {
       const wb = XLSX.utils.book_new();
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalDateStr();
 
       // 1. Sales Record
       const salesHeaders = ['SL', 'Invoice No', 'Date', 'Time', 'Customer Name', 'Mobile', 'Address', 'Category', 'Items Breakdown', 'Subtotal', 'Discount', 'Grand Total', 'Paid', 'Due', 'Operator'];
@@ -197,7 +197,7 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
 
   // Export all sheets combined into single file (.csv)
   const handleExportAllSheetsCsv = () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateStr();
     const sections: string[] = [];
 
     // Sales
@@ -576,8 +576,8 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
                     <tr key={c.id} className="hover:bg-slate-800/40 transition">
                       <td className="p-3 text-center text-slate-500 font-bold font-tabular">{idx + 1}</td>
                       <td className="p-3 font-black text-white text-sm">{c.name}</td>
-                      <td className="p-3 font-mono font-bold text-blue-400">{c.phone || '01904142370'}</td>
-                      <td className="p-3 text-slate-400">{c.address || 'Paduar Bazar, Cumilla'}</td>
+                      <td className="p-3 font-mono font-bold text-blue-400">{c.phone || '--'}</td>
+                      <td className="p-3 text-slate-400">{c.address || '--'}</td>
                     </tr>
                   ))
                 )}

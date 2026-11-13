@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Receipt, Printer, Plus, Edit3, Trash2, Check } from 'lucide-react';
 import { ExpenseRecord } from '../../types';
-import { formatCurrency, formatDateDisplay, isDateTodayOrYesterday } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, isDateTodayOrYesterday, getLocalDateStr } from '../../utils/helpers';
 
 interface ExpenseModalProps {
   expenses: ExpenseRecord[];
@@ -67,7 +67,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
   const [category, setCategory] = useState(DEFAULT_CATEGORIES[0]);
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => getLocalDateStr());
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -84,7 +84,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
     setEditingOrigDate('');
     setCategory(DEFAULT_CATEGORIES[0]);
     setAmount('');
-    setDate(new Date().toISOString().split('T')[0]);
+    setDate(getLocalDateStr());
     setDescription('');
   };
 
@@ -100,8 +100,8 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amt = parseFloat(amount) || 0;
-    if (amt <= 0) {
+    const amt = parseFloat(amount);
+    if (isNaN(amt) || amt < 0 || (amt === 0 && editingOrigAmount !== 0)) {
       showToast('Please enter a valid amount!', 'warning');
       return;
     }
@@ -294,7 +294,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
               <label className="block text-[11px] font-bold text-slate-400 mb-1">Amount (Tk) *</label>
               <input
                 type="number"
-                min="1"
+                min={editingOrigAmount === 0 ? '0' : '1'}
                 step="any"
                 required
                 value={amount}

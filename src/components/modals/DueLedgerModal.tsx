@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, BookMarked, Printer, HandCoins, Check, FileText, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CustomerDueSummary, DueRecord } from '../../types';
-import { formatCurrency, formatDateDisplay, resolveCustomerAddress } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, getLocalDateStr } from '../../utils/helpers';
 
 interface DueLedgerModalProps {
   dueRecords: DueRecord[];
@@ -35,7 +35,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentAddress, setPaymentAddress] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentDate, setPaymentDate] = useState(() => getLocalDateStr());
   const [paymentDesc, setPaymentDesc] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -64,12 +64,21 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
   });
   const activeNet = activeBilled - activePaid;
 
-  const handleCustomerSelectChange = (name: string) => {
-    setPaymentCustomer(name);
-    const m = customerSummaries.find(c => c.name.toLowerCase() === name.toLowerCase());
+  const handleCustomerSelectChange = (val: string) => {
+    if (!val) {
+      setPaymentCustomer('');
+      setPaymentPhone('');
+      setPaymentAddress('');
+      return;
+    }
+    const [custName, custPhone] = val.split('::');
+    setPaymentCustomer(custName);
+    const m = custPhone !== undefined
+      ? customerSummaries.find(c => c.name.toLowerCase() === custName.toLowerCase() && (c.phone || '') === custPhone)
+      : customerSummaries.find(c => c.name.toLowerCase() === custName.toLowerCase());
     if (m) {
       setPaymentPhone(m.phone || '');
-      setPaymentAddress(m.address || 'Paduar Bazar, Cumilla');
+      setPaymentAddress(m.address || '');
     }
   };
 
@@ -90,7 +99,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
       await onSubmitPayment({
         customer: paymentCustomer,
         phone: paymentPhone,
-        address: paymentAddress || 'Paduar Bazar, Cumilla',
+        address: paymentAddress,
         amount: amt,
         date: paymentDate,
         desc: paymentDesc || 'Cash / bKash Payment',
@@ -98,9 +107,9 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
       });
       setPaymentCustomer('');
       setPaymentPhone('');
+      setPaymentAddress('');
       setPaymentAmount('');
       setPaymentDesc('');
-      showToast('Customer payment recorded successfully!', 'success');
     } catch (err: any) {
       showToast(err.message || 'Payment error', 'error');
     } finally {
@@ -204,9 +213,9 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white font-bold focus:outline-none"
               >
                 <option value="ALL">All Due Customers ({customerSummaries.length})</option>
-                {customerSummaries.map(c => (
-                  <option key={c.name} value={c.name}>
-                    {c.name} (Due: Tk {formatCurrency(c.netBalance)})
+                {customerSummaries.map((c, idx) => (
+                  <option key={`${c.name}::${c.phone || idx}`} value={c.name}>
+                    {c.name}{c.phone ? ` (${c.phone})` : ''} (Due: Tk {formatCurrency(c.netBalance)})
                   </option>
                 ))}
               </select>
@@ -337,14 +346,14 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
               </label>
               <select
                 required
-                value={paymentCustomer}
+                value={paymentCustomer ? `${paymentCustomer}::${paymentPhone}` : ''}
                 onChange={e => handleCustomerSelectChange(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs sm:text-sm text-white font-bold focus:outline-none focus:border-emerald-500"
               >
                 <option value="">Select customer...</option>
-                {customerSummaries.map(c => (
-                  <option key={c.name} value={c.name}>
-                    {c.name} (Due: Tk {formatCurrency(c.netBalance)})
+                {customerSummaries.map((c, idx) => (
+                  <option key={`${c.name}::${c.phone || idx}`} value={`${c.name}::${c.phone || ''}`}>
+                    {c.name}{c.phone ? ` (${c.phone})` : ''} (Due: Tk {formatCurrency(c.netBalance)})
                   </option>
                 ))}
               </select>

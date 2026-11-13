@@ -29,11 +29,14 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
   const [viewMode, setViewMode] = useState<'summary' | 'detailed'>(isSingle ? 'detailed' : 'summary');
   const nowFormatted = formatInvoicePrintTimestamp(new Date());
 
-  // Filter sales if single customer
+  // Filter sales by customer and date range
   const filteredSales = sales.filter(s => {
-    if (isSingle && s.customer.trim().toLowerCase() !== selectedCust.trim().toLowerCase()) {
+    if (isSingle && (s.customer || '').trim().toLowerCase() !== selectedCust.trim().toLowerCase()) {
       return false;
     }
+    const d = (s.rawDate || s.date || '').slice(0, 10);
+    if (startDate && d && d < startDate) return false;
+    if (endDate && d && d > endDate) return false;
     return true;
   });
 
@@ -55,11 +58,14 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
   filteredSales.forEach(s => {
     const name = s.customer || 'Cash Customer';
     if (!custMap[name]) {
-      const matched = customers.find(c => c.name.toLowerCase() === name.toLowerCase());
+      const cleanPhone = (s.phone || '').trim();
+      const matched = (cleanPhone ? customers.find(c => (c.phone || '').trim() === cleanPhone) : null)
+        || customers.find(c => c.name.toLowerCase() === name.toLowerCase());
+      const isCash = name.trim().toLowerCase() === 'cash customer';
       custMap[name] = {
         name,
         phone: s.phone || matched?.phone || '--',
-        address: resolveCustomerAddress(name, matched?.address),
+        address: isCash ? '--' : (s.address || resolveCustomerAddress(name, matched?.address)),
         memoCount: 0,
         totalPurchased: 0,
         totalPaid: 0,
@@ -250,7 +256,7 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
                 </div>
                 <div className="border-r border-slate-200 pr-1">
                   <span className="text-[10px] font-bold text-blue-700 uppercase block">Total Memos</span>
-                  <span className="text-sm font-black text-blue-700 font-tabular">{sales.length} Memos</span>
+                  <span className="text-sm font-black text-blue-700 font-tabular">{filteredSales.length} Memos</span>
                 </div>
                 <div className="border-r border-slate-200 pr-1">
                   <span className="text-[10px] font-bold text-emerald-700 uppercase block">Total Sales</span>
@@ -308,7 +314,7 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
                   <tr>
                     <td colSpan={3} className="py-2.5 px-3 text-right font-black">Grand Total:</td>
                     <td className="py-2.5 px-2 text-center text-blue-900 border-r border-slate-200 font-tabular">
-                      {sales.length} Memos
+                      {filteredSales.length} Memos
                     </td>
                     <td className="py-2.5 px-3 text-right text-emerald-900 font-black font-tabular">
                       Tk {formatCurrency(totalSales)}

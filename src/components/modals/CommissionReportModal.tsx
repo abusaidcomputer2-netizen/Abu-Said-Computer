@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Printer, Calendar, RefreshCw, Layers, Award, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { SaleRecord, User, StaffLeaveRecord } from '../../types';
-import { formatCurrency, formatInvoicePrintTimestamp, normalizeCategory } from '../../utils/helpers';
+import { formatCurrency, formatInvoicePrintTimestamp, normalizeCategory, getLocalDateStr } from '../../utils/helpers';
 import { ReportFooter } from '../ReportFooter';
 
 interface CommissionReportModalProps {
@@ -24,8 +24,8 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
   const [leaveMode, setLeaveMode] = useState<'single' | 'range'>('single');
   const [leaveStaff, setLeaveStaff] = useState<string>(currentUser.username || 'Md Abu Said');
-  const [leaveDate, setLeaveDate] = useState<string>(now.toISOString().split('T')[0]);
-  const [leaveEndDate, setLeaveEndDate] = useState<string>(now.toISOString().split('T')[0]);
+  const [leaveDate, setLeaveDate] = useState<string>(() => getLocalDateStr(now));
+  const [leaveEndDate, setLeaveEndDate] = useState<string>(() => getLocalDateStr(now));
   const [leaveReason, setLeaveReason] = useState<string>('');
   
   // Persisted staff leaves

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Copy, Check } from 'lucide-react';
 import { Product } from '../../types';
-import { formatCurrency, normalizeCategory } from '../../utils/helpers';
+import { normalizeCategory, getLocalDateStr } from '../../utils/helpers';
 
 interface PhotocopyPaperModalProps {
   products: Product[];
@@ -20,8 +20,7 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
 }) => {
   const [productName, setProductName] = useState('');
   const [qty, setQty] = useState<number>(1);
-  const [unitCost, setUnitCost] = useState<number>(0);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => getLocalDateStr());
   const [notes, setNotes] = useState('Paper usage for shop photocopy machine');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -32,14 +31,6 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
 
   const selectedProd = paperProducts.find(p => p.name === productName);
   const currentStock = selectedProd?.stockQty !== null && selectedProd?.stockQty !== undefined ? selectedProd.stockQty : 0;
-
-  const handleProductChange = (name: string) => {
-    setProductName(name);
-    const p = paperProducts.find(x => x.name === name);
-    if (p && p.costPrice > 0) {
-      setUnitCost(p.costPrice);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +54,6 @@ export const PhotocopyPaperModal: React.FC<PhotocopyPaperModalProps> = ({
         notes,
         user: currentUser
       });
-      showToast(`Recorded ${qty} reams/units paper usage and deducted from stock inventory!`, 'success');
       onClose();
     } catch (err: any) {
       showToast(err.message || 'Error recording paper usage', 'error');
