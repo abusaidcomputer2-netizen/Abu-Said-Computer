@@ -269,30 +269,38 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                     >
                       <Printer className="w-3.5 h-3.5" />
                     </button>
-                    {isMemoEditable(s.rawDate || s.date) ? (
-                      <button
-                        onClick={() => onEditSale(s)}
-                        className="p-1.5 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white rounded-lg transition cursor-pointer"
-                        title="Edit Memo (Today or Yesterday)"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                    ) : (
-                      <span
-                        className="p-1.5 bg-slate-800/40 text-slate-600 rounded-lg cursor-not-allowed inline-flex items-center justify-center opacity-30"
-                        title="Only today's and yesterday's memos can be edited (Locked)"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </span>
-                    )}
+                    <button
+                      onClick={() => onEditSale(s)}
+                      className={`p-1.5 rounded-lg transition cursor-pointer ${
+                        isMemoEditable(s.rawDate || s.date)
+                          ? 'bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white'
+                          : 'bg-amber-600/10 hover:bg-amber-600/25 text-amber-400 border border-amber-500/20'
+                      }`}
+                      title={
+                        isMemoEditable(s.rawDate || s.date)
+                          ? 'Edit Memo (Today or Yesterday - Free to edit)'
+                          : `Edit Memo (Old Record: Grand Total Tk ${s.grandTotal} must remain identical)`
+                      }
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
                     {isAdmin && (
-                      <button
-                        onClick={() => onDeleteSale(s)}
-                        className="p-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-lg transition cursor-pointer"
-                        title="Delete Memo (Admin Only)"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      isMemoEditable(s.rawDate || s.date) ? (
+                        <button
+                          onClick={() => onDeleteSale(s)}
+                          className="p-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-lg transition cursor-pointer"
+                          title="Delete Memo (Today or Yesterday Only)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <span
+                          className="p-1.5 bg-slate-800/40 text-slate-600 rounded-lg cursor-not-allowed inline-flex items-center justify-center opacity-30"
+                          title="Old memos cannot be deleted (Permanently locked)"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </span>
+                      )
                     )}
                   </td>
                 </tr>

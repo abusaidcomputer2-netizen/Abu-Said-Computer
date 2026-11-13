@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Plus, Trash2, X, Check, ShoppingBag } from 'lucide-react';
 import { Customer, Product, SaleItem, SaleRecord, Category, CustomerDueSummary } from '../types';
-import { formatCurrency, normalizeCategory } from '../utils/helpers';
+import { formatCurrency, normalizeCategory, isDateTodayOrYesterday } from '../utils/helpers';
 
 interface MemoEntryFormProps {
   products: Product[];
@@ -388,6 +388,21 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
       finalAddress = '';
     }
 
+    // Rule:
+    // Today or Yesterday: Edited freely without conditions
+    // Old Memos: Total amount MUST remain exactly identical! Cannot be higher or lower.
+    if (editingSale) {
+      const isRecent = isDateTodayOrYesterday(editingSale.rawDate || editingSale.date);
+      if (!isRecent) {
+        const origGrand = Math.round((editingSale.grandTotal || 0) * 100) / 100;
+        const newGrand = Math.round(grandTotal * 100) / 100;
+        if (Math.abs(newGrand - origGrand) > 0.01) {
+          showToast(`পুরাতন মেমোর টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল Tk ${formatCurrency(origGrand)}, কিন্তু বর্তমান পরিমাণ Tk ${formatCurrency(newGrand)}। টাকা কম বা বেশি হলে সেভ হবে না।`, 'error');
+          return;
+        }
+      }
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmitSale({
@@ -462,6 +477,15 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
           </button>
         )}
       </div>
+
+      {editingSale && !isDateTodayOrYesterday(editingSale.rawDate || editingSale.date) && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 text-xs text-amber-300 flex items-start gap-2.5">
+          <span className="text-base">⚠️</span>
+          <div>
+            <span className="font-bold">পুরাতন মেমো এডিট মোড:</span> কাস্টমার তথ্য, কাজের নোট বা আইটেম সংশোধন করা যাবে, তবে সর্বমোট টাকার পরিমাণ (<strong className="text-white underline">Tk {formatCurrency(editingSale.grandTotal)}</strong>) অবশ্যই অপরিবর্তিত থাকতে হবে। টাকা কম বা বেশি হলে সেভ হবে না।
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-3.5">
         {/* Customer Info */}

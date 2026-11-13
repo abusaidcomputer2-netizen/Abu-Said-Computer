@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, ShoppingCart, Plus, Trash2, Check, Copy } from 'lucide-react';
 import { Product, PurchaseRecord } from '../../types';
-import { formatCurrency, formatDateDisplay, normalizeCategory } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, normalizeCategory, isDateTodayOrYesterday } from '../../utils/helpers';
 
 interface PurchaseModalProps {
   purchases: PurchaseRecord[];
@@ -210,14 +210,23 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({
                       </td>
                       {isAdmin && (
                         <td className="p-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => onDeletePurchase(p.rowId)}
-                            className="p-1 text-rose-400 hover:text-rose-300 transition"
-                            title="Delete Purchase"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {isDateTodayOrYesterday(p.date) ? (
+                            <button
+                              type="button"
+                              onClick={() => onDeletePurchase(p.rowId)}
+                              className="p-1 text-rose-400 hover:text-rose-300 transition cursor-pointer"
+                              title="Delete Purchase (Today or Yesterday Only)"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <span
+                              className="p-1 text-slate-600 opacity-30 cursor-not-allowed inline-flex"
+                              title="Old purchase records cannot be deleted"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </span>
+                          )}
                         </td>
                       )}
                     </tr>

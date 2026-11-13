@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Users, Plus, Edit3, Trash2, Check } from 'lucide-react';
+import { X, Users, Plus, Edit3, Trash2, Check, Search } from 'lucide-react';
 import { Customer } from '../../types';
 
 interface CustomerModalProps {
@@ -7,6 +7,7 @@ interface CustomerModalProps {
   onClose: () => void;
   onSubmitCustomer: (data: any) => Promise<void>;
   onDeleteCustomer: (id: number | string) => Promise<void>;
+  onClearAllCustomers?: () => Promise<void>;
   showToast: (msg: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
@@ -15,13 +16,28 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   onClose,
   onSubmitCustomer,
   onDeleteCustomer,
+  onClearAllCustomers,
   showToast
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const nextSuggestedSl = React.useMemo(() => {
     const max = customers.reduce((m, c) => Math.max(m, Number(c.sl) || 0), 0);
     return max + 1;
   }, [customers]);
+
+  const filteredCustomers = React.useMemo(() => {
+    if (!searchTerm.trim()) return customers;
+    const term = searchTerm.toLowerCase().trim();
+    return customers.filter(
+      c =>
+        c.name.toLowerCase().includes(term) ||
+        (c.phone && c.phone.includes(term)) ||
+        (c.address && c.address.toLowerCase().includes(term)) ||
+        String(c.sl).includes(term)
+    );
+  }, [customers, searchTerm]);
 
   const [sl, setSl] = useState<number>(nextSuggestedSl);
 
@@ -64,6 +80,29 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
     const trimmedPhone = phone.trim();
     const finalAddress = address.trim() || (isCashCust ? '' : 'Paduar Bazar, Cumilla');
 
+    // Rule: One mobile number can only belong to one customer! Multiple customers can have the same name (with different numbers).
+    const normalizedPhone = trimmedPhone.replace(/[\s\-\(\)]/g, '');
+    if (normalizedPhone) {
+      const duplicate = customers.find(c => {
+        if (editingId && c.id === editingId) return false;
+        const cPhoneNorm = (c.phone || '').replace(/[\s\-\(\)]/g, '');
+        return cPhoneNorm && cPhoneNorm === normalizedPhone;
+      });
+      if (duplicate) {
+        showToast(`এই মোবাইল নম্বরটি (${trimmedPhone}) ইতিমধ্যে "${duplicate.name}" এর নামে নিবন্ধিত আছে! একটি নম্বরে শুধুমাত্র একজন কাস্টমার সেভ করা যাবে।`, 'error');
+        return;
+      }
+    } else {
+      const dupNameNoPhone = customers.find(c => {
+        if (editingId && c.id === editingId) return false;
+        return c.name.trim().toLowerCase() === trimmedName.toLowerCase() && !(c.phone || '').trim();
+      });
+      if (dupNameNoPhone) {
+        showToast(`"${trimmedName}" নামে কোনো নম্বর ছাড়া কাস্টমার ইতিমধ্যে সেভ করা আছে! আলাদা মোবাইল নম্বর দিন।`, 'error');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmitCustomer({
@@ -101,16 +140,68 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
         </div>
 
         {/* Customer List */}
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Customer Accounts ({customers.length} Accounts)
-            </h4>
+        <div className="space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Customer Accounts ({filteredCustomers.length}{filteredCustomers.length !== customers.length ? ` / ${customers.length}` : ''} Accounts)
+              </h4>
+              {onClearAllCustomers && customers.length > 0 && (
+                !confirmClearAll ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmClearAll(true)}
+                    className="px-2.5 py-1 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 rounded-lg text-[10px] font-bold transition cursor-pointer flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" /> Delete All Permanently
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await onClearAllCustomers();
+                        setConfirmClearAll(false);
+                      }}
+                      className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[10px] font-bold transition cursor-pointer"
+                    >
+                      Confirm Delete All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmClearAll(false)}
+                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-bold transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )
+              )}
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Search name, phone, address..."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="max-h-56 overflow-y-auto border border-slate-800 rounded-2xl bg-slate-950">
+          <div className="max-h-72 overflow-y-auto border border-slate-800 rounded-2xl bg-slate-950">
             <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-900 text-slate-300 uppercase text-[10px] font-bold border-b border-slate-800 sticky top-0">
+              <thead className="bg-slate-900 text-slate-300 uppercase text-[10px] font-bold border-b border-slate-800 sticky top-0 z-10 shadow-sm">
                 <tr>
                   <th className="p-3 text-center w-16">SL</th>
                   <th className="p-3">Customer Name</th>
@@ -120,14 +211,14 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
-                {customers.length === 0 ? (
+                {filteredCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-slate-500 font-medium">
-                      No customers found.
+                    <td colSpan={5} className="py-8 text-center text-slate-500 font-medium">
+                      No customer accounts found matching &quot;{searchTerm}&quot;.
                     </td>
                   </tr>
                 ) : (
-                  customers.map(c => (
+                  filteredCustomers.map(c => (
                     <tr key={c.id} className="hover:bg-slate-900/60 transition">
                       <td className="p-3 text-center font-bold text-amber-400">{c.sl}</td>
                       <td className="p-3 font-bold text-white text-xs sm:text-sm">{c.name}</td>
@@ -137,7 +228,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleEdit(c)}
-                          className="p-1 text-amber-400 hover:text-amber-300"
+                          className="p-1 text-amber-400 hover:text-amber-300 cursor-pointer"
                           title="Edit"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -145,7 +236,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                         <button
                           type="button"
                           onClick={() => onDeleteCustomer(c.id)}
-                          className="p-1 text-rose-400 hover:text-rose-300"
+                          className="p-1 text-rose-400 hover:text-rose-300 cursor-pointer"
                           title="Delete"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

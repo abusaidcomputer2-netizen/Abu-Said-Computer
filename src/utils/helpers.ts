@@ -223,3 +223,25 @@ export function recalculateDueSummaries(dueRecords: any[] = []) {
   };
 }
 
+export function isDateTodayOrYesterday(dateStr?: string): boolean {
+  if (!dateStr) return false;
+  const now = new Date();
+  const getDates = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const bdTime = new Date(d.getTime() + (6 * 60 + d.getTimezoneOffset()) * 60000);
+    const bdy = bdTime.getFullYear();
+    const bdm = String(bdTime.getMonth() + 1).padStart(2, '0');
+    const bdDay = String(bdTime.getDate()).padStart(2, '0');
+    return [`${y}-${m}-${day}`, `${bdy}-${bdm}-${bdDay}`];
+  };
+
+  const todayVariants = getDates(now);
+  const yesterdayVariants = getDates(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+  const allowed = new Set([...todayVariants, ...yesterdayVariants]);
+
+  const cleanDate = dateStr.substring(0, 10).replace(/\//g, '-');
+  return allowed.has(cleanDate);
+}
+

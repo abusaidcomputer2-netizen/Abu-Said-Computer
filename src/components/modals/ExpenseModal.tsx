@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Receipt, Printer, Plus, Edit3, Trash2, Check } from 'lucide-react';
 import { ExpenseRecord } from '../../types';
-import { formatCurrency, formatDateDisplay } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, isDateTodayOrYesterday } from '../../utils/helpers';
 
 interface ExpenseModalProps {
   expenses: ExpenseRecord[];
@@ -62,6 +62,8 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
 }) => {
   const [filterMonth, setFilterMonth] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingOrigAmount, setEditingOrigAmount] = useState<number | null>(null);
+  const [editingOrigDate, setEditingOrigDate] = useState<string>('');
 
   const [category, setCategory] = useState(DEFAULT_CATEGORIES[0]);
   const [amount, setAmount] = useState('');
@@ -78,6 +80,8 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
   const resetForm = () => {
     setEditingId(null);
+    setEditingOrigAmount(null);
+    setEditingOrigDate('');
     setCategory(DEFAULT_CATEGORIES[0]);
     setAmount('');
     setDate(new Date().toISOString().split('T')[0]);
@@ -86,6 +90,8 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
   const handleEdit = (exp: ExpenseRecord) => {
     setEditingId(exp.id);
+    setEditingOrigAmount(exp.amount);
+    setEditingOrigDate(exp.date);
     setCategory(formatExpenseCategoryEn(exp.category));
     setAmount(String(exp.amount));
     setDate(exp.date);
@@ -100,6 +106,15 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
       return;
     }
 
+    if (editingId && editingOrigDate && !isDateTodayOrYesterday(editingOrigDate)) {
+      const origAmt = Math.round((editingOrigAmount || 0) * 100) / 100;
+      const newAmt = Math.round(amt * 100) / 100;
+      if (Math.abs(newAmt - origAmt) > 0.01) {
+        showToast(`পুরাতন খরচে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল Tk ${formatCurrency(origAmt)}, কিন্তু বর্তমান পরিমাণ Tk ${formatCurrency(newAmt)}। টাকা কম বা বেশি হলে সেভ হবে না।`, 'error');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmitExpense({
@@ -110,7 +125,6 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
         date,
         user: currentUser
       });
-      showToast(editingId ? 'Expense updated!' : 'Expense saved successfully!', 'success');
       resetForm();
     } catch (err: any) {
       showToast(err.message || 'Error saving expense', 'error');
@@ -209,19 +223,28 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleEdit(e)}
-                          className="p-1 text-amber-400 hover:text-amber-300"
-                          title="Edit"
+                          className="p-1 text-amber-400 hover:text-amber-300 cursor-pointer"
+                          title={isDateTodayOrYesterday(e.date) ? 'Edit Expense (Today/Yesterday)' : `Edit Expense (Old Record: Amount Tk ${e.amount} cannot change)`}
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => onDeleteExpense(e.id)}
-                          className="p-1 text-rose-400 hover:text-rose-300"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {isDateTodayOrYesterday(e.date) ? (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteExpense(e.id)}
+                            className="p-1 text-rose-400 hover:text-rose-300 cursor-pointer"
+                            title="Delete (Today or Yesterday Only)"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <span
+                            className="p-1 text-slate-600 opacity-30 cursor-not-allowed inline-flex"
+                            title="Old expense records cannot be deleted"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))

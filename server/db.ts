@@ -1,6 +1,7 @@
 import initSqlJs, { Database } from 'sql.js';
 import fs from 'fs';
 import path from 'path';
+import { populateMasterData } from './seedAllData.js';
 
 let db: Database;
 const DB_FILE = path.resolve(process.cwd(), 'as_computer.db');
@@ -245,17 +246,10 @@ function seedInitialData(): void {
     `);
   }
 
-  // Ensure default customer accounts exist
-  const custCount = db.exec("SELECT COUNT(*) as count FROM customers")[0]?.values[0][0] as number;
-  if (custCount === 0) {
-    db.run(`
-      INSERT INTO customers (sl, name, phone, address) VALUES
-      (1, 'Cash Customer', '', ''),
-      (2, 'Md Abu Said', '01904142370', 'Paduar Bazar, Cumilla'),
-      (3, 'Md Sujon', '01812345678', 'Paduar Bazar, Cumilla'),
-      (4, 'Al-Amin Traders', '01711223344', 'Paduar Bazar Biswa Road, Cumilla'),
-      (5, 'General Customer', '01900000000', 'Cumilla Sadar South');
-    `);
+  // Ensure historical master sales exist
+  const salesCount = (db.exec("SELECT COUNT(*) as count FROM sales")[0]?.values[0][0] as number) || 0;
+  if (salesCount < 50) {
+    populateMasterData(db);
   }
 
   // Set permanent Google Apps Script webhook URL

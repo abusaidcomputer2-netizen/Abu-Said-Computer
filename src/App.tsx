@@ -198,7 +198,7 @@ export default function App() {
     }
   };
 
-  const CACHE_VERSION = 'v10_cash_cust_clean';
+  const CACHE_VERSION = 'v11_clean_directory';
 
   // Bootstrap data fetch with intelligent merge so state is never lost
   const fetchBootstrapData = async () => {
@@ -222,18 +222,11 @@ export default function App() {
         }
       }
 
-      // Read persisted deleted IDs so deleted items never resurrect on reloads or fallback
-      let deletedProdIds: string[] = [];
-      let deletedCustIds: string[] = [];
+      // Clean up any stale delete arrays from older sessions
       try {
-        deletedProdIds = JSON.parse(localStorage.getItem('as_computer_deleted_products') || '[]').map(String);
+        localStorage.removeItem('as_computer_deleted_products');
+        localStorage.removeItem('as_computer_deleted_customers');
       } catch {}
-      try {
-        deletedCustIds = JSON.parse(localStorage.getItem('as_computer_deleted_customers') || '[]').map(String);
-      } catch {}
-
-      const filterOutDeletedProds = (list: any[]) => list.filter(p => p && !deletedProdIds.includes(String(p.id)));
-      const filterOutDeletedCusts = (list: any[]) => list.filter(c => c && !deletedCustIds.includes(String(c.id)));
 
       try {
         const res = await fetch(`/api/bootstrap?_t=${Date.now()}`, {
@@ -245,17 +238,12 @@ export default function App() {
           const data = JSON.parse(rawText);
           if (data.status === 'success') {
             const apiSales = data.records || data.sales || [];
-            const apiProducts = filterOutDeletedProds(data.products || []);
-            const apiCustomers = filterOutDeletedCusts(data.customers || []);
+            const apiProducts = data.products || [];
+            const apiCustomers = data.customers || [];
 
-            const cleanCachedProds = filterOutDeletedProds(cached?.products || []);
-            const cleanCachedCusts = filterOutDeletedCusts(cached?.customers || []);
-            const cleanFallbackProds = filterOutDeletedProds(FALLBACK_PRODUCTS);
-            const cleanFallbackCusts = filterOutDeletedCusts(FALLBACK_CUSTOMERS);
-
-            const mergedProducts = apiProducts.length > 0 ? apiProducts : (cleanCachedProds.length > 0 ? cleanCachedProds : cleanFallbackProds);
-            const mergedCustomers = apiCustomers.length > 0 ? apiCustomers : (cleanCachedCusts.length > 0 ? cleanCachedCusts : cleanFallbackCusts);
-            const mergedSales = apiSales;
+            const mergedProducts = apiProducts.length > 0 ? apiProducts : (cached?.products?.length ? cached.products : FALLBACK_PRODUCTS);
+            const mergedCustomers = apiCustomers;
+            const mergedSales = apiSales.length > 0 ? apiSales : (cached?.records?.length ? cached.records : []);
 
             setUsers(data.users || FALLBACK_USERS);
             setProducts(mergedProducts);
@@ -292,10 +280,8 @@ export default function App() {
       if (!isLoaded) {
         const source = cached || {};
         const initialUsers = source.users && source.users.length > 0 ? source.users : FALLBACK_USERS;
-        const rawProds = source.products && source.products.length > 0 ? source.products : FALLBACK_PRODUCTS;
-        const rawCusts = source.customers && source.customers.length > 0 ? source.customers : FALLBACK_CUSTOMERS;
-        const initialProducts = filterOutDeletedProds(rawProds);
-        const initialCustomers = filterOutDeletedCusts(rawCusts);
+        const initialProducts = source.products && source.products.length > 0 ? source.products : FALLBACK_PRODUCTS;
+        const initialCustomers = source.customers && source.customers.length > 0 ? source.customers : FALLBACK_CUSTOMERS;
         const initialSales = (source.records || source.sales || []).length > 0 ? (source.records || source.sales) : FALLBACK_SALES;
         const initialExpenses = source.expenses && source.expenses.length > 0 ? source.expenses : FALLBACK_EXPENSES;
         let initialDue = source.dueRecords && source.dueRecords.length > 0 ? source.dueRecords : FALLBACK_DUE_RECORDS;
@@ -664,26 +650,7 @@ export default function App() {
       return { ...prev, records: updated, sales: updated };
     });
 
-    // 3. Auto-save customer in Customer Directory if not exists
-    const custName = (payload.customer || '').trim();
-    if (custName && custName.toLowerCase() !== 'general customer' && custName.toLowerCase() !== 'cash customer') {
-      const exists = customers.some(c => c.name.toLowerCase() === custName.toLowerCase());
-      if (!exists) {
-        const nextCust: Customer = {
-          id: Date.now(),
-          rowId: Date.now(),
-          sl: customers.length + 1,
-          name: custName,
-          phone: payload.phone || '',
-          address: finalCustAddress || ''
-        };
-        setCustomers(prev => [...prev, nextCust]);
-        updateCachedBootstrap(prev => ({
-          ...prev,
-          customers: [...(prev.customers || []), nextCust]
-        }));
-      }
-    }
+    // 3. Only explicitly saved customers remain in Customer Directory (no auto-save from memo entry)
 
     // 4. Update stock locally for stationery items
     if (payload.items && payload.items.length > 0) {
@@ -752,6 +719,9 @@ export default function App() {
         if (data.invoiceData) {
           setInvoiceModalSale(data.invoiceData);
         }
+      } else if (data && data.status === 'error') {
+        showToast(data.message || 'Failed to save memo', 'error');
+        setInvoiceModalSale(null);
       } else {
         showToast(isEdit ? 'Invoice updated!' : 'Invoice generated successfully!', 'success');
       }
@@ -764,24 +734,26 @@ export default function App() {
   };
 
   const handleDeleteSale = async (saleId: number) => {
-    setSales(prev => prev.filter(s => s.id !== saleId));
-    updateCachedBootstrap(prev => ({
-      ...prev,
-      records: (prev.records || []).filter((s: any) => s.id !== saleId),
-      sales: (prev.sales || []).filter((s: any) => s.id !== saleId)
-    }));
     setDeleteMemoSale(null);
     setActiveTab('sales');
 
     try {
       const { data } = await safeFetchJson<any>(`/api/sales/${saleId}`, { method: 'DELETE' });
       if (data && data.status === 'success') {
+        setSales(prev => prev.filter(s => s.id !== saleId));
+        updateCachedBootstrap(prev => ({
+          ...prev,
+          records: (prev.records || []).filter((s: any) => s.id !== saleId),
+          sales: (prev.sales || []).filter((s: any) => s.id !== saleId)
+        }));
         showToast(data.message, 'success');
+      } else if (data && data.status === 'error') {
+        showToast(data.message || 'Old memos cannot be deleted!', 'error');
       } else {
         showToast('Memo deleted', 'info');
       }
     } catch {
-      showToast('Memo deleted', 'info');
+      showToast('Failed to delete memo', 'error');
     } finally {
       await fetchBootstrapData();
     }
@@ -898,9 +870,11 @@ export default function App() {
       const { data } = await safeFetchJson<any>(`/api/purchases/${id}`, { method: 'DELETE' });
       if (data && data.status === 'success') {
         showToast(data.message, 'success');
+      } else if (data && data.status === 'error') {
+        showToast(data.message || 'Cannot delete purchase', 'error');
       }
     } catch {
-      // local delete already applied
+      showToast('Failed to delete purchase', 'error');
     } finally {
       await fetchBootstrapData();
     }
@@ -958,11 +932,13 @@ export default function App() {
       });
       if (data && data.status === 'success') {
         showToast(data.message, 'success');
+      } else if (data && data.status === 'error') {
+        showToast(data.message || 'Error saving expense', 'error');
       } else {
         showToast(isEdit ? 'Expense updated' : 'Expense recorded', 'success');
       }
     } catch {
-      showToast(isEdit ? 'Expense updated' : 'Expense recorded', 'success');
+      showToast('Failed to save expense', 'error');
     } finally {
       await fetchBootstrapData();
     }
@@ -970,19 +946,20 @@ export default function App() {
   };
 
   const handleDeleteExpense = async (id: number) => {
-    setExpenses(prev => prev.filter(e => e.id !== id));
-    updateCachedBootstrap(prev => ({
-      ...prev,
-      expenses: (prev.expenses || []).filter((e: any) => e.id !== id)
-    }));
-
     try {
       const { data } = await safeFetchJson<any>(`/api/expenses/${id}`, { method: 'DELETE' });
       if (data && data.status === 'success') {
+        setExpenses(prev => prev.filter(e => e.id !== id));
+        updateCachedBootstrap(prev => ({
+          ...prev,
+          expenses: (prev.expenses || []).filter((e: any) => e.id !== id)
+        }));
         showToast(data.message, 'success');
+      } else if (data && data.status === 'error') {
+        showToast(data.message || 'Old expenses cannot be deleted!', 'error');
       }
     } catch {
-      // local delete already applied
+      showToast('Failed to delete expense', 'error');
     } finally {
       await fetchBootstrapData();
     }
@@ -1060,6 +1037,27 @@ export default function App() {
     }
     const isCashCustomer = payload.name.trim().toLowerCase() === 'cash customer';
     const cleanPhone = payload.phone ? payload.phone.trim() : '';
+    const normalizedPhone = cleanPhone.replace(/[\s\-\(\)]/g, '');
+    if (normalizedPhone) {
+      const duplicate = customers.find(c => {
+        if (isEdit && String(c.id) === String(cid)) return false;
+        const cPhoneNorm = (c.phone || '').replace(/[\s\-\(\)]/g, '');
+        return cPhoneNorm && cPhoneNorm === normalizedPhone;
+      });
+      if (duplicate) {
+        showToast(`এই মোবাইল নম্বরটি (${cleanPhone}) ইতিমধ্যে "${duplicate.name}" এর নামে নিবন্ধিত আছে! একটি নম্বরে শুধুমাত্র একজন কাস্টমার সেভ করা যাবে।`, 'error');
+        return;
+      }
+    } else {
+      const dupNameNoPhone = customers.find(c => {
+        if (isEdit && String(c.id) === String(cid)) return false;
+        return c.name.trim().toLowerCase() === payload.name.trim().toLowerCase() && !(c.phone || '').trim();
+      });
+      if (dupNameNoPhone) {
+        showToast(`"${payload.name.trim()}" নামে কোনো নম্বর ছাড়া কাস্টমার ইতিমধ্যে সেভ করা আছে! আলাদা মোবাইল নম্বর দিন।`, 'error');
+        return;
+      }
+    }
     const finalAddress = payload.address && payload.address.trim() ? payload.address.trim() : (isCashCustomer ? '' : 'Paduar Bazar, Cumilla');
 
     const custRecord: Customer = {
@@ -1113,6 +1111,9 @@ export default function App() {
             customers: (prev.customers || []).map((c: any) => String(c.id) === String(cid) ? data.customer : c)
           }));
         }
+      } else if (data && data.status === 'error') {
+        showToast(data.message || 'Error saving customer', 'error');
+        await fetchBootstrapData();
       } else {
         showToast(isEdit ? 'Customer updated!' : 'Customer saved!', 'success');
       }
@@ -1125,31 +1126,43 @@ export default function App() {
     // 1. Immediately remove from React state
     setCustomers(prev => prev.filter(c => String(c.id) !== String(id)));
 
-    // 2. Track deleted ID in localStorage so fallback never resurrects it
-    try {
-      const deletedIds: any[] = JSON.parse(localStorage.getItem('as_computer_deleted_customers') || '[]');
-      if (!deletedIds.some(d => String(d) === String(id))) {
-        deletedIds.push(id);
-        localStorage.setItem('as_computer_deleted_customers', JSON.stringify(deletedIds));
-      }
-    } catch {}
-
-    // 3. Remove from cached bootstrap
+    // 2. Remove from cached bootstrap
     updateCachedBootstrap(prev => ({
       ...prev,
       customers: (prev.customers || []).filter((c: any) => String(c.id) !== String(id))
     }));
 
-    // 4. Send DELETE to backend database
+    // 3. Send DELETE to backend database
     try {
       const { data } = await safeFetchJson<any>(`/api/customers/${id}`, { method: 'DELETE' });
       if (data && data.status === 'success') {
-        showToast(data.message || 'Customer deleted successfully', 'success');
+        showToast(data.message || 'Customer deleted permanently', 'success');
       } else {
         showToast('Customer deleted', 'info');
       }
     } catch {
       showToast('Customer deleted', 'info');
+    }
+  };
+
+  const handleClearAllCustomers = async () => {
+    setCustomers([]);
+    updateCachedBootstrap(prev => ({
+      ...prev,
+      customers: []
+    }));
+
+    try {
+      const { data } = await safeFetchJson<any>('/api/customers', { method: 'DELETE' });
+      if (data && data.status === 'success') {
+        showToast(data.message || 'All customers permanently deleted', 'success');
+      } else {
+        showToast('All customers deleted', 'info');
+      }
+    } catch {
+      showToast('All customers deleted', 'info');
+    } finally {
+      await fetchBootstrapData();
     }
   };
 
@@ -1227,22 +1240,13 @@ export default function App() {
     // 1. Immediately remove from React state
     setProducts(prev => prev.filter(p => String(p.id) !== String(id)));
 
-    // 2. Track deleted ID in localStorage so fallback never resurrects it
-    try {
-      const deletedIds = JSON.parse(localStorage.getItem('as_computer_deleted_products') || '[]');
-      if (!deletedIds.some((d: any) => String(d) === String(id))) {
-        deletedIds.push(id);
-        localStorage.setItem('as_computer_deleted_products', JSON.stringify(deletedIds));
-      }
-    } catch {}
-
-    // 3. Remove from cached bootstrap
+    // 2. Remove from cached bootstrap
     updateCachedBootstrap(prev => ({
       ...prev,
       products: (prev.products || []).filter((p: any) => String(p.id) !== String(id))
     }));
 
-    // 4. Send DELETE to backend database
+    // 3. Send DELETE to backend database
     try {
       const { data } = await safeFetchJson<any>(`/api/products/${id}`, { method: 'DELETE' });
       if (data && data.status === 'success') {
@@ -1800,6 +1804,7 @@ export default function App() {
           }}
           onSubmitCustomer={handleSubmitCustomer}
           onDeleteCustomer={handleDeleteCustomer}
+          onClearAllCustomers={handleClearAllCustomers}
           showToast={showToast}
         />
       )}

@@ -354,6 +354,29 @@ apiRouter.delete('/products/:id', (req: Request, res: Response) => {
   }
 });
 
+// Helper to verify if a record date is Today or Yesterday
+export function isDateTodayOrYesterday(dateStr?: string): boolean {
+  if (!dateStr) return false;
+  const now = new Date();
+  const getDates = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const bdTime = new Date(d.getTime() + (6 * 60 + d.getTimezoneOffset()) * 60000);
+    const bdy = bdTime.getFullYear();
+    const bdm = String(bdTime.getMonth() + 1).padStart(2, '0');
+    const bdDay = String(bdTime.getDate()).padStart(2, '0');
+    return [`${y}-${m}-${day}`, `${bdy}-${bdm}-${bdDay}`];
+  };
+
+  const todayVariants = getDates(now);
+  const yesterdayVariants = getDates(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+  const allowed = new Set([...todayVariants, ...yesterdayVariants]);
+
+  const cleanDate = dateStr.substring(0, 10).replace(/\//g, '-');
+  return allowed.has(cleanDate);
+}
+
 // ---------------- CUSTOMERS ----------------
 apiRouter.post('/customers', (req: Request, res: Response) => {
   try {
@@ -361,9 +384,35 @@ apiRouter.post('/customers', (req: Request, res: Response) => {
     if (!name || !name.trim()) return res.status(400).json({ status: 'error', message: 'Customer name required' });
 
     const trimmedName = name.trim();
-    const isCashCust = trimmedName.toLowerCase() === 'cash customer';
     const cleanPhone = phone ? phone.trim() : '';
     const cleanAddress = address && address.trim() ? address.trim() : '';
+
+    // Uniqueness validation: One mobile number can only belong to one customer!
+    // Multiple customers CAN have the same name, but duplicate mobile number (or exact same name + empty phone) is blocked.
+    const normalizedPhone = cleanPhone.replace(/[\s\-\(\)]/g, '');
+    const existingCusts = queryAll<{ id: number; name: string; phone: string }>('SELECT id, name, phone FROM customers');
+    if (normalizedPhone) {
+      const duplicate = existingCusts.find(c => {
+        const pNorm = (c.phone || '').replace(/[\s\-\(\)]/g, '');
+        return pNorm && pNorm === normalizedPhone;
+      });
+      if (duplicate) {
+        return res.status(400).json({
+          status: 'error',
+          message: `এই মোবাইল নম্বরটি (${cleanPhone}) ইতিমধ্যে "${duplicate.name}" এর নামে নিবন্ধিত আছে! একটি নম্বরে শুধুমাত্র একজন কাস্টমার সেভ করা যাবে।`
+        });
+      }
+    } else {
+      const dupNameNoPhone = existingCusts.find(c =>
+        c.name.trim().toLowerCase() === trimmedName.toLowerCase() && !(c.phone || '').trim()
+      );
+      if (dupNameNoPhone) {
+        return res.status(400).json({
+          status: 'error',
+          message: `"${trimmedName}" নামে কোনো নম্বর ছাড়া কাস্টমার ইতিমধ্যে সেভ করা আছে! নতুন কাস্টমারের জন্য আলাদা মোবাইল নম্বর দিন।`
+        });
+      }
+    }
 
     let finalSl = parseInt(sl, 10);
     const maxSlObj = queryOne('SELECT MAX(sl) as m FROM customers');
@@ -415,10 +464,35 @@ apiRouter.put('/customers/:id', (req: Request, res: Response) => {
     if (!name || !name.trim()) return res.status(400).json({ status: 'error', message: 'Customer name required' });
 
     const trimmedName = name.trim();
-    const isCashCust = trimmedName.toLowerCase() === 'cash customer';
     const cleanPhone = phone ? phone.trim() : '';
     const cleanAddress = address && address.trim() ? address.trim() : '';
     let finalSl = parseInt(sl, 10) || 1;
+
+    // Uniqueness validation on update: One mobile number can only belong to one customer!
+    const normalizedPhone = cleanPhone.replace(/[\s\-\(\)]/g, '');
+    const existingCusts = queryAll<{ id: number; name: string; phone: string }>('SELECT id, name, phone FROM customers WHERE id != ?', [id]);
+    if (normalizedPhone) {
+      const duplicate = existingCusts.find(c => {
+        const pNorm = (c.phone || '').replace(/[\s\-\(\)]/g, '');
+        return pNorm && pNorm === normalizedPhone;
+      });
+      if (duplicate) {
+        return res.status(400).json({
+          status: 'error',
+          message: `এই মোবাইল নম্বরটি (${cleanPhone}) ইতিমধ্যে "${duplicate.name}" এর নামে নিবন্ধিত আছে! একটি নম্বরে শুধুমাত্র একজন কাস্টমার সেভ করা যাবে।`
+        });
+      }
+    } else {
+      const dupNameNoPhone = existingCusts.find(c =>
+        c.name.trim().toLowerCase() === trimmedName.toLowerCase() && !(c.phone || '').trim()
+      );
+      if (dupNameNoPhone) {
+        return res.status(400).json({
+          status: 'error',
+          message: `"${trimmedName}" নামে কোনো নম্বর ছাড়া কাস্টমার ইতিমধ্যে সেভ করা আছে! আলাদা মোবাইল নম্বর দিন।`
+        });
+      }
+    }
 
     runSql(
       'UPDATE customers SET sl = ?, name = ?, phone = ?, address = ? WHERE id = ?',
@@ -448,7 +522,16 @@ apiRouter.delete('/customers/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     runSql('DELETE FROM customers WHERE id = ?', [id]);
-    return res.json({ status: 'success', message: 'Customer deleted successfully', id });
+    return res.json({ status: 'success', message: 'Customer deleted permanently', id });
+  } catch (err: any) {
+    return res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+apiRouter.delete('/customers', (_req: Request, res: Response) => {
+  try {
+    runSql('DELETE FROM customers');
+    return res.json({ status: 'success', message: 'All customers deleted permanently' });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });
   }
@@ -569,21 +652,6 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
     const createdSale = queryOne('SELECT id FROM sales WHERE invoice_no = ?', [invoiceNo]);
     const saleId = createdSale?.id || 0;
 
-    // Auto-save customer into customers database if not already exists (only for real customers with phone)
-    if (!isCashCustomer && cleanPhone) {
-      const existingCust = queryOne('SELECT id, phone, address FROM customers WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))', [finalCustName]);
-      if (!existingCust) {
-        const maxCustObj = queryOne('SELECT MAX(sl) as m FROM customers');
-        const nextCustSl = (maxCustObj?.m || 0) + 1;
-        runSql(
-          'INSERT INTO customers (sl, name, phone, address) VALUES (?, ?, ?, ?)',
-          [nextCustSl, finalCustName, cleanPhone, cleanAddress]
-        );
-      } else if (cleanPhone && !existingCust.phone) {
-        runSql('UPDATE customers SET phone = ?, address = ? WHERE id = ?', [cleanPhone, cleanAddress, existingCust.id]);
-      }
-    }
-
     // 2. Insert items and automatically deduct stationery stock
     for (const it of items) {
       runSql(`
@@ -669,6 +737,22 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
     if (!existing) return res.status(404).json({ status: 'error', message: 'Invoice not found' });
 
     const { customer, phone, address, desc, subtotal, discount, grandTotal, paid, due, items, user } = req.body;
+
+    // Rules:
+    // Today or Yesterday: Edited freely without conditions
+    // Old Memos: Total amount MUST remain exactly identical! Cannot be higher or lower.
+    const isRecent = isDateTodayOrYesterday(existing.date);
+    if (!isRecent) {
+      const origGrand = Math.round((parseFloat(existing.grand_total) || 0) * 100) / 100;
+      const newGrand = Math.round((parseFloat(grandTotal) || 0) * 100) / 100;
+      if (Math.abs(newGrand - origGrand) > 0.01) {
+        return res.status(400).json({
+          status: 'error',
+          message: `পুরাতন মেমোতে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল Tk ${origGrand}, কিন্তু বর্তমান পরিমাণ Tk ${newGrand}। টাকা কম বা বেশি হলে সেভ হবে না।`
+        });
+      }
+    }
+
     const oldItems = JSON.parse(existing.items_json || '[]');
 
     // Reconcile stock delta between old items and new items
@@ -826,6 +910,15 @@ apiRouter.delete('/sales/:id', (req: Request, res: Response) => {
     const saleId = parseInt(req.params.id, 10);
     const existing = queryOne('SELECT * FROM sales WHERE id = ?', [saleId]);
     if (!existing) return res.status(404).json({ status: 'error', message: 'Invoice not found' });
+
+    // Deletion rule: Old memos cannot be deleted! Only today's or yesterday's can be deleted.
+    const isRecent = isDateTodayOrYesterday(existing.date);
+    if (!isRecent) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'পুরাতন মেমো বা পূর্বের দিনের হিসাব ডিলিট করা সম্পূর্ণ নিষিদ্ধ! শুধুমাত্র আজ অথবা গতকালের মেমো ডিলিট করা যাবে।'
+      });
+    }
 
     // 1. Restore product stock for stationery items
     const items = JSON.parse(existing.items_json || '[]');
@@ -1070,12 +1163,19 @@ apiRouter.delete('/purchases/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
     const pur = queryOne('SELECT * FROM purchases WHERE id = ?', [id]);
-    if (pur) {
-      const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = LOWER(?)', [pur.product_name]);
-      if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
-        const newStock = Math.max(0, (prod.stock_qty || 0) - (parseFloat(pur.qty) || 0));
-        runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
-      }
+    if (!pur) return res.status(404).json({ status: 'error', message: 'Purchase record not found' });
+
+    if (!isDateTodayOrYesterday(pur.date)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'পুরাতন ক্রয়ের তথ্য ডিলিট করা সম্পূর্ণ নিষিদ্ধ! শুধুমাত্র আজ অথবা গতকালের তথ্য ডিলিট করা যাবে।'
+      });
+    }
+
+    const prod = queryOne('SELECT id, stock_qty FROM products WHERE LOWER(name) = LOWER(?)', [pur.product_name]);
+    if (prod && prod.stock_qty !== null && prod.stock_qty !== undefined) {
+      const newStock = Math.max(0, (prod.stock_qty || 0) - (parseFloat(pur.qty) || 0));
+      runSql('UPDATE products SET stock_qty = ? WHERE id = ?', [newStock, prod.id]);
     }
     runSql('DELETE FROM purchases WHERE id = ?', [id]);
     saveDatabase();
@@ -1128,9 +1228,27 @@ apiRouter.post('/expenses', (req: Request, res: Response) => {
 apiRouter.put('/expenses/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
+    const existing = queryOne('SELECT * FROM expenses WHERE id = ?', [id]);
+    if (!existing) return res.status(404).json({ status: 'error', message: 'Expense not found' });
+
     const { category, description, amount, date } = req.body;
     const amt = parseFloat(amount) || 0;
     if (amt <= 0) return res.status(400).json({ status: 'error', message: 'Valid amount required' });
+
+    // Rules:
+    // Today or Yesterday: Edited freely
+    // Old records: amount must remain identical!
+    const isRecent = isDateTodayOrYesterday(existing.date);
+    if (!isRecent) {
+      const origAmt = Math.round((parseFloat(existing.amount) || 0) * 100) / 100;
+      const newAmt = Math.round(amt * 100) / 100;
+      if (Math.abs(newAmt - origAmt) > 0.01) {
+        return res.status(400).json({
+          status: 'error',
+          message: `পুরাতন খরচে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ বন্ধ! মূল পরিমাণ ছিল Tk ${origAmt}, কিন্তু বর্তমান পরিমাণ Tk ${newAmt}।`
+        });
+      }
+    }
 
     const cleanCategory = cleanExpenseCategory(category || 'Other Expenses');
     runSql(`
@@ -1147,6 +1265,17 @@ apiRouter.put('/expenses/:id', (req: Request, res: Response) => {
 apiRouter.delete('/expenses/:id', (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id, 10);
+    const existing = queryOne('SELECT * FROM expenses WHERE id = ?', [id]);
+    if (!existing) return res.status(404).json({ status: 'error', message: 'Expense not found' });
+
+    const isRecent = isDateTodayOrYesterday(existing.date);
+    if (!isRecent) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'পুরাতন খরচের তথ্য ডিলিট করা সম্পূর্ণ নিষিদ্ধ! শুধুমাত্র আজ অথবা গতকালের খরচ ডিলিট করা যাবে।'
+      });
+    }
+
     runSql('DELETE FROM expenses WHERE id = ?', [id]);
     return res.json({ status: 'success', message: 'Expense deleted successfully' });
   } catch (err: any) {
