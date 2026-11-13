@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Printer, BookMarked } from 'lucide-react';
 import { CustomerDueSummary, DueRecord } from '../../types';
-import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, formatPeriodHeader } from '../../utils/helpers';
 import { ReportFooter } from '../ReportFooter';
 
 interface LedgerPrintModalProps {
@@ -68,7 +68,7 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
   });
   const netDue = totalBilled - totalPaid;
 
-  const periodLabel = month || (startDate && endDate ? `${startDate} to ${endDate}` : 'All Records');
+  const periodLabel = formatPeriodHeader(startDate, endDate, month);
 
   return (
     <div className="print-modal-backdrop fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 print:p-0 print:m-0 print:bg-white print:static print:block">
@@ -138,8 +138,8 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
                 <h3 className="text-xl font-black text-amber-900 uppercase">
                   {isSingle ? 'CUSTOMER DUE STATEMENT' : 'LEDGER STATEMENT'}
                 </h3>
-                <p className="text-xs text-slate-600 font-semibold mt-1">
-                  Period : <span className="font-bold text-slate-900">{periodLabel}</span>
+                <p className="text-xs text-slate-600 font-semibold mt-1 text-right">
+                  <span className="font-bold text-slate-900">{periodLabel}</span> : Period
                 </p>
               </div>
             </div>

@@ -38,7 +38,16 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm 10mm 8mm 10mm;
+    margin: 8mm 10mm 13mm 10mm;
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      color: #475569;
+      vertical-align: middle;
+      padding-top: 2px;
+    }
   }
 
   /* Force pure white background on everything and eliminate all browser drop-shadows */
@@ -148,7 +157,7 @@
     justify-content: space-between !important;
     width: 100% !important;
     max-width: 100% !important;
-    min-height: 270mm !important;
+    min-height: 264mm !important;
     padding: 0 !important;
     margin: 0 !important;
     background: #ffffff !important;
@@ -167,7 +176,7 @@
     margin: 0 auto !important;
     padding: 0 !important;
     box-sizing: border-box !important;
-    min-height: 270mm !important;
+    min-height: 264mm !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;

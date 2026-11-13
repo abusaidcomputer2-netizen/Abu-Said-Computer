@@ -20,7 +20,7 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
   showAuthorizedSignature = true,
   leftSignatureLabel = 'CUSTOMER SIGNATURE',
   rightSignatureLabel = 'AUTHORIZED SIGNATURE',
-  pageInfo = 'Page 1 of 1',
+  pageInfo = '',
   className = ''
 }) => {
   return (
@@ -77,9 +77,11 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
         <div>
           {reportTitle} - Printed : {printTimestamp} {currentUser ? `• ${currentUser}` : ''}
         </div>
-        <div className="font-bold text-slate-700 whitespace-nowrap">
-          {pageInfo || 'Page 1 of 1'}
-        </div>
+        {pageInfo ? (
+          <div className="font-bold text-slate-700 whitespace-nowrap print:hidden">
+            {pageInfo}
+          </div>
+        ) : null}
       </div>
     </div>
   );

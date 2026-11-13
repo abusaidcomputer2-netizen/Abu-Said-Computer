@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Printer, Building2 } from 'lucide-react';
 import { SaleRecord } from '../../types';
-import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, formatPeriodHeader } from '../../utils/helpers';
 import { ReportFooter } from '../ReportFooter';
 
 interface SummaryReportModalProps {
@@ -104,7 +104,7 @@ export const SummaryReportModal: React.FC<SummaryReportModalProps> = ({
   });
 
   const datesSorted = Object.keys(dateGroups).sort((a, b) => b.localeCompare(a));
-  const periodLabel = month || (startDate && endDate ? `${startDate} to ${endDate}` : 'All Records');
+  const periodLabel = formatPeriodHeader(startDate, endDate, month);
 
   return (
     <div className="print-modal-backdrop fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 print:p-0 print:m-0 print:bg-white print:static print:block">
@@ -164,11 +164,13 @@ export const SummaryReportModal: React.FC<SummaryReportModalProps> = ({
               </div>
               <div className="text-right flex-shrink-0">
                 <h3 className="text-xl font-black text-blue-900 uppercase">SALES REPORT</h3>
-                <p className="text-xs text-slate-600 font-semibold mt-1">
-                  Period : <span className="font-bold text-slate-900">{periodLabel}</span>
+                <p className="text-xs text-slate-600 font-semibold mt-1 text-right">
+                  <span className="font-bold text-slate-900">{periodLabel}</span> : Period
                 </p>
                 {staff && staff !== 'ALL' && (
-                  <p className="text-xs text-blue-800 font-bold">Staff : {staff}</p>
+                  <p className="text-xs text-slate-600 font-semibold text-right">
+                    <span className="font-bold text-blue-800">{staff}</span> : Staff
+                  </p>
                 )}
               </div>
             </div>

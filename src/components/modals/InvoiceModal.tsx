@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, Building2, CheckCircle2 } from 'lucide-react';
+import { X, Printer, Building2 } from 'lucide-react';
 import { SaleRecord } from '../../types';
 import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, generateBarcodeSvg, numberToWordsTaka } from '../../utils/helpers';
 import { ReportFooter } from '../ReportFooter';
@@ -183,7 +183,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                       {formatCurrency(sale.grandTotal)}
                     </td>
                   </tr>
-                  {sale.due > 0 ? (
+                  {sale.due > 0 && (
                     <>
                       <tr className="border-b border-slate-200 text-emerald-900 bg-emerald-50/40">
                         <td colSpan={4} className="py-2 px-4 text-right font-bold sm:text-sm">
@@ -202,19 +202,33 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                         </td>
                       </tr>
                     </>
-                  ) : (
-                    <tr className="bg-emerald-50/60 text-emerald-900 border-b border-slate-300">
-                      <td colSpan={4} className="py-2 px-4 text-right font-bold text-xs sm:text-sm">
-                        Payment Status:
-                      </td>
-                      <td className="py-2 px-4 text-right font-black text-xs sm:text-sm text-emerald-700 flex items-center justify-end gap-1.5">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span>Full Paid</span>
-                      </td>
-                    </tr>
                   )}
                 </tfoot>
               </table>
+            </div>
+
+            {/* Colored Double-Bordered Rubber Stamp Seal (No Date line) */}
+            <div className="flex justify-end pt-1">
+              {sale.due > 0 ? (
+                <div className="border-[3px] border-rose-700 rounded-xl p-[3px] bg-rose-50/85 inline-block">
+                  <div className="border border-rose-600 rounded-lg px-6 py-1.5 text-center">
+                    <span className="block text-xl font-black tracking-[0.22em] text-rose-700 leading-none">
+                      DUE
+                    </span>
+                    <span className="block text-xs font-black text-rose-800 mt-1 font-tabular">
+                      Due Amount: Tk {formatCurrency(sale.due)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-[3px] border-emerald-700 rounded-xl p-[3px] bg-emerald-50/85 inline-block">
+                  <div className="border border-emerald-600 rounded-lg px-8 py-1.5 text-center">
+                    <span className="block text-2xl font-black tracking-[0.22em] text-emerald-700 leading-none">
+                      PAID
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

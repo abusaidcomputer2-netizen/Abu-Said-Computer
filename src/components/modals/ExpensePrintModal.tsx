@@ -104,8 +104,8 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
               </div>
               <div className="text-right flex-shrink-0">
                 <h3 className="text-xl font-black text-rose-900 uppercase">EXPENSE STATEMENT</h3>
-                <p className="text-xs text-slate-600 font-semibold mt-1">
-                  Format : <span className="font-bold text-slate-900">{viewMode === 'summary' ? 'Category Summary' : 'Detailed List'}</span>
+                <p className="text-xs text-slate-600 font-semibold mt-1 text-right">
+                  <span className="font-bold text-slate-900">{viewMode === 'summary' ? 'Category Summary' : 'Detailed List'}</span> : Format
                 </p>
               </div>
             </div>

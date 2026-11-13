@@ -185,7 +185,7 @@ export default function App() {
     }, 3800);
   };
 
-  const CACHE_VERSION = 'v12_snapshot_idb';
+  const CACHE_VERSION = 'v13_clean_due';
 
   // Resilient Dual-Layer Cache Updater (localStorage + IndexedDB, always stamps cacheVersion)
   const updateCachedBootstrap = (updater: (prev: any) => any) => {
@@ -269,31 +269,7 @@ export default function App() {
         const initialCustomers = Array.isArray(source.customers) ? source.customers : FALLBACK_CUSTOMERS;
         const initialSales = (source.records || source.sales || []).length > 0 ? (source.records || source.sales) : FALLBACK_SALES;
         const initialExpenses = Array.isArray(source.expenses) ? source.expenses : FALLBACK_EXPENSES;
-        let initialDue = (source.dueRecords && source.dueRecords.length > 0) ? source.dueRecords : FALLBACK_DUE_RECORDS;
-
-        // Auto-reconcile due records from any sales that have due > 0
-        initialSales.forEach((s: any) => {
-          if (s.due > 0) {
-            const dueId = `INV-${s.invoiceNo}`;
-            const exists = initialDue.some((d: any) => d.id === dueId);
-            if (!exists) {
-              initialDue = [{
-                rowId: Date.now() + Math.random(),
-                id: dueId,
-                date: s.rawDate || s.date,
-                customer: s.customer,
-                phone: s.phone || '',
-                address: s.address || ((s.customer || '').trim().toLowerCase() === 'cash customer' ? '' : 'Paduar Bazar, Cumilla'),
-                type: 'Memo / Bill',
-                desc: `Memo #${s.invoiceNo}${s.desc ? ` [${s.desc}]` : ''}`,
-                due: s.due,
-                paid: 0,
-                user: s.user || 'Md Abu Said',
-                timestamp: s.timestamp || s.date
-              }, ...initialDue];
-            }
-          }
-        });
+        const initialDue = Array.isArray(source.dueRecords) ? source.dueRecords : FALLBACK_DUE_RECORDS;
 
         const { customerSummaries: calcSummaries, dueTotals: calcTotals } = recalculateDueSummaries(initialDue);
         setUsers(initialUsers);

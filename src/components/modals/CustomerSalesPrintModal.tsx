@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Printer, TrendingUp, Users, FileText } from 'lucide-react';
 import { SaleRecord, Customer } from '../../types';
-import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, resolveCustomerAddress } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, formatPeriodHeader, resolveCustomerAddress } from '../../utils/helpers';
 import { ReportFooter } from '../ReportFooter';
 
 interface CustomerSalesPrintModalProps {
@@ -95,7 +95,7 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
       }
     : null;
 
-  const periodLabel = startDate && endDate ? `${startDate} to ${endDate}` : 'All Time Records';
+  const periodLabel = startDate || endDate ? formatPeriodHeader(startDate, endDate) : 'All Time Records';
 
   // Distinct customer names for dropdown
   const allCustomerNames = Array.from(new Set(sales.map(s => s.customer).filter(Boolean))).sort();
@@ -199,8 +199,8 @@ export const CustomerSalesPrintModal: React.FC<CustomerSalesPrintModalProps> = (
                 <h3 className="text-xl font-black text-cyan-900 uppercase">
                   {isSingle ? 'CUSTOMER STATEMENT' : 'SALES STATEMENT'}
                 </h3>
-                <p className="text-xs text-slate-600 font-semibold mt-1">
-                  Period : <span className="font-bold text-slate-900">{periodLabel}</span>
+                <p className="text-xs text-slate-600 font-semibold mt-1 text-right">
+                  <span className="font-bold text-slate-900">{periodLabel}</span> : Period
                 </p>
               </div>
             </div>

@@ -75,38 +75,47 @@ export function saveLocalBootstrapSnapshot(snapshot: any, cacheVersion: string):
   void saveToIdb(payload);
 }
 
+function migrateLegacySnapshot(parsed: any, cacheVersion: string): any | null {
+  if (!parsed) return null;
+  if (parsed.cacheVersion === cacheVersion) return parsed;
+  const hasUserData =
+    (parsed.expenses && parsed.expenses.length > 0) ||
+    (parsed.purchases && parsed.purchases.length > 0) ||
+    (parsed.cashClosings && parsed.cashClosings.length > 0) ||
+    (parsed.records && parsed.records.length > 0);
+  if (!hasUserData) return null;
+
+  // Permanently clear historical due records when migrating older caches into clean due version
+  const migrated = {
+    ...parsed,
+    cacheVersion,
+    dueRecords: [],
+    customerSummaries: [],
+    dueTotals: { shopTotalDue: 0, shopTotalPaid: 0, netDue: 0 }
+  };
+  saveLocalBootstrapSnapshot(migrated, cacheVersion);
+  return migrated;
+}
+
 export async function loadLocalBootstrapSnapshot(cacheVersion: string): Promise<any | null> {
   try {
     const cachedStr = localStorage.getItem(STORAGE_KEY);
     if (cachedStr) {
       const parsed = JSON.parse(cachedStr);
-      if (parsed && parsed.cacheVersion === cacheVersion) {
-        return parsed;
-      }
-      // Migrate older valid offline cache if it actually has user-created records/expenses/purchases
-      if (
-        parsed &&
-        !parsed.cacheVersion &&
-        ((parsed.expenses && parsed.expenses.length > 0) ||
-          (parsed.purchases && parsed.purchases.length > 0) ||
-          (parsed.cashClosings && parsed.cashClosings.length > 0) ||
-          (parsed.records && parsed.records.length > 0))
-      ) {
-        const migrated = { ...parsed, cacheVersion };
-        saveLocalBootstrapSnapshot(migrated, cacheVersion);
-        return migrated;
-      }
+      const result = migrateLegacySnapshot(parsed, cacheVersion);
+      if (result) return result;
     }
   } catch {
     // Ignore parse failure
   }
 
   const idbData = await loadFromIdb();
-  if (idbData && idbData.cacheVersion === cacheVersion) {
+  const migratedIdb = migrateLegacySnapshot(idbData, cacheVersion);
+  if (migratedIdb) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(idbData));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedIdb));
     } catch {}
-    return idbData;
+    return migratedIdb;
   }
 
   return null;

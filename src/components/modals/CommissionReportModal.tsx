@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Printer, Calendar, RefreshCw, Layers, Award, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { SaleRecord, User, StaffLeaveRecord } from '../../types';
-import { formatCurrency, formatInvoicePrintTimestamp, normalizeCategory, getLocalDateStr } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, formatPeriodHeader, normalizeCategory, getLocalDateStr } from '../../utils/helpers';
 import { ReportFooter } from '../ReportFooter';
 
 interface CommissionReportModalProps {
@@ -197,12 +197,10 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
     saveLeaves(leaves.filter(l => l.id !== id));
   };
 
-  // Formatted Month Title e.g. "October 2026"
+  // Formatted Month Title e.g. "October-2026"
   const formattedMonthDisplay = useMemo(() => {
     if (!selectedMonth) return 'All Periods';
-    const [year, month] = selectedMonth.split('-');
-    const date = new Date(Number(year), Number(month) - 1, 1);
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return formatPeriodHeader('', '', selectedMonth);
   }, [selectedMonth]);
 
   const nowFormatted = formatInvoicePrintTimestamp(new Date());
@@ -341,11 +339,11 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
               </div>
             </div>
             <div className="text-right flex-shrink-0">
-              <span className="text-xs font-bold px-3 py-1 bg-purple-100 text-purple-900 rounded-lg inline-block border border-purple-200">
-                Staff: {selectedStaff}
-              </span>
-              <p className="text-xs font-bold mt-1 text-slate-700">
-                Period: <span className="font-black text-slate-900">{formattedMonthDisplay}</span>
+              <p className="text-xs font-semibold text-slate-700 text-right">
+                <span className="text-xs font-bold px-2.5 py-0.5 bg-purple-100 text-purple-900 rounded-lg inline-block border border-purple-200">{selectedStaff}</span> : Staff
+              </p>
+              <p className="text-xs font-semibold mt-1.5 text-slate-700 text-right">
+                <span className="font-black text-slate-900">{formattedMonthDisplay}</span> : Period
               </p>
             </div>
           </div>
@@ -657,8 +655,10 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
                         <tr key={l.id} className="hover:bg-slate-800/30">
                           <td className="py-2 px-3 text-center text-slate-500 font-bold">{idx + 1}</td>
                           <td className="py-2 px-3 font-bold text-white print:text-slate-900">{l.staffName}</td>
-                          <td className="py-2 px-3 text-slate-300 print:text-slate-700">
-                            {l.endDate && l.endDate !== l.date ? `${l.date} to ${l.endDate}` : l.date}
+                          <td className="py-2 px-3 text-slate-300 print:text-slate-700 whitespace-nowrap">
+                            {l.endDate && l.endDate !== l.date
+                              ? `${formatDateDisplay(l.date)} to ${formatDateDisplay(l.endDate)}`
+                              : formatDateDisplay(l.date)}
                           </td>
                           <td className="py-2 px-3 text-center font-bold text-amber-400 print:text-amber-800">
                             {l.days || 1} Days

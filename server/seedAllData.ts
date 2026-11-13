@@ -142,14 +142,8 @@ export function populateMasterData(db: Database): boolean {
       }
     } catch {}
 
-    // Record Due Ledger
-    if (due > 0) {
-      const dueDesc = desc ? `Invoice #${invNo} - ${category} [${desc}]` : `Invoice #${invNo} - ${category}`;
-      db.run(
-        'INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [`INV-${invNo}`, rawDate, customer, phone, address, 'Memo / Bill', dueDesc, due, 0, user, timestamp]
-      );
-    }
+    // Previous historical due_ledger entries permanently cleared per user request.
+    // Future new sales with due > 0 continue creating due_ledger records normally via /api/sales.
 
     saleId++;
   }
