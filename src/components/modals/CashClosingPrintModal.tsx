@@ -264,7 +264,7 @@ export const CashClosingPrintModal: React.FC<CashClosingPrintModalProps> = ({
         <ReportFooter
           reportTitle="Daily Cash Closing Report"
           printTimestamp={nowFormatted}
-          currentUser={cashClosing.user || currentUser}
+          currentUser={currentUser || cashClosing.user}
           leftSignatureLabel="CASHIER / STAFF SIGNATURE"
           rightSignatureLabel="AUTHORIZED SIGNATURE"
         />

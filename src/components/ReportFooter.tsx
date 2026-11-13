@@ -6,6 +6,7 @@ interface ReportFooterProps {
   currentUser?: string;
   showCustomerSignature?: boolean;
   showAuthorizedSignature?: boolean;
+  hideSignatures?: boolean;
   leftSignatureLabel?: string;
   rightSignatureLabel?: string;
   pageInfo?: string;
@@ -19,6 +20,7 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
   currentUser = 'Md Abu Said',
   showCustomerSignature = true,
   showAuthorizedSignature = true,
+  hideSignatures = false,
   leftSignatureLabel = 'CUSTOMER SIGNATURE',
   rightSignatureLabel = 'AUTHORIZED SIGNATURE',
   pageInfo = 'Page 1 of 1',
@@ -90,32 +92,34 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
         </div>
 
         {/* Signatures with generous space so signatures can be given easily */}
-        <div className="pt-10 sm:pt-14 print:pt-12 pb-1.5 flex justify-between items-end text-center">
-          {showCustomerSignature ? (
-            <div className="w-52 sm:w-64 text-center">
-              <div className="border-b border-dashed border-slate-400 pb-1 mb-1.5" />
-              <div className="font-bold text-slate-800 text-[10px] sm:text-[11px] uppercase tracking-wider">
-                {leftSignatureLabel}
+        {!hideSignatures && (
+          <div className="pt-10 sm:pt-14 print:pt-12 pb-1.5 flex justify-between items-end text-center">
+            {showCustomerSignature ? (
+              <div className="w-52 sm:w-64 text-center">
+                <div className="border-b border-dashed border-slate-400 pb-1 mb-1.5" />
+                <div className="font-bold text-slate-800 text-[10px] sm:text-[11px] uppercase tracking-wider">
+                  {leftSignatureLabel}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="w-52 sm:w-64 text-center">
-              <div className="border-b border-slate-400 pb-1 mb-1.5" />
-              <div className="font-bold text-slate-800 text-[10px] sm:text-[11px] uppercase tracking-wider">
-                {leftSignatureLabel}
+            ) : (
+              <div className="w-52 sm:w-64 text-center">
+                <div className="border-b border-slate-400 pb-1 mb-1.5" />
+                <div className="font-bold text-slate-800 text-[10px] sm:text-[11px] uppercase tracking-wider">
+                  {leftSignatureLabel}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {showAuthorizedSignature && (
-            <div className="w-52 sm:w-64 text-center">
-              <div className="border-b-2 border-slate-900 pb-1 mb-1.5" />
-              <div className="font-bold text-slate-900 text-[10px] sm:text-[11px] uppercase tracking-wider">
-                {rightSignatureLabel}
+            {showAuthorizedSignature && (
+              <div className="w-52 sm:w-64 text-center">
+                <div className="border-b-2 border-slate-900 pb-1 mb-1.5" />
+                <div className="font-bold text-slate-900 text-[10px] sm:text-[11px] uppercase tracking-wider">
+                  {rightSignatureLabel}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Bottom Document Audit Meta Line: Shown in Screen Preview; in Print, @page margin-box renders this exact row on every page */}

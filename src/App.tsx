@@ -1720,6 +1720,7 @@ export default function App() {
       {invoiceModalSale && (
         <InvoiceModal
           sale={invoiceModalSale}
+          currentUser={currentUser.username}
           onClose={() => {
             setInvoiceModalSale(null);
             setActiveTab('sales');

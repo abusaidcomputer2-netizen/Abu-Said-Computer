@@ -6,10 +6,11 @@ import { ReportFooter } from '../ReportFooter';
 
 interface InvoiceModalProps {
   sale: SaleRecord | null;
+  currentUser?: string;
   onClose: () => void;
 }
 
-export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => {
+export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, currentUser, onClose }) => {
   if (!sale) return null;
 
   const barcodeHtml = generateBarcodeSvg(`AS-${sale.invoiceNo}`);
@@ -213,7 +214,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
           <ReportFooter
             reportTitle="Sales Invoice"
             printTimestamp={printTimestamp}
-            currentUser={sale.user}
+            currentUser={currentUser || sale.user}
             showCustomerSignature={true}
             showAuthorizedSignature={true}
             rightBadge={
