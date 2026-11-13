@@ -289,11 +289,11 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
         </div>
 
         {/* Printable & Interactive Area */}
-        <div className="print-page-container bg-slate-950/80 border border-slate-800/80 text-slate-100 p-5 sm:p-6 rounded-2xl print:bg-white print:text-slate-900 print:p-0 print:border-none print:shadow-none flex flex-col justify-start print:justify-between print:min-h-[248mm]">
+        <div className="print-page-container bg-slate-950/80 border border-slate-800/80 text-slate-100 p-5 sm:p-6 rounded-2xl print:bg-white print:text-slate-900 print:p-0 print:border-none print:shadow-none flex flex-col justify-start print:justify-between">
           <div className="print-content-body space-y-4 print:space-y-3">
           
             {/* Printable Report Header */}
-            <div className="hidden print:flex justify-between items-start border-b-2 border-slate-800 pb-2.5 mb-3">
+            <div className="hidden print:flex justify-between items-start border-b-2 border-blue-700 pb-2.5 mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-13 h-13 flex items-center justify-center flex-shrink-0 bg-transparent">
                   <img 
@@ -372,15 +372,15 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
                 </span>
               </div>
 
-              {/* Card 4: Total Commission (Executive Navy Highlight - Zero Gradient Leak) */}
-              <div className="bg-blue-950 border border-blue-400/50 p-3 print:p-2.5 rounded-2xl print:rounded-xl text-white print:bg-slate-900 print:border-slate-900 print:text-white">
-                <span className="text-[10px] font-bold text-blue-200 uppercase tracking-wider block print:text-slate-300">
+              {/* Card 4: Total Commission (Clean Executive Royal Blue Highlight - Zero Black Box) */}
+              <div className="bg-blue-600/15 border border-blue-400/50 p-3 print:p-2.5 rounded-2xl print:rounded-xl text-white print:bg-blue-50 print:border-2 print:border-blue-600 print:text-blue-950">
+                <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider block print:text-blue-700">
                   TOTAL COMMISSION
                 </span>
-                <div className="text-xl sm:text-2xl print:text-lg font-black text-white font-tabular mt-1 print:text-white">
+                <div className="text-xl sm:text-2xl print:text-lg font-black text-white font-tabular mt-1 print:text-blue-950">
                   {formatCurrency(stats.totalCommission)}
                 </div>
-                <span className="text-[10px] font-medium text-blue-200/80 block mt-0.5 print:text-slate-300">
+                <span className="text-[10px] font-medium text-blue-200/90 block mt-0.5 print:text-blue-700">
                   Billed Sales Commission
                 </span>
               </div>
@@ -401,15 +401,15 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
 
             {/* Combined All-Staff Commission Summary Table (when ALL selected, fits cleanly on 1 page) */}
             {isAllStaff && (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl print:rounded-xl overflow-hidden print:border print:border-slate-300 print:bg-white">
-                <div className="px-4 py-2.5 print:py-2 border-b border-slate-800 flex justify-between items-center flex-wrap gap-2 print:bg-slate-800 print:border-slate-800">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl print:rounded-xl overflow-hidden print:border print:border-blue-200 print:bg-white">
+                <div className="px-4 py-2.5 print:py-2 border-b border-slate-800 flex justify-between items-center flex-wrap gap-2 print:bg-blue-50 print:border-b-2 print:border-blue-600">
                   <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-blue-400 print:text-white" />
-                    <span className="text-xs font-black uppercase tracking-wider text-white print:text-white">
+                    <Users className="w-4 h-4 text-blue-400 print:text-blue-700" />
+                    <span className="text-xs font-black uppercase tracking-wider text-white print:text-blue-950">
                       STAFF-WISE COMMISSION SUMMARY ({formattedMonthDisplay})
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 font-semibold print:text-slate-300">
+                  <span className="text-[10px] text-slate-400 font-semibold print:text-blue-700">
                     {staffBreakdown.length} Staff Accounts
                   </span>
                 </div>
@@ -458,15 +458,15 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
                           <td className="py-2 px-3 print:py-1.5 text-right border-r border-slate-800 font-bold font-tabular text-slate-200 print:text-slate-900 print:border-slate-300">
                             {formatCurrency(row.netSales)}
                           </td>
-                          <td className="py-2 px-3 print:py-1.5 text-right font-black font-tabular text-white bg-blue-950/30 print:bg-slate-50 print:text-slate-950">
+                          <td className="py-2 px-3 print:py-1.5 text-right font-black font-tabular text-blue-200 bg-blue-500/10 print:bg-blue-50/70 print:text-blue-950">
                             {formatCurrency(row.totalCommission)}
                           </td>
                         </tr>
                       ))}
                     </tbody>
-                    <tfoot className="border-t-2 border-slate-700 bg-slate-950 font-black text-xs print:text-[11px] print:bg-slate-100 print:border-slate-400">
+                    <tfoot className="border-t-2 border-slate-700 bg-slate-950 font-black text-xs print:text-[11px] print:bg-blue-50 print:border-blue-300">
                       <tr>
-                        <td colSpan={2} className="py-2.5 px-3 print:py-1.5 text-right uppercase tracking-wider text-white print:text-slate-900 border-r border-slate-800 print:border-slate-300">
+                        <td colSpan={2} className="py-2.5 px-3 print:py-1.5 text-right uppercase tracking-wider text-white print:text-blue-950 border-r border-slate-800 print:border-slate-300">
                           ALL STAFF TOTAL:
                         </td>
                         <td className="py-2.5 px-2 print:py-1.5 text-center text-amber-400 print:text-amber-800 font-tabular border-r border-slate-800 print:border-slate-300">
@@ -487,7 +487,7 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
                         <td className="py-2.5 px-3 print:py-1.5 text-right text-white print:text-slate-950 font-tabular border-r border-slate-800 print:border-slate-300">
                           {formatCurrency(stats.netSales)}
                         </td>
-                        <td className="py-2.5 px-3 print:py-1.5 text-right font-black text-sm text-blue-300 print:text-slate-950 font-tabular">
+                        <td className="py-2.5 px-3 print:py-1.5 text-right font-black text-sm text-blue-300 print:text-blue-800 font-tabular">
                           {formatCurrency(stats.totalCommission)}
                         </td>
                       </tr>
@@ -498,11 +498,11 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
             )}
 
             {/* Category-Wise Sales & Commission Breakdown Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl print:rounded-xl overflow-hidden print:border print:border-slate-300 print:bg-white">
-              <div className="px-4 py-2.5 print:py-2 border-b border-slate-800 flex justify-between items-center flex-wrap gap-2 print:bg-slate-100 print:border-b-2 print:border-slate-300">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl print:rounded-xl overflow-hidden print:border print:border-indigo-200 print:bg-white">
+              <div className="px-4 py-2.5 print:py-2 border-b border-slate-800 flex justify-between items-center flex-wrap gap-2 print:bg-indigo-50/80 print:border-b-2 print:border-indigo-500">
                 <div className="flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-blue-400 print:text-slate-800" />
-                  <span className="text-xs font-black uppercase tracking-wider text-white print:text-slate-900">
+                  <Layers className="w-4 h-4 text-blue-400 print:text-indigo-700" />
+                  <span className="text-xs font-black uppercase tracking-wider text-white print:text-indigo-950">
                     CATEGORY-WISE SALES & COMMISSION BREAKDOWN
                   </span>
                 </div>
@@ -585,9 +585,9 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
                     </td>
                   </tr>
                 </tbody>
-                <tfoot className="border-t-2 border-slate-700 bg-slate-950 font-black text-xs print:bg-slate-100 print:border-slate-400">
+                <tfoot className="border-t-2 border-slate-700 bg-slate-950 font-black text-xs print:bg-indigo-50/70 print:border-indigo-300">
                   <tr>
-                    <td colSpan={2} className="py-2.5 px-4 print:py-2 text-right uppercase tracking-wider text-white print:text-slate-900 border-r border-slate-800 print:border-slate-300">
+                    <td colSpan={2} className="py-2.5 px-4 print:py-2 text-right uppercase tracking-wider text-white print:text-indigo-950 border-r border-slate-800 print:border-slate-300">
                       TOTAL:
                     </td>
                     <td className="py-2.5 px-4 print:py-2 text-right font-black text-sm text-white font-tabular border-r border-slate-800 print:border-slate-300 print:text-slate-950">
@@ -596,7 +596,7 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
                     <td className="py-2.5 px-4 print:py-2 text-center text-slate-500 border-r border-slate-800 print:border-slate-300">
                       --
                     </td>
-                    <td className="py-2.5 px-4 print:py-2 text-right font-black text-base text-blue-400 font-tabular print:text-slate-950">
+                    <td className="py-2.5 px-4 print:py-2 text-right font-black text-base text-blue-400 font-tabular print:text-blue-800">
                       {formatCurrency(stats.totalCommission)}
                     </td>
                   </tr>
@@ -605,13 +605,14 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
             </div>
           </div>
 
-          {/* Report Footer - Print only, NO signatures, always stamps logged-in printing user */}
-          <div className="hidden print:block pt-4">
+          {/* Report Footer - Print only, NO shop address & NO signatures, always stamps logged-in printing user in @page footer */}
+          <div className="hidden print:block">
             <ReportFooter
               reportTitle="Staff Commission Report"
               printTimestamp={nowFormatted}
               currentUser={currentUser.username}
               hideSignatures={true}
+              hideShopInfo={true}
             />
           </div>
         </div>

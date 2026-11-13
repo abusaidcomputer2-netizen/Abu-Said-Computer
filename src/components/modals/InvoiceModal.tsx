@@ -93,7 +93,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, currentUser, o
                 <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider block">
                   CUSTOMER INFO:
                 </span>
-                <div className="text-base sm:text-lg font-black text-slate-900 leading-tight uppercase">
+                <div className="text-base sm:text-lg font-black text-slate-900 leading-tight">
                   {sale.customer || 'Cash Customer'}
                 </div>
                 <div className="text-slate-700 font-medium text-xs sm:text-sm flex items-center gap-1.5">

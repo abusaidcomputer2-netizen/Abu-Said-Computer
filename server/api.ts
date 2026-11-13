@@ -655,6 +655,15 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
       }
     }
 
+    const paidNum = parseFloat(paid) || 0;
+    const grandNum = parseFloat(grandTotal) || 0;
+    if (paidNum > grandNum + 0.01) {
+      return res.status(400).json({
+        status: 'error',
+        message: `পেইড টাকা (Tk ${paidNum}) মোট বিল (Tk ${grandNum}) থেকে বেশি হতে পারবে না!`
+      });
+    }
+
     const dueVal = parseFloat(due) || 0;
     const finalCustName = (customer || '').trim() || 'Cash Customer';
     const isCashCustomer = finalCustName.toLowerCase() === 'cash customer';
@@ -806,6 +815,15 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
           message: `পুরাতন মেমোতে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল Tk ${origGrand}, কিন্তু বর্তমান পরিমাণ Tk ${newGrand}। টাকা কম বা বেশি হলে সেভ হবে না।`
         });
       }
+    }
+
+    const paidNum = parseFloat(paid) || 0;
+    const grandNum = parseFloat(grandTotal) || 0;
+    if (paidNum > grandNum + 0.01) {
+      return res.status(400).json({
+        status: 'error',
+        message: `পেইড টাকা (Tk ${paidNum}) মোট বিল (Tk ${grandNum}) থেকে বেশি হতে পারবে না!`
+      });
     }
 
     const dueVal = parseFloat(due) || 0;

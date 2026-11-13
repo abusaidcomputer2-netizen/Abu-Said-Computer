@@ -54,7 +54,7 @@ import { DataSheetModal } from './components/modals/DataSheetModal';
 import { CommissionReportModal } from './components/modals/CommissionReportModal';
 import { initGoogleAuth, setCachedAccessToken } from './services/googleAuth';
 import { User as GoogleUser } from 'firebase/auth';
-import { normalizeCategory, recalculateDueSummaries, getLocalDateStr, isDateTodayOrYesterday } from './utils/helpers';
+import { normalizeCategory, recalculateDueSummaries, getLocalDateStr, isDateTodayOrYesterday, formatCurrency } from './utils/helpers';
 import { 
   FALLBACK_USERS, 
   FALLBACK_PRODUCTS, 
@@ -591,6 +591,9 @@ export default function App() {
   const handleSubmitSale = async (payload: any) => {
     if (!Array.isArray(payload.items) || payload.items.length === 0) {
       throw new Error('At least one item is required to create an invoice!');
+    }
+    if ((parseFloat(payload.paid) || 0) > (parseFloat(payload.grandTotal) || 0) + 0.01) {
+      throw new Error(`পেইড টাকা মোট বিল (Tk ${formatCurrency(payload.grandTotal || 0)}) থেকে বেশি হতে পারবে না!`);
     }
 
     const isEdit = !!payload.id;

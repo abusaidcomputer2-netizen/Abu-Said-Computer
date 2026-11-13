@@ -318,6 +318,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
   const grandTotal = Math.max(0, Math.round(subtotal - discount));
   const paidVal = isPaidAuto ? grandTotal : (paid === '' ? 0 : parseFloat(paid) || 0);
   const dueVal = Math.max(0, Math.round(grandTotal - paidVal));
+  const isPaidExceedingTotal = paidVal > grandTotal + 0.001;
 
   const hasOutOfStockStationery = (() => {
     const requestedTotals: Record<string, number> = {};
@@ -340,6 +341,11 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (paidVal > grandTotal + 0.001) {
+      showToast(`পেইড টাকা (Tk ${formatCurrency(paidVal)}) মোট বিল (Tk ${formatCurrency(grandTotal)}) থেকে বেশি হতে পারবে না!`, 'error');
+      return;
+    }
 
     const formattedItems: SaleItem[] = [];
     const requestedTotals: Record<string, number> = {};
@@ -797,8 +803,8 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-1">
-            <div className="bg-slate-900 border border-emerald-500/30 p-2.5 rounded-xl">
-              <label className="block text-[10px] font-bold text-emerald-400 uppercase mb-0.5">
+            <div className={`bg-slate-900 border p-2.5 rounded-xl ${isPaidExceedingTotal ? 'border-rose-500/70' : 'border-emerald-500/30'}`}>
+              <label className={`block text-[10px] font-bold uppercase mb-0.5 ${isPaidExceedingTotal ? 'text-rose-400' : 'text-emerald-400'}`}>
                 Paid Amount
               </label>
               <input
@@ -808,10 +814,18 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                 value={isPaidAuto ? grandTotal : paid}
                 onChange={e => handlePaidChange(e.target.value)}
                 placeholder="0"
-                className="w-full bg-slate-950 border border-emerald-500/50 rounded-lg px-2.5 py-1 text-right text-emerald-400 font-black text-sm sm:text-base focus:outline-none font-tabular"
+                className={`w-full bg-slate-950 border rounded-lg px-2.5 py-1 text-right font-black text-sm sm:text-base focus:outline-none font-tabular ${
+                  isPaidExceedingTotal
+                    ? 'border-rose-500 text-rose-400'
+                    : 'border-emerald-500/50 text-emerald-400'
+                }`}
               />
-              <span className="text-[9px] text-slate-400 block mt-0.5">
-                {isPaidAuto ? '* Auto 100% paid' : '* Partial payment specified'}
+              <span className={`text-[9px] block mt-0.5 ${isPaidExceedingTotal ? 'text-rose-400 font-bold' : 'text-slate-400'}`}>
+                {isPaidExceedingTotal
+                  ? `⚠️ পেইড টাকা বিল (Tk ${formatCurrency(grandTotal)}) থেকে বেশি হতে পারবে না!`
+                  : isPaidAuto
+                  ? '* Auto 100% paid'
+                  : '* Partial payment specified'}
               </span>
             </div>
 
@@ -851,9 +865,9 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isSubmitting || hasOutOfStockStationery}
+          disabled={isSubmitting || hasOutOfStockStationery || isPaidExceedingTotal}
           className={`w-full text-white font-black py-3.5 rounded-2xl shadow-lg transition flex items-center justify-center gap-2.5 text-base cursor-pointer disabled:opacity-60 ${
-            hasOutOfStockStationery
+            hasOutOfStockStationery || isPaidExceedingTotal
               ? 'bg-rose-950/80 border border-rose-500/60 text-rose-300 cursor-not-allowed shadow-none'
               : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-600/25'
           }`}
@@ -862,6 +876,11 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
             <span className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
               <span>⚠️ Stationery Out of Stock (Memo Blocked)</span>
+            </span>
+          ) : isPaidExceedingTotal ? (
+            <span className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+              <span>⚠️ Paid Amount Exceeds Bill (Save Blocked)</span>
             </span>
           ) : (
             <>
