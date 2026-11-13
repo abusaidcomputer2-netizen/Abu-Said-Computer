@@ -148,10 +148,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     let stationery = 0;
 
     filteredSales.forEach(s => {
+      const ratio = s.subtotal > 0 ? s.grandTotal / s.subtotal : 1.0;
       if (s.items && s.items.length > 0) {
         s.items.forEach(it => {
           const cat = normalizeCategory(it.category);
-          const val = it.total || (it.price * it.qty);
+          const val = (it.total || (it.price * it.qty)) * ratio;
           if (cat === 'Photocopy') photocopy += val;
           else if (cat === 'Online Application') online += val;
           else stationery += val;

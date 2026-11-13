@@ -25,6 +25,7 @@ export const EXPENSE_CATEGORIES_BN = [
   'চা ও আপ্যায়ন',
   'ফটোকপির ব্যবহার্য সামগ্রী',
   'যাতায়াত ও পরিবহন',
+  'স্টেশনারি পণ্য ক্রয়',
   'অন্যান্য খরচ'
 ];
 
@@ -40,6 +41,7 @@ export const formatExpenseCategoryBn = (cat: string) => {
   if (c.includes('ink') || c.includes('toner') || c.includes('কালি') || c.includes('টোনার')) return 'কালি ও টোনার';
   if (c.includes('repair') || c.includes('servicing') || c.includes('মেরামত')) return 'মেশিন মেরামত ও সার্ভিসিং';
   if (c.includes('tea') || c.includes('entertainment') || c.includes('আপ্যায়ন') || c.includes('চা')) return 'চা ও আপ্যায়ন';
+  if (c.includes('stationery') || c.includes('purchase') || c.includes('স্টেশনারি') || c.includes('ক্রয়')) return 'স্টেশনারি পণ্য ক্রয়';
   if (c.includes('paper') || c.includes('photocopy') || c.includes('ফটোকপি')) return 'ফটোকপির ব্যবহার্য সামগ্রী';
   if (c.includes('transport') || c.includes('conveyance') || c.includes('যাতায়াত')) return 'যাতায়াত ও পরিবহন';
   if (c.includes('other') || c.includes('অন্যান্য')) return 'অন্যান্য খরচ';
@@ -282,6 +284,9 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white font-semibold focus:outline-none focus:border-rose-500"
               >
                 <option value="" disabled>Select Expense Category...</option>
+                {category && !DEFAULT_CATEGORIES.includes(category) && (
+                  <option value={category}>{category}</option>
+                )}
                 {DEFAULT_CATEGORIES.map(c => (
                   <option key={c} value={c}>
                     {c}

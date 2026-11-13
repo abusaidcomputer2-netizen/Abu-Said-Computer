@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Printer, Boxes, Building2 } from 'lucide-react';
 import { Product } from '../../types';
-import { formatCurrency, formatInvoicePrintTimestamp, normalizeCategory } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, getLocalDateStr, normalizeCategory } from '../../utils/helpers';
 import { ReportFooter } from '../ReportFooter';
 
 interface StockPrintModalProps {
@@ -83,7 +83,7 @@ export const StockPrintModal: React.FC<StockPrintModalProps> = ({ products, curr
               <div className="text-right flex-shrink-0">
                 <h3 className="text-xl font-black text-emerald-900 uppercase">STOCK REPORT</h3>
                 <p className="text-xs text-slate-600 font-semibold mt-1 text-right">
-                  <span className="font-bold text-slate-900">Stationery Products Only</span> : Category
+                  <span className="font-bold text-slate-900">{formatDateDisplay(getLocalDateStr())}</span> : Date
                 </p>
               </div>
             </div>
@@ -180,6 +180,7 @@ export const StockPrintModal: React.FC<StockPrintModalProps> = ({ products, curr
           reportTitle="Stationery Stock Valuation Report"
           printTimestamp={nowFormatted}
           currentUser={currentUser}
+          hideShopInfo={true}
           leftSignatureLabel="CHECKED BY"
           rightSignatureLabel="AUTHORIZED SIGNATURE"
         />

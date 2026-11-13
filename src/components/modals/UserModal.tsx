@@ -65,7 +65,7 @@ export const UserModal: React.FC<UserModalProps> = ({
     if (pStr === 'all' || u.role === 'admin') {
       setSelectedPerms(ALL_PERMISSIONS.map(p => p.key));
     } else {
-      setSelectedPerms(pStr.split(',').map(s => s.trim()));
+      setSelectedPerms(pStr.split(',').map(s => s.trim()).filter(Boolean));
     }
   };
 
