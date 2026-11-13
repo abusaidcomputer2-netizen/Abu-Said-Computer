@@ -38,16 +38,7 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm 10mm 13mm 10mm;
-    @bottom-right {
-      content: "Page " counter(page) " of " counter(pages);
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 9px;
-      font-weight: 700;
-      color: #475569;
-      vertical-align: middle;
-      padding-top: 2px;
-    }
+    margin: 8mm 10mm 14mm 10mm;
   }
 
   /* Force pure white background on everything and eliminate all browser drop-shadows */
@@ -191,19 +182,7 @@
   }
 
   .print-doc-footer {
-    width: 100% !important;
-    background: #ffffff !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    margin-top: auto !important;
-    padding-top: 4px !important;
-    padding-bottom: 2px !important;
-    border-top: 1px solid #94a3b8 !important;
-    font-size: 10px !important;
-    line-height: 1.3 !important;
-    color: #475569 !important;
-    box-sizing: border-box !important;
+    display: none !important;
   }
 
   .report-footer-container {

@@ -9,6 +9,7 @@ interface ReportFooterProps {
   leftSignatureLabel?: string;
   rightSignatureLabel?: string;
   pageInfo?: string;
+  rightBadge?: React.ReactNode;
   className?: string;
 }
 
@@ -20,27 +21,68 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
   showAuthorizedSignature = true,
   leftSignatureLabel = 'CUSTOMER SIGNATURE',
   rightSignatureLabel = 'AUTHORIZED SIGNATURE',
-  pageInfo = '',
+  pageInfo = 'Page 1 of 1',
+  rightBadge,
   className = ''
 }) => {
+  const footerLeftText = `${reportTitle} - Printed : ${printTimestamp}${currentUser ? ` • ${currentUser}` : ''}`
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"');
+
   return (
     <div className={`report-footer-container flex-grow flex flex-col justify-between ${className}`}>
+      <style>{`
+        @media print {
+          @page {
+            @bottom-left {
+              content: "${footerLeftText}";
+              font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
+              font-size: 9px;
+              font-weight: 500;
+              color: #475569;
+              border-top: 1px solid #cbd5e1;
+              vertical-align: middle;
+              padding-top: 4px;
+              white-space: nowrap;
+            }
+            @bottom-center {
+              content: "";
+              border-top: 1px solid #cbd5e1;
+            }
+            @bottom-right {
+              content: "Page " counter(page) " of " counter(pages);
+              font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
+              font-size: 9px;
+              font-weight: 700;
+              color: #334155;
+              border-top: 1px solid #cbd5e1;
+              vertical-align: middle;
+              padding-top: 4px;
+              white-space: nowrap;
+            }
+          }
+        }
+      `}</style>
+
       {/* Top Part of Footer: Stays close to content/table with generous signing space */}
       <div className="space-y-3 sm:space-y-4 pt-3 print:pt-2">
-        {/* Shop Info Block */}
-        <div className="pt-2 sm:pt-3 print:pt-1 border-t border-slate-300 text-left">
-          <div className="font-black text-slate-900 tracking-wider uppercase text-xs sm:text-sm">
-            ABU SAID COMPUTER
+        {/* Shop Info Block + Right Stamp aligned on same row */}
+        <div className="pt-2 sm:pt-3 print:pt-1 border-t border-slate-300 flex justify-between items-center gap-4 text-left">
+          <div>
+            <div className="font-black text-slate-900 tracking-wider uppercase text-xs sm:text-sm">
+              ABU SAID COMPUTER
+            </div>
+            <div className="text-slate-600 font-medium text-[11px] sm:text-xs mt-0.5">
+              Office: Bhai Bhai Super Market (2nd Floor), Paduar Bazar, Cumilla
+            </div>
+            <div className="text-slate-700 text-[11px] sm:text-xs mt-0.5">
+              Mobile: <span className="font-bold text-slate-900">+88 01904 142370</span>
+            </div>
+            <div className="text-slate-600 font-medium text-[11px] sm:text-xs mt-0.5">
+              Email: abusaidcomputer2@gmail.com
+            </div>
           </div>
-          <div className="text-slate-600 font-medium text-[11px] sm:text-xs mt-0.5">
-            Office: Bhai Bhai Super Market (2nd Floor), Paduar Bazar, Cumilla-3500
-          </div>
-          <div className="text-slate-700 text-[11px] sm:text-xs mt-0.5">
-            Mobile: <span className="font-bold text-slate-900">+88 01904 142370</span>
-          </div>
-          <div className="text-slate-600 font-medium text-[11px] sm:text-xs mt-0.5">
-            Email: abusaidcomputer2@gmail.com
-          </div>
+          {rightBadge && <div className="flex-shrink-0">{rightBadge}</div>}
         </div>
 
         {/* Signatures with generous space so signatures can be given easily */}
@@ -72,16 +114,14 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
         </div>
       </div>
 
-      {/* Bottom Document Audit Meta Line: Anchored at the very bottom of the page */}
-      <div className="print-doc-footer mt-auto border-t border-slate-300 pt-2 flex justify-between items-center text-[10px] sm:text-[11px] text-slate-600 font-medium">
+      {/* Bottom Document Audit Meta Line: Shown in Screen Preview; in Print, @page margin-box renders this exact row on every page */}
+      <div className="print-doc-footer mt-auto border-t border-slate-300 pt-2 flex justify-between items-center text-[10px] sm:text-[11px] text-slate-600 font-medium print:hidden">
         <div>
           {reportTitle} - Printed : {printTimestamp} {currentUser ? `• ${currentUser}` : ''}
         </div>
-        {pageInfo ? (
-          <div className="font-bold text-slate-700 whitespace-nowrap print:hidden">
-            {pageInfo}
-          </div>
-        ) : null}
+        <div className="font-bold text-slate-700 whitespace-nowrap">
+          {pageInfo || 'Page 1 of 1'}
+        </div>
       </div>
     </div>
   );

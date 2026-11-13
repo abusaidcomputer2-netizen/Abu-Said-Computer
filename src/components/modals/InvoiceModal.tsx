@@ -207,9 +207,17 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
               </table>
             </div>
 
-            {/* Colored Double-Bordered Rubber Stamp Seal (No Date line) */}
-            <div className="flex justify-end pt-1">
-              {sale.due > 0 ? (
+          </div>
+
+          {/* Exact Sample Matched Footer at bottom of page with PAID/DUE stamp aligned beside shop name & address */}
+          <ReportFooter
+            reportTitle="Sales Invoice"
+            printTimestamp={printTimestamp}
+            currentUser={sale.user}
+            showCustomerSignature={true}
+            showAuthorizedSignature={true}
+            rightBadge={
+              sale.due > 0 ? (
                 <div className="border-[3px] border-rose-700 rounded-xl p-[3px] bg-rose-50/85 inline-block">
                   <div className="border border-rose-600 rounded-lg px-6 py-1.5 text-center">
                     <span className="block text-xl font-black tracking-[0.22em] text-rose-700 leading-none">
@@ -228,17 +236,8 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, onClose }) => 
                     </span>
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Exact Sample Matched Footer at bottom of page */}
-          <ReportFooter
-            reportTitle="Sales Invoice"
-            printTimestamp={printTimestamp}
-            currentUser={sale.user}
-            showCustomerSignature={true}
-            showAuthorizedSignature={true}
+              )
+            }
           />
         </div>
       </div>
