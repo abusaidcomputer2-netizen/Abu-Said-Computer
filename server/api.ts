@@ -60,6 +60,45 @@ function lookupCustomerAddress(custName: string, phone: string): string {
   return byName?.address ? byName.address.trim() : '';
 }
 
+function upsertDueCustomerInDb(name: string, phone: string, address: string): void {
+  const trimmedName = (name || '').trim();
+  if (!trimmedName || trimmedName.toLowerCase() === 'cash customer') return;
+
+  const cleanPhone = (phone || '').trim();
+  const cleanAddr = (address || '').trim();
+  const normPhone = cleanPhone.replace(/[\s\-\(\)]/g, '');
+
+  const allCusts = queryAll<{ id: number; name: string; phone: string; address: string }>(
+    'SELECT id, name, phone, address FROM customers'
+  );
+
+  let matched = normPhone
+    ? allCusts.find(c => (c.phone || '').replace(/[\s\-\(\)]/g, '') === normPhone)
+    : undefined;
+  if (!matched) {
+    matched = allCusts.find(c =>
+      c.name.trim().toLowerCase() === trimmedName.toLowerCase() &&
+      (!cleanPhone || !(c.phone || '').trim())
+    );
+  }
+
+  if (matched) {
+    const nextPhone = matched.phone || cleanPhone;
+    const nextAddr = matched.address || cleanAddr;
+    if (nextPhone !== matched.phone || nextAddr !== matched.address) {
+      runSql('UPDATE customers SET phone = ?, address = ? WHERE id = ?', [nextPhone, nextAddr, matched.id]);
+    }
+  } else {
+    const maxSl = queryOne<{ m: number }>('SELECT MAX(sl) as m FROM customers')?.m || 0;
+    runSql('INSERT INTO customers (sl, name, phone, address) VALUES (?, ?, ?, ?)', [
+      maxSl + 1,
+      trimmedName,
+      cleanPhone,
+      cleanAddr
+    ]);
+  }
+}
+
 // ---------------- AUTH ----------------
 apiRouter.post('/auth/login', (req: Request, res: Response) => {
   const { username, password } = req.body;
@@ -733,9 +772,9 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
       }
     }
 
-    // 3. Record in Due Ledger if due > 0
+    // 3. Record in Due Ledger & auto-save Customer ONLY if due > 0
     if (dueVal > 0) {
-      const dueDesc = `Memo #${invoiceNo}${desc ? ` [${desc.trim()}]` : ''}`;
+      const dueDesc = (desc && String(desc).trim()) ? String(desc).trim() : categorySummary;
       runSql(`
         INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -744,6 +783,9 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
         cleanAddress, 'Memo / Bill', dueDesc, dueVal, 0,
         user || 'Staff', `${dateStr} ${now.toTimeString().split(' ')[0]}`
       ]);
+      if (!isCashCustomer) {
+        upsertDueCustomerInDb(finalCustName, cleanPhone, cleanAddress);
+      }
     }
     saveDatabase();
 
@@ -951,7 +993,7 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
     );
 
     if (dueVal > 0) {
-      const dueDesc = `Memo #${existing.invoice_no}${cleanDesc ? ` [${cleanDesc}]` : ''}`;
+      const dueDesc = cleanDesc || categorySummary;
       if (existingDue) {
         runSql(`
           UPDATE due_ledger SET customer_name = ?, customer_phone = ?, customer_address = ?, description = ?, due_dr = ?, paid_cr = 0
@@ -966,6 +1008,9 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
           cleanUpdateAddress, 'Memo / Bill', dueDesc, dueVal, 0,
           user || existing.user_name, existing.timestamp
         ]);
+      }
+      if (!isCashCust) {
+        upsertDueCustomerInDb(finalUpdateCust, cleanUpdatePhone, cleanUpdateAddress);
       }
     } else if (existingDue) {
       const prevDesc = existingDue.description || '';
@@ -2374,5 +2419,231 @@ apiRouter.post('/apps-script/sync', async (_req: Request, res: Response) => {
     return res.status(500).json({ status: 'error', message: err.message });
   }
 });
+
+// ---------------- NON-DESTRUCTIVE CLOUD-TO-SERVER BACKUP SYNC ----------------
+apiRouter.post('/backup/sync-all', (req: Request, res: Response) => {
+  try {
+    const { sales, dueRecords, customers, products, expenses, purchases, cashClosings } = req.body || {};
+    let merged = 0;
+
+    if (Array.isArray(products)) {
+      for (const p of products) {
+        if (!p?.name) continue;
+        const exists = queryOne<{ id: number }>(
+          'SELECT id FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))',
+          [String(p.name)]
+        );
+        if (!exists) {
+          runSql(
+            'INSERT INTO products (sl, category, name, selling_price, cost_price, stock_qty, low_stock_limit) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+              Number(p.sl) || 1,
+              p.category || 'Photocopy',
+              String(p.name).trim(),
+              Number(p.price) || 0,
+              Number(p.costPrice) || 0,
+              p.stockQty ?? null,
+              Number(p.lowStockLimit) || 5
+            ]
+          );
+          merged++;
+        }
+      }
+    }
+
+    if (Array.isArray(customers)) {
+      for (const c of customers) {
+        if (!c?.name || String(c.name).trim().toLowerCase() === 'cash customer') continue;
+        const cPhone = String(c.phone || '').trim();
+        const normPhone = cPhone.replace(/[\s\-\(\)]/g, '');
+        const existingAll = queryAll<{ id: number; name: string; phone: string }>('SELECT id, name, phone FROM customers');
+        const found = normPhone
+          ? existingAll.find(x => (x.phone || '').replace(/[\s\-\(\)]/g, '') === normPhone)
+          : existingAll.find(x => x.name.trim().toLowerCase() === String(c.name).trim().toLowerCase() && !(x.phone || '').trim());
+        if (!found) {
+          const maxSl = queryOne<{ m: number }>('SELECT MAX(sl) as m FROM customers')?.m || 0;
+          runSql('INSERT INTO customers (sl, name, phone, address) VALUES (?, ?, ?, ?)', [
+            Number(c.sl) || (maxSl + 1),
+            String(c.name).trim(),
+            cPhone,
+            String(c.address || '').trim()
+          ]);
+          merged++;
+        }
+      }
+    }
+
+    if (Array.isArray(sales)) {
+      for (const s of sales) {
+        const invNo = Number(s?.invoiceNo);
+        if (!invNo || invNo <= 0) continue;
+        const exists = queryOne<{ id: number }>('SELECT id FROM sales WHERE invoice_no = ?', [invNo]);
+        if (!exists) {
+          runSql(
+            `INSERT INTO sales (
+              invoice_no, timestamp, date, user_name, customer_name, customer_phone, customer_address,
+              category_summary, description, subtotal, discount, grand_total, paid, due, items_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              invNo,
+              s.timestamp || '',
+              s.rawDate || s.date || getBdDateStr(),
+              s.user || 'Staff',
+              s.customer || 'Cash Customer',
+              s.phone || '',
+              s.address || '',
+              s.category || 'Photocopy',
+              s.desc || '',
+              Number(s.subtotal) || 0,
+              Number(s.discount) || 0,
+              Number(s.grandTotal) || 0,
+              Number(s.paid) || 0,
+              Number(s.due) || 0,
+              JSON.stringify(Array.isArray(s.items) ? s.items : [])
+            ]
+          );
+          const created = queryOne<{ id: number }>('SELECT id FROM sales WHERE invoice_no = ?', [invNo]);
+          const saleId = created?.id || 0;
+          if (Array.isArray(s.items)) {
+            for (const it of s.items) {
+              runSql(
+                'INSERT INTO sale_items (sale_id, invoice_no, category, product_name, price, cost_price, qty, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                  saleId,
+                  invNo,
+                  it.category || s.category || 'Photocopy',
+                  it.name || 'Service',
+                  Number(it.price) || 0,
+                  Number(it.costPrice) || 0,
+                  Number(it.qty) || 1,
+                  Number(it.total) || 0
+                ]
+              );
+            }
+          }
+          merged++;
+        }
+      }
+    }
+
+    if (Array.isArray(dueRecords)) {
+      for (const d of dueRecords) {
+        if (!d?.id || !d?.customer) continue;
+        const exists = queryOne<{ id: number }>('SELECT id FROM due_ledger WHERE entry_id = ?', [String(d.id)]);
+        if (!exists) {
+          runSql(
+            `INSERT INTO due_ledger (entry_id, date, customer_name, customer_phone, customer_address, transaction_type, description, due_dr, paid_cr, user_name, timestamp)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              String(d.id),
+              d.date || getBdDateStr(),
+              String(d.customer).trim(),
+              d.phone || '',
+              d.address || '',
+              d.type || 'Memo / Bill',
+              d.desc || '',
+              Number(d.due) || 0,
+              Number(d.paid) || 0,
+              d.user || 'Staff',
+              d.timestamp || ''
+            ]
+          );
+          merged++;
+        }
+      }
+    }
+
+    if (Array.isArray(expenses)) {
+      for (const e of expenses) {
+        const eid = String(e?.expId || `EXP-${e?.id || ''}`).trim();
+        if (!eid || eid === 'EXP-') continue;
+        const exists = queryOne<{ id: number }>('SELECT id FROM expenses WHERE expense_id = ?', [eid]);
+        if (!exists) {
+          runSql(
+            'INSERT INTO expenses (expense_id, timestamp, date, category, description, amount, user_name) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+              eid,
+              e.timestamp || '',
+              e.date || getBdDateStr(),
+              e.category || 'Other Expenses',
+              e.desc || '',
+              Number(e.amount) || 0,
+              e.user || 'Staff'
+            ]
+          );
+          merged++;
+        }
+      }
+    }
+
+    if (Array.isArray(purchases)) {
+      for (const p of purchases) {
+        if (!p?.id || !p?.product) continue;
+        const exists = queryOne<{ id: number }>('SELECT id FROM purchases WHERE purchase_id = ?', [String(p.id)]);
+        if (!exists) {
+          runSql(
+            `INSERT INTO purchases (purchase_id, date, timestamp, product_name, category, qty, unit_cost, total_cost, supplier, notes, user_name)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              String(p.id),
+              p.date || getBdDateStr(),
+              p.timestamp || '',
+              p.product,
+              p.category || 'Stationery Products',
+              Number(p.qty) || 1,
+              Number(p.unitCost) || 0,
+              Number(p.totalCost) || 0,
+              p.supplier || '',
+              p.notes || '',
+              p.user || 'Staff'
+            ]
+          );
+          merged++;
+        }
+      }
+    }
+
+    if (Array.isArray(cashClosings)) {
+      for (const c of cashClosings) {
+        if (!c?.date) continue;
+        const exists = queryOne<{ id: number }>('SELECT id FROM cash_closings WHERE date = ?', [String(c.date)]);
+        if (!exists) {
+          runSql(
+            `INSERT INTO cash_closings (
+              closing_id, date, closed_at, user_name, opening_cash, prev_shortage_deducted,
+              sales_inflow, due_inflow, total_inflow, expense_outflow, expected_cash,
+              actual_cash, difference, status, notes, denominations_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              c.id || `CC-${c.date}`,
+              c.date,
+              c.closedAt || '',
+              c.user || 'Staff',
+              Number(c.openingCash) || 0,
+              Number(c.prevShortageDeducted) || 0,
+              Number(c.salesInflow) || 0,
+              Number(c.dueInflow) || 0,
+              Number(c.totalInflow) || 0,
+              Number(c.expenseOutflow) || 0,
+              Number(c.expectedCash) || 0,
+              Number(c.actualCash) || 0,
+              Number(c.difference) || 0,
+              c.status || 'Matched',
+              c.notes || '',
+              JSON.stringify(c.denominations || {})
+            ]
+          );
+          merged++;
+        }
+      }
+    }
+
+    saveDatabase();
+    return res.json({ status: 'success', merged });
+  } catch (err: any) {
+    return res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
 
 

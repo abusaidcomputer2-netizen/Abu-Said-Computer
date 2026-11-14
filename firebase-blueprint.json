@@ -1,0 +1,250 @@
+{
+  "entities": {
+    "ShopAdmin": {
+      "title": "ShopAdmin",
+      "description": "Authorized Firebase admin account for Abu Said Computer.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "name": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "ShopUser": {
+      "title": "ShopUser",
+      "description": "Shop staff/admin login account metadata.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "role": { "type": "string", "enum": ["admin", "staff"], "maxLength": 20 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "permissions": { "type": "string", "maxLength": 300 },
+        "ownerEmail": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "username", "role", "ownerEmail", "createdAt", "updatedAt"]
+    },
+    "ShopProduct": {
+      "title": "ShopProduct",
+      "description": "Catalog product or service with stock and pricing.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "rowId": { "type": "number" },
+        "sl": { "type": "number" },
+        "category": { "type": "string", "enum": ["Photocopy", "Online Application", "Stationery Products"], "maxLength": 60 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "price": { "type": "number" },
+        "costPrice": { "type": "number" },
+        "stockQty": { "type": "number" },
+        "lowStockLimit": { "type": "number" },
+        "ownerEmail": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "sl", "category", "name", "price", "ownerEmail", "createdAt", "updatedAt"]
+    },
+    "ShopCustomer": {
+      "title": "ShopCustomer",
+      "description": "Saved shop customer account (primarily due customers or manually saved).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "rowId": { "type": "number" },
+        "sl": { "type": "number" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "address": { "type": "string", "maxLength": 300 },
+        "ownerEmail": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "sl", "name", "ownerEmail", "createdAt", "updatedAt"]
+    },
+    "ShopSale": {
+      "title": "ShopSale",
+      "description": "Sales invoice / memo record with line items.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "rowId": { "type": "number" },
+        "invoiceNo": { "type": "number" },
+        "timestamp": { "type": "string", "maxLength": 80 },
+        "rawDate": { "type": "string", "maxLength": 30 },
+        "date": { "type": "string", "maxLength": 30 },
+        "user": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "customer": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "address": { "type": "string", "maxLength": 300 },
+        "category": { "type": "string", "maxLength": 180 },
+        "desc": { "type": "string", "maxLength": 1000 },
+        "subtotal": { "type": "number" },
+        "discount": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "paid": { "type": "number" },
+        "due": { "type": "number" },
+        "items": { "type": "array" },
+        "ownerEmail": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "invoiceNo", "date", "user", "customer", "grandTotal", "paid", "due", "items", "ownerEmail", "createdAt", "updatedAt"]
+    },
+    "ShopDueRecord": {
+      "title": "ShopDueRecord",
+      "description": "Customer due ledger entry (debit charge or credit payment).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "rowId": { "type": "number" },
+        "date": { "type": "string", "maxLength": 30 },
+        "customer": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "address": { "type": "string", "maxLength": 300 },
+        "type": { "type": "string", "maxLength": 80 },
+        "desc": { "type": "string", "maxLength": 1000 },
+        "due": { "type": "number" },
+        "paid": { "type": "number" },
+        "user": { "type": "string", "maxLength": 120 },
+        "timestamp": { "type": "string", "maxLength": 80 },
+        "ownerEmail": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "date", "customer", "type", "due", "paid", "ownerEmail", "createdAt", "updatedAt"]
+    },
+    "ShopExpense": {
+      "title": "ShopExpense",
+      "description": "Shop operating expense or paper usage log.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "rowId": { "type": "number" },
+        "expId": { "type": "string", "maxLength": 80 },
+        "timestamp": { "type": "string", "maxLength": 80 },
+        "date": { "type": "string", "maxLength": 30 },
+        "category": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "desc": { "type": "string", "maxLength": 1000 },
+        "amount": { "type": "number" },
+        "user": { "type": "string", "maxLength": 120 },
+        "ownerEmail": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "date", "category", "amount", "ownerEmail", "createdAt", "updatedAt"]
+    },
+    "ShopPurchase": {
+      "title": "ShopPurchase",
+      "description": "Stationery / supply stock purchase entry.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "rowId": { "type": "number" },
+        "date": { "type": "string", "maxLength": 30 },
+        "timestamp": { "type": "string", "maxLength": 80 },
+        "product": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "category": { "type": "string", "maxLength": 120 },
+        "qty": { "type": "number" },
+        "unitCost": { "type": "number" },
+        "totalCost": { "type": "number" },
+        "supplier": { "type": "string", "maxLength": 200 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "user": { "type": "string", "maxLength": 120 },
+        "ownerEmail": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "date", "product", "qty", "totalCost", "ownerEmail", "createdAt", "updatedAt"]
+    },
+    "ShopCashClosing": {
+      "title": "ShopCashClosing",
+      "description": "Daily drawer reconciliation and denomination counts.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "rowId": { "type": "number" },
+        "date": { "type": "string", "maxLength": 30 },
+        "closedAt": { "type": "string", "maxLength": 80 },
+        "user": { "type": "string", "maxLength": 120 },
+        "openingCash": { "type": "number" },
+        "prevShortageDeducted": { "type": "number" },
+        "salesInflow": { "type": "number" },
+        "dueInflow": { "type": "number" },
+        "totalInflow": { "type": "number" },
+        "expenseOutflow": { "type": "number" },
+        "expectedCash": { "type": "number" },
+        "actualCash": { "type": "number" },
+        "difference": { "type": "number" },
+        "status": { "type": "string", "enum": ["Matched", "Short", "Excess"], "maxLength": 20 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "denominations": { "type": "object" },
+        "ownerEmail": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "date", "status", "expectedCash", "actualCash", "ownerEmail", "createdAt", "updatedAt"]
+    },
+    "ShopMeta": {
+      "title": "ShopMeta",
+      "description": "Shop cloud backup metadata and linked Google Sheet info.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "linkedSheetId": { "type": "string", "maxLength": 200 },
+        "linkedSheetUrl": { "type": "string", "maxLength": 500 },
+        "lastBackupTime": { "type": "string", "maxLength": 120 },
+        "ownerEmail": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerEmail", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/ShopAdmin" },
+      "description": "Explicitly authorized admin UIDs for shop Firestore access."
+    },
+    "/shop_users/{userDocId}": {
+      "schema": { "$ref": "#/entities/ShopUser" },
+      "description": "Shop staff and admin accounts synchronized across devices."
+    },
+    "/shop_products/{productDocId}": {
+      "schema": { "$ref": "#/entities/ShopProduct" },
+      "description": "Master product and service catalog with live inventory."
+    },
+    "/shop_customers/{customerDocId}": {
+      "schema": { "$ref": "#/entities/ShopCustomer" },
+      "description": "Saved customer directory (due customers and manual entries)."
+    },
+    "/shop_sales/{saleDocId}": {
+      "schema": { "$ref": "#/entities/ShopSale" },
+      "description": "Sales invoices and memos synchronized in real time."
+    },
+    "/shop_due_ledger/{dueDocId}": {
+      "schema": { "$ref": "#/entities/ShopDueRecord" },
+      "description": "Due charges and due payment collection entries."
+    },
+    "/shop_expenses/{expenseDocId}": {
+      "schema": { "$ref": "#/entities/ShopExpense" },
+      "description": "Operating expenses and photocopy paper usage logs."
+    },
+    "/shop_purchases/{purchaseDocId}": {
+      "schema": { "$ref": "#/entities/ShopPurchase" },
+      "description": "Stock purchase register records."
+    },
+    "/shop_cash_closings/{closingDocId}": {
+      "schema": { "$ref": "#/entities/ShopCashClosing" },
+      "description": "Daily cash drawer closings."
+    },
+    "/shop_meta/{metaDocId}": {
+      "schema": { "$ref": "#/entities/ShopMeta" },
+      "description": "Linked Google Sheet and backup timestamps."
+    }
+  }
+}

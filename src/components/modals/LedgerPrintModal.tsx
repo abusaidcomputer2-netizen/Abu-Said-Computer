@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Printer, BookMarked } from 'lucide-react';
 import { CustomerDueSummary, DueRecord } from '../../types';
-import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, formatPeriodHeader } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp, formatPeriodHeader, cleanDueDescription } from '../../utils/helpers';
 import { ReportFooter } from '../ReportFooter';
 
 interface LedgerPrintModalProps {
@@ -223,7 +223,7 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
                   <th className="py-2 px-2 text-center w-10 border-r border-slate-200">SL</th>
                   <th className="py-2 px-3 border-r border-slate-200 w-28">Date</th>
                   {!isSingle && <th className="py-2 px-3 border-r border-slate-200">Customer Info</th>}
-                  <th className="py-2 px-3 border-r border-slate-200 text-center">Particulars</th>
+                  <th className="py-2 px-1.5 border-r border-slate-200 text-center w-16">Particulars</th>
                   <th className="py-2 px-3 border-r border-slate-200">Description</th>
                   <th className="py-2 px-3 text-right border-r border-slate-200 w-24">Due (Dr)</th>
                   <th className="py-2 px-3 text-right border-r border-slate-200 w-24">Paid (Cr)</th>
@@ -251,11 +251,11 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
                           <div className="text-[10px] text-slate-500 font-normal">{r.phone}</div>
                         </td>
                       )}
-                      <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 font-bold text-amber-800 text-center whitespace-nowrap">
+                      <td className="py-2.5 px-1.5 print:py-2 print:px-1 w-16 border-r border-slate-200 font-bold text-amber-800 text-center whitespace-nowrap">
                         {r.id.startsWith('INV-') ? `#${r.id.replace('INV-', '')}` : r.type}
                       </td>
                       <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 text-slate-700 text-xs">
-                        {r.desc || '--'}
+                        {cleanDueDescription(r.desc, r.type || '--')}
                       </td>
                       <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right border-r border-slate-200 text-rose-700 font-bold font-tabular">
                         {r.due > 0 ? formatCurrency(r.due) : '-'}

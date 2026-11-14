@@ -57,6 +57,10 @@ interface LayoutProps {
   onOpenGoogleDriveBackup?: () => void;
   onOpenDataSheet?: () => void;
   onOpenCommissionReport?: () => void;
+  cloudSyncConnected?: boolean;
+  cloudSyncEmail?: string | null;
+  isCloudSyncing?: boolean;
+  onConnectCloudSync?: () => void;
   children: React.ReactNode;
 }
 
@@ -72,6 +76,10 @@ export const Layout: React.FC<LayoutProps> = ({
   onOpenGoogleDriveBackup,
   onOpenDataSheet,
   onOpenCommissionReport,
+  cloudSyncConnected,
+  cloudSyncEmail,
+  isCloudSyncing,
+  onConnectCloudSync,
   children
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -415,6 +423,31 @@ export const Layout: React.FC<LayoutProps> = ({
 
             {/* Header Right Stats, Date & User Actions */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {onConnectCloudSync && (
+                <button
+                  type="button"
+                  onClick={onConnectCloudSync}
+                  title={cloudSyncConnected ? `Cloud Live (${cloudSyncEmail || 'abusaidcomputer2@gmail.com'}) — Click to sync now` : 'Connect Google account for automatic PC & Mobile live sync'}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                    cloudSyncConnected
+                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25'
+                      : 'bg-blue-600/20 border-blue-500/40 text-blue-300 hover:bg-blue-600/30'
+                  }`}
+                >
+                  {cloudSyncConnected ? (
+                    <>
+                      <span className={`w-2 h-2 rounded-full bg-emerald-400 ${isCloudSyncing ? 'animate-ping' : ''}`} />
+                      <span>{isCloudSyncing ? 'Syncing...' : 'Cloud Live'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Cloud className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Sync Devices</span>
+                    </>
+                  )}
+                </button>
+              )}
+
               <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-950 border border-slate-800 rounded-xl text-xs font-semibold text-slate-300">
                 <Calendar className="w-3.5 h-3.5 text-blue-400" />
                 <span>{currentDateDisplay}</span>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Building2, 
   Lock, 
@@ -10,7 +10,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  Cloud
 } from 'lucide-react';
 import { 
   User, 
@@ -52,8 +53,31 @@ import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
 import { GoogleDriveBackupModal } from './components/modals/GoogleDriveBackupModal';
 import { DataSheetModal } from './components/modals/DataSheetModal';
 import { CommissionReportModal } from './components/modals/CommissionReportModal';
-import { initGoogleAuth, setCachedAccessToken } from './services/googleAuth';
+import { initGoogleAuth, setCachedAccessToken, googleSignIn, SHOP_OWNER_EMAIL } from './services/googleAuth';
 import { User as GoogleUser } from 'firebase/auth';
+import {
+  isAuthorizedCloudUser,
+  subscribeToShopCloud,
+  uploadMissingRecordsToCloud,
+  syncSaleToCloud,
+  deleteSaleFromCloud,
+  syncProductToCloud,
+  deleteProductFromCloud,
+  syncCustomerToCloud,
+  deleteCustomerFromCloud,
+  clearAllCustomersInCloud,
+  syncDueRecordToCloud,
+  syncExpenseToCloud,
+  deleteExpenseFromCloud,
+  syncPurchaseToCloud,
+  deletePurchaseFromCloud,
+  syncCashClosingToCloud,
+  syncUserToCloud,
+  deleteUserFromCloud,
+  syncMetaToCloud,
+  dispatchClientAutoBackup,
+  ShopSnapshotPayload
+} from './services/cloudSync';
 import { normalizeCategory, recalculateDueSummaries, getLocalDateStr, isDateTodayOrYesterday, formatCurrency } from './utils/helpers';
 import { 
   FALLBACK_USERS, 
@@ -173,6 +197,32 @@ export default function App() {
   const [linkedSheetId, setLinkedSheetId] = useState('');
   const [linkedSheetUrl, setLinkedSheetUrl] = useState('');
   const [lastBackupTime, setLastBackupTime] = useState('');
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+  const [bootstrapReady, setBootstrapReady] = useState(false);
+
+  const backendUnavailableRef = useRef(false);
+  const serverSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestDataRef = useRef<ShopSnapshotPayload>({
+    users: [],
+    products: [],
+    customers: [],
+    sales: [],
+    dueRecords: [],
+    expenses: [],
+    purchases: [],
+    cashClosings: []
+  });
+
+  latestDataRef.current = {
+    users,
+    products,
+    customers,
+    sales,
+    dueRecords,
+    expenses,
+    purchases,
+    cashClosings
+  };
 
   // Toast Notifications
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -200,8 +250,9 @@ export default function App() {
   };
 
   // Bootstrap data fetch with intelligent merge so state is never lost
-  const fetchBootstrapData = async () => {
+  const fetchBootstrapData = async (): Promise<ShopSnapshotPayload | null> => {
     setIsLoading(true);
+    let snapshotResult: ShopSnapshotPayload | null = null;
     try {
       let isLoaded = false;
       const cached = await loadLocalBootstrapSnapshot(CACHE_VERSION);
@@ -255,6 +306,17 @@ export default function App() {
               sales: mergedSales
             };
             saveLocalBootstrapSnapshot(mergedToSave, CACHE_VERSION);
+            backendUnavailableRef.current = false;
+            snapshotResult = {
+              users: data.users || FALLBACK_USERS,
+              products: mergedProducts,
+              customers: mergedCustomers,
+              sales: mergedSales,
+              dueRecords: data.dueRecords || [],
+              expenses: data.expenses || [],
+              purchases: data.purchases || [],
+              cashClosings: data.cashClosings || []
+            };
             isLoaded = true;
           }
         }
@@ -263,6 +325,7 @@ export default function App() {
       }
 
       if (!isLoaded) {
+        backendUnavailableRef.current = true;
         const source = cached || {};
         const initialUsers = source.users && source.users.length > 0 ? source.users : FALLBACK_USERS;
         const initialProducts = source.products && source.products.length > 0 ? source.products : FALLBACK_PRODUCTS;
@@ -270,6 +333,8 @@ export default function App() {
         const initialSales = (source.records || source.sales || []).length > 0 ? (source.records || source.sales) : FALLBACK_SALES;
         const initialExpenses = Array.isArray(source.expenses) ? source.expenses : FALLBACK_EXPENSES;
         const initialDue = Array.isArray(source.dueRecords) ? source.dueRecords : FALLBACK_DUE_RECORDS;
+        const initialPurchases = Array.isArray(source.purchases) ? source.purchases : FALLBACK_PURCHASES;
+        const initialClosings = Array.isArray(source.cashClosings) ? source.cashClosings : FALLBACK_CASH_CLOSINGS;
 
         const { customerSummaries: calcSummaries, dueTotals: calcTotals } = recalculateDueSummaries(initialDue);
         setUsers(initialUsers);
@@ -280,8 +345,8 @@ export default function App() {
         setDueRecords(initialDue);
         setCustomerSummaries(calcSummaries);
         setDueTotals(calcTotals);
-        setPurchases(Array.isArray(source.purchases) ? source.purchases : FALLBACK_PURCHASES);
-        setCashClosings(Array.isArray(source.cashClosings) ? source.cashClosings : FALLBACK_CASH_CLOSINGS);
+        setPurchases(initialPurchases);
+        setCashClosings(initialClosings);
 
         const toSave = {
           cacheVersion: CACHE_VERSION,
@@ -294,15 +359,77 @@ export default function App() {
           dueRecords: initialDue,
           customerSummaries: calcSummaries,
           dueTotals: calcTotals,
-          purchases: Array.isArray(source.purchases) ? source.purchases : FALLBACK_PURCHASES,
-          cashClosings: Array.isArray(source.cashClosings) ? source.cashClosings : FALLBACK_CASH_CLOSINGS
+          purchases: initialPurchases,
+          cashClosings: initialClosings
         };
         saveLocalBootstrapSnapshot(toSave, CACHE_VERSION);
+        snapshotResult = {
+          users: initialUsers,
+          products: initialProducts,
+          customers: initialCustomers,
+          sales: initialSales,
+          dueRecords: initialDue,
+          expenses: initialExpenses,
+          purchases: initialPurchases,
+          cashClosings: initialClosings
+        };
       }
     } catch (err: any) {
       console.warn('Bootstrap data load warning:', err);
     } finally {
       setIsLoading(false);
+      setBootstrapReady(true);
+    }
+    return snapshotResult;
+  };
+
+  const scheduleServerBackupSync = () => {
+    if (backendUnavailableRef.current) return;
+    if (serverSyncTimerRef.current) clearTimeout(serverSyncTimerRef.current);
+    serverSyncTimerRef.current = setTimeout(async () => {
+      try {
+        const snap = latestDataRef.current;
+        await safeFetchJson('/api/backup/sync-all', {
+          method: 'POST',
+          body: JSON.stringify(snap)
+        });
+      } catch {
+        // Silent — local & Firestore already synced
+      }
+    }, 1200);
+  };
+
+  const handleConnectCloudSync = async () => {
+    try {
+      if (isAuthorizedCloudUser(googleUser)) {
+        setIsCloudSyncing(true);
+        const uploaded = await uploadMissingRecordsToCloud(latestDataRef.current);
+        showToast(
+          uploaded > 0
+            ? `Synced ${uploaded} new record(s) to cloud backup!`
+            : 'Cloud Live Sync & Auto-Backup is active!',
+          'success'
+        );
+        return;
+      }
+
+      const res = await googleSignIn();
+      if (!res?.user) return;
+      setGoogleUser(res.user);
+      setGoogleToken(res.accessToken);
+      setCachedAccessToken(res.accessToken);
+
+      if (!isAuthorizedCloudUser(res.user)) {
+        showToast(`অটো সিঙ্ক এর জন্য অনুমোদিত ইমেইল (${SHOP_OWNER_EMAIL}) দিয়ে সাইন ইন করুন।`, 'warning');
+      } else {
+        showToast('Cloud Live Sync (PC ↔ Mobile) connected!', 'success');
+      }
+    } catch (err: any) {
+      if (err?.code !== 'auth/popup-closed-by-user') {
+        showToast(err?.message || 'Google sign-in failed', 'error');
+      }
+    } finally {
+      setIsCloudSyncing(false);
     }
   };
 
@@ -342,6 +469,93 @@ export default function App() {
       handleFilterRunningMonth();
     }
   }, [currentUser]);
+
+  // Real-time Cross-Device Cloud Sync & Non-Destructive Initial Backup
+  useEffect(() => {
+    if (!bootstrapReady || !isAuthorizedCloudUser(googleUser)) return;
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
+
+    const startSync = async () => {
+      setIsCloudSyncing(true);
+      try {
+        await uploadMissingRecordsToCloud(latestDataRef.current);
+        if (cancelled) return;
+        unsubscribe = subscribeToShopCloud({
+          onUsers: items => {
+            setUsers(items);
+            updateCachedBootstrap(prev => ({ ...prev, users: items }));
+          },
+          onProducts: items => {
+            setProducts(items);
+            updateCachedBootstrap(prev => ({ ...prev, products: items }));
+            scheduleServerBackupSync();
+          },
+          onCustomers: items => {
+            setCustomers(items);
+            updateCachedBootstrap(prev => ({ ...prev, customers: items }));
+            scheduleServerBackupSync();
+          },
+          onSales: items => {
+            setSales(items);
+            updateCachedBootstrap(prev => ({ ...prev, records: items, sales: items }));
+            scheduleServerBackupSync();
+          },
+          onDueRecords: items => {
+            const { customerSummaries: calcSummaries, dueTotals: calcTotals } = recalculateDueSummaries(items);
+            setDueRecords(items);
+            setCustomerSummaries(calcSummaries);
+            setDueTotals(calcTotals);
+            updateCachedBootstrap(prev => ({
+              ...prev,
+              dueRecords: items,
+              customerSummaries: calcSummaries,
+              dueTotals: calcTotals
+            }));
+            scheduleServerBackupSync();
+          },
+          onExpenses: items => {
+            setExpenses(items);
+            updateCachedBootstrap(prev => ({ ...prev, expenses: items }));
+            scheduleServerBackupSync();
+          },
+          onPurchases: items => {
+            setPurchases(items);
+            updateCachedBootstrap(prev => ({ ...prev, purchases: items }));
+            scheduleServerBackupSync();
+          },
+          onCashClosings: items => {
+            setCashClosings(items);
+            updateCachedBootstrap(prev => ({ ...prev, cashClosings: items }));
+            scheduleServerBackupSync();
+          },
+          onMeta: meta => {
+            if (meta.linkedSheetId) setLinkedSheetId(meta.linkedSheetId);
+            if (meta.linkedSheetUrl) setLinkedSheetUrl(meta.linkedSheetUrl);
+            if (meta.lastBackupTime) setLastBackupTime(meta.lastBackupTime);
+          },
+          onError: err => {
+            console.warn('Cloud sync listener warning:', err.message);
+          }
+        });
+      } catch (err) {
+        console.warn('Initial cloud sync warning:', err);
+      } finally {
+        if (!cancelled) setIsCloudSyncing(false);
+      }
+    };
+
+    void startSync();
+
+    return () => {
+      cancelled = true;
+      if (unsubscribe) unsubscribe();
+      if (serverSyncTimerRef.current) {
+        clearTimeout(serverSyncTimerRef.current);
+        serverSyncTimerRef.current = null;
+      }
+    };
+  }, [bootstrapReady, googleUser?.email, googleUser?.emailVerified]);
 
   // Handle Login with exact passwords
   const handleLogin = async (e: React.FormEvent) => {
@@ -698,13 +912,12 @@ export default function App() {
         ? sales.map(s => s.id === payload.id ? finalRecord : s)
         : [finalRecord, ...sales];
 
-      // Sync Due Ledger locally
+      // Sync Due Ledger locally (no Memo # prefix in Description)
       let updatedDue = [...dueRecords];
       const dueId = `INV-${finalRecord.invoiceNo}`;
       const existingIdx = updatedDue.findIndex(d => d.id === dueId || (d.desc || '').includes(`Memo #${finalRecord.invoiceNo}`));
-      const dueDesc = finalRecord.desc
-        ? `Memo #${finalRecord.invoiceNo} - ${finalRecord.category} [${finalRecord.desc}]`
-        : `Memo #${finalRecord.invoiceNo} - ${finalRecord.category}`;
+      const dueDesc = finalRecord.desc ? finalRecord.desc.trim() : (finalRecord.category || 'Sales Memo');
+      let changedDueEntry: DueRecord | null = null;
 
       if ((finalRecord.due || 0) > 0) {
         const dueEntry: DueRecord = {
@@ -721,45 +934,48 @@ export default function App() {
           user: finalRecord.user,
           timestamp: finalRecord.timestamp
         };
+        changedDueEntry = dueEntry;
         if (existingIdx >= 0) updatedDue[existingIdx] = dueEntry;
         else updatedDue = [dueEntry, ...updatedDue];
       } else if (existingIdx >= 0) {
         const prevDesc = updatedDue[existingIdx].desc || '';
-        updatedDue[existingIdx] = {
+        const paidEntry: DueRecord = {
           ...updatedDue[existingIdx],
           due: 0,
           desc: prevDesc.includes('[Paid in Full]') ? prevDesc : `${prevDesc} [Paid in Full]`.trim()
         };
+        changedDueEntry = paidEntry;
+        updatedDue[existingIdx] = paidEntry;
       }
 
       const { customerSummaries: newSummaries, dueTotals: newTotals } = recalculateDueSummaries(updatedDue);
 
-      // Sync Customers directory locally if new customer or missing contact info
+      // Auto-save Customer Directory ONLY for Due customers (due > 0)
       let updatedCustomers = customers;
+      let savedDueCustomer: Customer | null = null;
       const finalName = (finalRecord.customer || '').trim();
-      if (!isCashCust && finalName && (cleanPhone || finalCustAddress)) {
+      if ((finalRecord.due || 0) > 0 && !isCashCust && finalName) {
         if (matchedCust) {
           const nextPhone = matchedCust.phone || cleanPhone;
           const nextAddr = matchedCust.address || finalCustAddress;
           if (nextPhone !== matchedCust.phone || nextAddr !== matchedCust.address) {
-            updatedCustomers = customers.map(c =>
-              c.id === matchedCust.id ? { ...c, phone: nextPhone, address: nextAddr } : c
-            );
+            const editedCust: Customer = { ...matchedCust, phone: nextPhone, address: nextAddr };
+            savedDueCustomer = editedCust;
+            updatedCustomers = customers.map(c => c.id === matchedCust.id ? editedCust : c);
           }
         } else {
           const nextSl = customers.length > 0 ? Math.max(...customers.map(c => c.sl || 0)) + 1 : 1;
           const newCustId = Date.now() + 1;
-          updatedCustomers = [
-            ...customers,
-            {
-              id: newCustId,
-              rowId: newCustId,
-              sl: nextSl,
-              name: finalName,
-              phone: cleanPhone,
-              address: finalCustAddress
-            }
-          ];
+          const newCust: Customer = {
+            id: newCustId,
+            rowId: newCustId,
+            sl: nextSl,
+            name: finalName,
+            phone: cleanPhone,
+            address: finalCustAddress
+          };
+          savedDueCustomer = newCust;
+          updatedCustomers = [...customers, newCust];
         }
       }
 
@@ -782,8 +998,38 @@ export default function App() {
         dueTotals: newTotals,
         customers: updatedCustomers
       }));
+
+      // Real-time cloud sync & Apps Script backup
+      void syncSaleToCloud(finalRecord);
+      updatedProducts.forEach((p, idx) => {
+        if (products[idx] && p.stockQty !== products[idx].stockQty) {
+          void syncProductToCloud(p);
+        }
+      });
+      if (changedDueEntry) void syncDueRecordToCloud(changedDueEntry);
+      if (savedDueCustomer) void syncCustomerToCloud(savedDueCustomer);
+      void dispatchClientAutoBackup({ action: isEdit ? 'update_sale' : 'add_sale', ...finalRecord });
     } else {
-      await fetchBootstrapData();
+      const snap = await fetchBootstrapData();
+      void syncSaleToCloud(finalRecord);
+      if (snap) {
+        const itemNames = new Set((finalRecord.items || []).map(it => (it.name || '').trim().toLowerCase()));
+        snap.products.forEach(p => {
+          if (itemNames.has(p.name.trim().toLowerCase())) {
+            void syncProductToCloud(p);
+          }
+        });
+        const dueMatch = snap.dueRecords.find(d => d.id === `INV-${finalRecord.invoiceNo}`);
+        if (dueMatch) void syncDueRecordToCloud(dueMatch);
+        if ((finalRecord.due || 0) > 0 && !isCashCust) {
+          const custMatch = (cleanPhone ? snap.customers.find(c => (c.phone || '').trim() === cleanPhone) : null)
+            || snap.customers.find(c => c.name.trim().toLowerCase() === (finalRecord.customer || '').trim().toLowerCase());
+          if (custMatch) void syncCustomerToCloud(custMatch);
+        }
+      }
+      if (isEdit) {
+        void dispatchClientAutoBackup({ action: 'update_sale', ...finalRecord });
+      }
     }
 
     setEditingSale(null);
@@ -793,6 +1039,7 @@ export default function App() {
   };
 
   const handleDeleteSale = async (saleId: number) => {
+    const targetBefore = sales.find(s => s.id === saleId);
     setDeleteMemoSale(null);
     setActiveTab('sales');
 
@@ -805,7 +1052,7 @@ export default function App() {
       }
 
       if (backendUnavailable) {
-        const target = sales.find(s => s.id === saleId);
+        const target = targetBefore;
         if (!target) {
           showToast('Invoice not found', 'error');
           return;
@@ -833,14 +1080,16 @@ export default function App() {
         });
 
         const updatedSales = sales.filter(s => s.id !== saleId);
+        let updatedDueEntry: DueRecord | null = null;
         const updatedDue = dueRecords.map(d => {
           if (d.id === `INV-${target.invoiceNo}` || (d.desc || '').includes(`Memo #${target.invoiceNo}`)) {
             const prevDesc = d.desc || '';
-            return {
+            updatedDueEntry = {
               ...d,
               due: 0,
               desc: prevDesc.includes('[Memo Deleted / Cancelled]') ? prevDesc : `${prevDesc} [Memo Deleted / Cancelled]`.trim()
             };
+            return updatedDueEntry;
           }
           return d;
         });
@@ -860,11 +1109,30 @@ export default function App() {
           customerSummaries: newSummaries,
           dueTotals: newTotals
         }));
+
+        void deleteSaleFromCloud(target.invoiceNo);
+        updatedProducts.forEach((p, idx) => {
+          if (products[idx] && p.stockQty !== products[idx].stockQty) {
+            void syncProductToCloud(p);
+          }
+        });
+        if (updatedDueEntry) void syncDueRecordToCloud(updatedDueEntry);
         showToast(`Invoice #${target.invoiceNo} deleted and stock restored!`, 'success');
       } else {
         setSales(prev => prev.filter(s => s.id !== saleId));
         showToast(data?.message || 'Memo deleted', 'success');
-        await fetchBootstrapData();
+        const snap = await fetchBootstrapData();
+        if (targetBefore) {
+          void deleteSaleFromCloud(targetBefore.invoiceNo);
+          if (snap) {
+            const itemNames = new Set((targetBefore.items || []).map(it => (it.name || '').trim().toLowerCase()));
+            snap.products.forEach(p => {
+              if (itemNames.has(p.name.trim().toLowerCase())) void syncProductToCloud(p);
+            });
+            const dueMatch = snap.dueRecords.find(d => d.id === `INV-${targetBefore.invoiceNo}`);
+            if (dueMatch) void syncDueRecordToCloud(dueMatch);
+          }
+        }
       }
     } catch {
       showToast('Failed to delete memo', 'error');
@@ -910,8 +1178,26 @@ export default function App() {
         customerSummaries: newSummaries,
         dueTotals: newTotals
       }));
+      void syncDueRecordToCloud(newDueRec);
+      void dispatchClientAutoBackup({
+        action: 'add_payment',
+        entryId: newDueRec.id,
+        date: newDueRec.date,
+        customer: newDueRec.customer,
+        phone: newDueRec.phone,
+        desc: newDueRec.desc,
+        amount: newDueRec.paid,
+        user: newDueRec.user,
+        timestamp: newDueRec.timestamp
+      });
     } else {
-      await fetchBootstrapData();
+      const snap = await fetchBootstrapData();
+      if (snap && snap.dueRecords.length > 0) {
+        const latestPay = snap.dueRecords.find(
+          d => d.type === 'Payment Received' && d.customer.toLowerCase() === String(payload.customer || '').trim().toLowerCase()
+        );
+        if (latestPay) void syncDueRecordToCloud(latestPay);
+      }
     }
     showToast(data?.message || 'Payment collected successfully!', 'success');
   };
@@ -934,6 +1220,7 @@ export default function App() {
       let grandTotal = 0;
       const summaries: string[] = [];
       let nextProducts = [...products];
+      const touchedProducts: Product[] = [];
 
       const offlineRows: PurchaseRecord[] = payload.items.map((it: any, idx: number) => {
         const pName = (it.product || '').trim();
@@ -947,14 +1234,16 @@ export default function App() {
         const pIdx = nextProducts.findIndex(p => p.name.trim().toLowerCase() === pName.toLowerCase());
         if (pIdx >= 0) {
           const cur = nextProducts[pIdx];
-          nextProducts[pIdx] = {
+          const updatedProd = {
             ...cur,
             stockQty: (cur.stockQty || 0) + qVal,
             costPrice: uCost > 0 ? uCost : cur.costPrice
           };
+          nextProducts[pIdx] = updatedProd;
+          touchedProducts.push(updatedProd);
         } else {
           const maxSl = nextProducts.filter(p => p.category === cat).reduce((m, p) => Math.max(m, p.sl || 0), 0);
-          nextProducts.push({
+          const createdProd: Product = {
             id: Date.now() + idx + 1000,
             rowId: Date.now() + idx + 1000,
             sl: maxSl + 1,
@@ -964,7 +1253,9 @@ export default function App() {
             costPrice: uCost,
             stockQty: qVal,
             lowStockLimit: 5
-          });
+          };
+          nextProducts.push(createdProd);
+          touchedProducts.push(createdProd);
         }
 
         return {
@@ -1008,8 +1299,23 @@ export default function App() {
         purchases: updatedPurchases,
         expenses: updatedExpenses
       }));
+
+      offlineRows.forEach(r => { void syncPurchaseToCloud(r); });
+      touchedProducts.forEach(p => { void syncProductToCloud(p); });
+      void syncExpenseToCloud(newExpense);
+      void dispatchClientAutoBackup({ action: 'add_expense', ...newExpense });
     } else {
-      await fetchBootstrapData();
+      const snap = await fetchBootstrapData();
+      if (snap) {
+        const boughtNames = new Set((payload.items || []).map((it: any) => String(it.product || '').trim().toLowerCase()));
+        snap.products.forEach(p => {
+          if (boughtNames.has(p.name.trim().toLowerCase())) void syncProductToCloud(p);
+        });
+        snap.purchases.slice(0, (payload.items || []).length || 1).forEach(pur => {
+          void syncPurchaseToCloud(pur);
+        });
+        if (snap.expenses[0]) void syncExpenseToCloud(snap.expenses[0]);
+      }
     }
 
     showToast(data?.message || 'Purchases saved and stock updated!', 'success');
@@ -1017,6 +1323,7 @@ export default function App() {
   };
 
   const handleDeletePurchase = async (id: string | number) => {
+    const targetBefore = purchases.find(p => String(p.rowId) === String(id) || String(p.id) === String(id));
     try {
       const { ok, data, error, backendUnavailable } = await safeFetchJson<any>(`/api/purchases/${id}`, { method: 'DELETE' });
       if (data?.status === 'error' || (!ok && !backendUnavailable)) {
@@ -1026,7 +1333,7 @@ export default function App() {
       }
 
       if (backendUnavailable) {
-        const target = purchases.find(p => String(p.rowId) === String(id) || String(p.id) === String(id));
+        const target = targetBefore;
         if (!target) {
           showToast('Purchase record not found', 'error');
           return;
@@ -1049,11 +1356,22 @@ export default function App() {
           products: updatedProducts,
           purchases: updatedPurchases
         }));
+        void deletePurchaseFromCloud(String(target.id));
+        updatedProducts.forEach((p, idx) => {
+          if (products[idx] && p.stockQty !== products[idx].stockQty) void syncProductToCloud(p);
+        });
         showToast('Purchase deleted and stock reversed!', 'success');
       } else {
         setPurchases(prev => prev.filter(p => String(p.rowId) !== String(id) && String(p.id) !== String(id)));
         showToast(data?.message || 'Purchase deleted and stock reversed!', 'success');
-        await fetchBootstrapData();
+        const snap = await fetchBootstrapData();
+        if (targetBefore) {
+          void deletePurchaseFromCloud(String(targetBefore.id));
+          if (snap) {
+            const pMatch = snap.products.find(p => p.name.trim().toLowerCase() === (targetBefore.product || '').trim().toLowerCase());
+            if (pMatch) void syncProductToCloud(pMatch);
+          }
+        }
       }
     } catch {
       showToast('Failed to delete purchase', 'error');
@@ -1107,8 +1425,17 @@ export default function App() {
         products: updatedProducts,
         expenses: updatedExpenses
       }));
+      updatedProducts.forEach((p, idx) => {
+        if (products[idx] && p.stockQty !== products[idx].stockQty) void syncProductToCloud(p);
+      });
+      void syncExpenseToCloud(newExp);
     } else {
-      await fetchBootstrapData();
+      const snap = await fetchBootstrapData();
+      if (snap) {
+        const pMatch = snap.products.find(p => p.name.trim().toLowerCase() === (payload.productName || '').trim().toLowerCase());
+        if (pMatch) void syncProductToCloud(pMatch);
+        if (snap.expenses[0]) void syncExpenseToCloud(snap.expenses[0]);
+      }
     }
 
     showToast(data?.message || 'Paper usage recorded and deducted from stock!', 'success');
@@ -1161,8 +1488,17 @@ export default function App() {
       const updatedExpenses = isEdit ? expenses.map(e => e.id === expId ? newExp : e) : [newExp, ...expenses];
       setExpenses(updatedExpenses);
       updateCachedBootstrap(prev => ({ ...prev, expenses: updatedExpenses }));
+      void syncExpenseToCloud(newExp);
+      void dispatchClientAutoBackup({ action: isEdit ? 'update_expense' : 'add_expense', ...newExp });
     } else {
-      await fetchBootstrapData();
+      const snap = await fetchBootstrapData();
+      if (snap) {
+        const expMatch = isEdit ? snap.expenses.find(e => e.id === payload.id) : snap.expenses[0];
+        if (expMatch) {
+          void syncExpenseToCloud(expMatch);
+          if (isEdit) void dispatchClientAutoBackup({ action: 'update_expense', ...expMatch });
+        }
+      }
     }
 
     showToast(data?.message || (isEdit ? 'Expense updated!' : 'Expense recorded!'), 'success');
@@ -1191,10 +1527,12 @@ export default function App() {
         const updatedExpenses = expenses.filter(e => e.id !== id);
         setExpenses(updatedExpenses);
         updateCachedBootstrap(prev => ({ ...prev, expenses: updatedExpenses }));
+        void deleteExpenseFromCloud(id);
         showToast('Expense deleted', 'success');
       } else {
         setExpenses(prev => prev.filter(e => e.id !== id));
         showToast(data?.message || 'Expense deleted', 'success');
+        void deleteExpenseFromCloud(id);
         await fetchBootstrapData();
       }
     } catch {
@@ -1240,8 +1578,12 @@ export default function App() {
         : [newRec, ...cashClosings];
       setCashClosings(updatedClosings);
       updateCachedBootstrap(prev => ({ ...prev, cashClosings: updatedClosings }));
+      void syncCashClosingToCloud(newRec);
+      void dispatchClientAutoBackup({ action: 'add_cash_closing', ...newRec });
     } else {
-      await fetchBootstrapData();
+      const snap = await fetchBootstrapData();
+      const ccMatch = snap?.cashClosings.find(c => c.date === payload.date);
+      if (ccMatch) void syncCashClosingToCloud(ccMatch);
     }
 
     showToast(data?.message || `Daily cash closing saved for ${payload.date}!`, 'success');
@@ -1309,8 +1651,11 @@ export default function App() {
         : [...customers, custRecord];
       setCustomers(updatedCustomers);
       updateCachedBootstrap(prev => ({ ...prev, customers: updatedCustomers }));
+      void syncCustomerToCloud(custRecord);
+      void dispatchClientAutoBackup({ action: isEdit ? 'update_customer' : 'add_customer', ...custRecord });
     } else {
       await fetchBootstrapData();
+      void syncCustomerToCloud(custRecord);
     }
 
     showToast(data?.message || (isEdit ? 'Customer updated!' : 'Customer saved!'), 'success');
@@ -1327,6 +1672,7 @@ export default function App() {
       const updatedCustomers = customers.filter(c => String(c.id) !== String(id));
       setCustomers(updatedCustomers);
       updateCachedBootstrap(prev => ({ ...prev, customers: updatedCustomers }));
+      void deleteCustomerFromCloud(id);
       showToast(data?.message || 'Customer deleted permanently', 'success');
     } catch {
       showToast('Failed to delete customer', 'error');
@@ -1334,6 +1680,7 @@ export default function App() {
   };
 
   const handleClearAllCustomers = async () => {
+    const prevIds = customers.map(c => c.id);
     try {
       const { ok, data, error, backendUnavailable } = await safeFetchJson<any>('/api/customers', { method: 'DELETE' });
       if (data?.status === 'error' || (!ok && !backendUnavailable)) {
@@ -1341,6 +1688,7 @@ export default function App() {
       } else {
         setCustomers([]);
         updateCachedBootstrap(prev => ({ ...prev, customers: [] }));
+        void clearAllCustomersInCloud(prevIds);
         showToast(data?.message || 'All customers permanently deleted', 'success');
       }
       if (!backendUnavailable) await fetchBootstrapData();
@@ -1394,8 +1742,16 @@ export default function App() {
         : [...products, prodRecord];
       setProducts(updatedProducts);
       updateCachedBootstrap(prev => ({ ...prev, products: updatedProducts }));
+      void syncProductToCloud(prodRecord);
+      void dispatchClientAutoBackup({ action: isEdit ? 'update_product' : 'add_product', ...prodRecord });
     } else {
-      await fetchBootstrapData();
+      const snap = await fetchBootstrapData();
+      if (data?.product) {
+        void syncProductToCloud(data.product);
+      } else if (snap) {
+        const match = snap.products.find(p => p.name.trim().toLowerCase() === String(payload.name || '').trim().toLowerCase());
+        if (match) void syncProductToCloud(match);
+      }
     }
 
     showToast(data?.message || (isEdit ? 'Product updated!' : 'Product saved!'), 'success');
@@ -1412,6 +1768,7 @@ export default function App() {
       const updatedProducts = products.filter(p => String(p.id) !== String(id));
       setProducts(updatedProducts);
       updateCachedBootstrap(prev => ({ ...prev, products: updatedProducts }));
+      void deleteProductFromCloud(id);
       showToast(data?.message || 'Product deleted successfully', 'success');
     } catch {
       showToast('Failed to delete product', 'error');
@@ -1452,6 +1809,7 @@ export default function App() {
       const updatedUsers = isEdit ? users.map(u => u.id === payload.id ? userObj : u) : [...users, userObj];
       setUsers(updatedUsers);
       updateCachedBootstrap(prev => ({ ...prev, users: updatedUsers }));
+      void syncUserToCloud(userObj);
     }
 
     if (payload.username && payload.password && payload.password.trim()) {
@@ -1466,7 +1824,11 @@ export default function App() {
     showToast(data?.message || (isEdit ? 'User updated!' : 'User created!'), 'success');
     setActiveTab('sales');
     if (!backendUnavailable) {
-      await fetchBootstrapData();
+      const snap = await fetchBootstrapData();
+      if (snap) {
+        const uMatch = snap.users.find(u => u.username.trim().toLowerCase() === String(payload.username || '').trim().toLowerCase());
+        if (uMatch) void syncUserToCloud(uMatch);
+      }
     }
   };
 
@@ -1479,6 +1841,7 @@ export default function App() {
     const updatedUsers = users.filter(u => u.id !== id);
     setUsers(updatedUsers);
     updateCachedBootstrap(prev => ({ ...prev, users: updatedUsers }));
+    void deleteUserFromCloud(id);
     showToast(data?.message || 'User deleted', 'success');
     setActiveTab('sales');
     if (!backendUnavailable) {
@@ -1586,9 +1949,27 @@ export default function App() {
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            <div className="pt-3 border-t border-slate-800 text-center flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-semibold">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Encrypted local session • Fast SQL database</span>
+            <div className="pt-3 border-t border-slate-800 space-y-2.5 text-center">
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-semibold">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>Encrypted session • Cloud Auto-Sync & Backup</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleConnectCloudSync}
+                className={`w-full py-2 px-3 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-2 cursor-pointer ${
+                  isAuthorizedCloudUser(googleUser)
+                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+                    : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-blue-300'
+                }`}
+              >
+                <Cloud className="w-3.5 h-3.5" />
+                <span>
+                  {isAuthorizedCloudUser(googleUser)
+                    ? `Cloud Sync Live (${googleUser?.email})`
+                    : 'Connect Cloud Sync (PC ↔ Mobile)'}
+                </span>
+              </button>
             </div>
           </form>
         </div>
@@ -1610,6 +1991,10 @@ export default function App() {
       onOpenGoogleDriveBackup={() => setDriveBackupOpen(true)}
       onOpenDataSheet={() => setDataSheetOpen(true)}
       onOpenCommissionReport={() => setCommissionReportOpen(true)}
+      cloudSyncConnected={isAuthorizedCloudUser(googleUser)}
+      cloudSyncEmail={googleUser?.email}
+      isCloudSyncing={isCloudSyncing}
+      onConnectCloudSync={handleConnectCloudSync}
     >
       {/* Toast Notification Container */}
       <div className="fixed top-6 right-6 z-[999999] flex flex-col gap-2 pointer-events-none">
@@ -2085,6 +2470,7 @@ export default function App() {
           setLinkedSheetId(sheetId);
           setLinkedSheetUrl(sheetUrl);
           setLastBackupTime(backupTime);
+          void syncMetaToCloud({ linkedSheetId: sheetId, linkedSheetUrl: sheetUrl, lastBackupTime: backupTime });
         }}
         showToast={showToast}
       />

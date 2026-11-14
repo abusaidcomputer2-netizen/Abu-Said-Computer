@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, BookMarked, Printer, HandCoins, Check, FileText, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { CustomerDueSummary, DueRecord } from '../../types';
-import { formatCurrency, formatDateDisplay, getLocalDateStr } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, getLocalDateStr, cleanDueDescription } from '../../utils/helpers';
 
 interface DueLedgerModalProps {
   dueRecords: DueRecord[];
@@ -276,7 +276,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
               <tr>
                 <th className="p-3">Date</th>
                 <th className="p-3">Customer & Contact</th>
-                <th className="p-3">Particulars / Memo</th>
+                <th className="p-2 w-20 text-center">Particulars</th>
                 <th className="p-3">Description</th>
                 <th className="p-3 text-right">Due (Dr)</th>
                 <th className="p-3 text-right">Paid (Cr)</th>
@@ -313,10 +313,10 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                         </button>
                       </div>
                     </td>
-                    <td className="p-3 text-amber-300 font-bold whitespace-nowrap">
+                    <td className="p-2 w-20 text-center text-amber-300 font-bold whitespace-nowrap">
                       {r.id.startsWith('INV-') ? `#${r.id.replace('INV-', '')}` : r.type}
                     </td>
-                    <td className="p-3 text-slate-300 text-xs">{r.desc || '--'}</td>
+                    <td className="p-3 text-slate-300 text-xs">{cleanDueDescription(r.desc, r.type || '--')}</td>
                     <td className="p-3 text-right font-black text-rose-400 font-tabular">
                       {r.due > 0 ? formatCurrency(r.due) : '-'}
                     </td>
@@ -378,7 +378,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
 
             <div className="sm:col-span-2">
               <label className="block text-[11px] font-bold text-emerald-400 mb-1">
-                Amount (Tk ) *
+                Amount (Tk) *
               </label>
               <input
                 type="number"

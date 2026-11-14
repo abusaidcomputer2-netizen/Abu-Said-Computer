@@ -1,0 +1,409 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Reusable Hardened Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedEmail() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedOwner() {
+      return isVerifiedEmail() && request.auth.token.email == 'abusaidcomputer2@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedOwner() ||
+        (isVerifiedEmail() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isShopOwnerEmail(val) {
+      return val is string && val == 'abusaidcomputer2@gmail.com';
+    }
+
+    function isNum(val) {
+      return val is int || val is float;
+    }
+
+    function isReqStr(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isOptStr(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    // --- Entity Validation Blueprints (Anti-Update-Gap) ---
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'name', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        isReqStr(data.email, 3, 200) &&
+        (!('name' in data) || isOptStr(data.name, 120)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidShopUser(data) {
+      return data.keys().hasAll(['id', 'username', 'role', 'phone', 'permissions', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'username', 'role', 'phone', 'permissions', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        isNum(data.id) &&
+        isReqStr(data.username, 1, 120) &&
+        data.role in ['admin', 'staff'] &&
+        isOptStr(data.phone, 40) &&
+        isOptStr(data.permissions, 300) &&
+        isShopOwnerEmail(data.ownerEmail) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidShopProduct(data) {
+      return data.keys().hasAll(['id', 'rowId', 'sl', 'category', 'name', 'price', 'costPrice', 'stockQty', 'lowStockLimit', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'rowId', 'sl', 'category', 'name', 'price', 'costPrice', 'stockQty', 'lowStockLimit', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        isNum(data.id) &&
+        isNum(data.rowId) &&
+        isNum(data.sl) && data.sl >= 0 &&
+        data.category in ['Photocopy', 'Online Application', 'Stationery Products'] &&
+        isReqStr(data.name, 1, 200) &&
+        isNum(data.price) && data.price >= 0 &&
+        isNum(data.costPrice) && data.costPrice >= 0 &&
+        (data.stockQty == null || (isNum(data.stockQty) && data.stockQty >= 0)) &&
+        isNum(data.lowStockLimit) && data.lowStockLimit >= 0 &&
+        isShopOwnerEmail(data.ownerEmail) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidShopCustomer(data) {
+      return data.keys().hasAll(['id', 'rowId', 'sl', 'name', 'phone', 'address', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'rowId', 'sl', 'name', 'phone', 'address', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        isNum(data.id) &&
+        isNum(data.rowId) &&
+        isNum(data.sl) && data.sl >= 0 &&
+        isReqStr(data.name, 1, 200) &&
+        isOptStr(data.phone, 40) &&
+        isOptStr(data.address, 300) &&
+        isShopOwnerEmail(data.ownerEmail) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidShopSale(data) {
+      return data.keys().hasAll([
+          'id', 'rowId', 'invoiceNo', 'timestamp', 'rawDate', 'date',
+          'user', 'customer', 'phone', 'address', 'category', 'desc',
+          'subtotal', 'discount', 'grandTotal', 'paid', 'due', 'items',
+          'ownerEmail', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'rowId', 'invoiceNo', 'timestamp', 'rawDate', 'date',
+          'user', 'customer', 'phone', 'address', 'category', 'desc',
+          'subtotal', 'discount', 'grandTotal', 'paid', 'due', 'items',
+          'ownerEmail', 'createdAt', 'updatedAt'
+        ]) &&
+        isNum(data.id) &&
+        isNum(data.rowId) &&
+        isNum(data.invoiceNo) && data.invoiceNo >= 1 &&
+        isOptStr(data.timestamp, 80) &&
+        isReqStr(data.rawDate, 8, 30) &&
+        isReqStr(data.date, 8, 30) &&
+        isReqStr(data.user, 1, 120) &&
+        isReqStr(data.customer, 1, 200) &&
+        isOptStr(data.phone, 40) &&
+        isOptStr(data.address, 300) &&
+        isOptStr(data.category, 180) &&
+        isOptStr(data.desc, 1000) &&
+        isNum(data.subtotal) && data.subtotal >= 0 &&
+        isNum(data.discount) && data.discount >= 0 &&
+        isNum(data.grandTotal) && data.grandTotal >= 0 &&
+        isNum(data.paid) && data.paid >= 0 && data.paid <= data.grandTotal + 0.01 &&
+        isNum(data.due) && data.due >= 0 && data.due <= data.grandTotal + 0.01 &&
+        data.items is list && data.items.size() >= 1 && data.items.size() <= 100 && data.items[0] is map &&
+        isShopOwnerEmail(data.ownerEmail) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidShopDueRecord(data) {
+      return data.keys().hasAll(['id', 'rowId', 'date', 'customer', 'phone', 'address', 'type', 'desc', 'due', 'paid', 'user', 'timestamp', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'rowId', 'date', 'customer', 'phone', 'address', 'type', 'desc', 'due', 'paid', 'user', 'timestamp', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isNum(data.rowId) &&
+        isReqStr(data.date, 8, 30) &&
+        isReqStr(data.customer, 1, 200) &&
+        isOptStr(data.phone, 40) &&
+        isOptStr(data.address, 300) &&
+        isReqStr(data.type, 1, 80) &&
+        isOptStr(data.desc, 1000) &&
+        isNum(data.due) && data.due >= 0 &&
+        isNum(data.paid) && data.paid >= 0 &&
+        isOptStr(data.user, 120) &&
+        isOptStr(data.timestamp, 80) &&
+        isShopOwnerEmail(data.ownerEmail) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidShopExpense(data) {
+      return data.keys().hasAll(['id', 'rowId', 'expId', 'timestamp', 'date', 'category', 'desc', 'amount', 'user', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'rowId', 'expId', 'timestamp', 'date', 'category', 'desc', 'amount', 'user', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        isNum(data.id) &&
+        isNum(data.rowId) &&
+        isOptStr(data.expId, 80) &&
+        isOptStr(data.timestamp, 80) &&
+        isReqStr(data.date, 8, 30) &&
+        isReqStr(data.category, 1, 120) &&
+        isOptStr(data.desc, 1000) &&
+        isNum(data.amount) && data.amount >= 0 &&
+        isOptStr(data.user, 120) &&
+        isShopOwnerEmail(data.ownerEmail) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidShopPurchase(data) {
+      return data.keys().hasAll(['id', 'rowId', 'date', 'timestamp', 'product', 'category', 'qty', 'unitCost', 'totalCost', 'supplier', 'notes', 'user', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'rowId', 'date', 'timestamp', 'product', 'category', 'qty', 'unitCost', 'totalCost', 'supplier', 'notes', 'user', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isNum(data.rowId) &&
+        isReqStr(data.date, 8, 30) &&
+        isOptStr(data.timestamp, 80) &&
+        isReqStr(data.product, 1, 200) &&
+        isReqStr(data.category, 1, 120) &&
+        isNum(data.qty) && data.qty > 0 &&
+        isNum(data.unitCost) && data.unitCost >= 0 &&
+        isNum(data.totalCost) && data.totalCost >= 0 &&
+        isOptStr(data.supplier, 200) &&
+        isOptStr(data.notes, 500) &&
+        isOptStr(data.user, 120) &&
+        isShopOwnerEmail(data.ownerEmail) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidShopCashClosing(data) {
+      return data.keys().hasAll([
+          'id', 'rowId', 'date', 'closedAt', 'user', 'openingCash', 'prevShortageDeducted',
+          'salesInflow', 'dueInflow', 'totalInflow', 'expenseOutflow', 'expectedCash',
+          'actualCash', 'difference', 'status', 'notes', 'denominations',
+          'ownerEmail', 'createdAt', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'rowId', 'date', 'closedAt', 'user', 'openingCash', 'prevShortageDeducted',
+          'salesInflow', 'dueInflow', 'totalInflow', 'expenseOutflow', 'expectedCash',
+          'actualCash', 'difference', 'status', 'notes', 'denominations',
+          'ownerEmail', 'createdAt', 'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        isNum(data.rowId) &&
+        isReqStr(data.date, 8, 30) &&
+        isOptStr(data.closedAt, 80) &&
+        isReqStr(data.user, 1, 120) &&
+        isNum(data.openingCash) &&
+        isNum(data.prevShortageDeducted) &&
+        isNum(data.salesInflow) &&
+        isNum(data.dueInflow) &&
+        isNum(data.totalInflow) &&
+        isNum(data.expenseOutflow) &&
+        isNum(data.expectedCash) &&
+        isNum(data.actualCash) &&
+        isNum(data.difference) &&
+        data.status in ['Matched', 'Short', 'Excess'] &&
+        isOptStr(data.notes, 500) &&
+        data.denominations is map && data.denominations.size() <= 20 &&
+        isShopOwnerEmail(data.ownerEmail) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidShopMeta(data) {
+      return data.keys().hasAll(['id', 'linkedSheetId', 'linkedSheetUrl', 'lastBackupTime', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'linkedSheetId', 'linkedSheetUrl', 'lastBackupTime', 'ownerEmail', 'createdAt', 'updatedAt']) &&
+        isValidId(data.id) &&
+        isOptStr(data.linkedSheetId, 200) &&
+        isOptStr(data.linkedSheetUrl, 500) &&
+        isOptStr(data.lastBackupTime, 120) &&
+        isShopOwnerEmail(data.ownerEmail) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // --- Connection Check Document ---
+    match /test/connection {
+      allow get: if isVerifiedEmail();
+      allow list, create, update, delete: if false;
+    }
+
+    // --- Admin Registry ---
+    match /admins/{adminUid} {
+      allow get: if isVerifiedEmail() && isValidId(adminUid) && (request.auth.uid == adminUid || isBootstrappedOwner());
+      allow list: if false;
+      allow create: if isBootstrappedOwner() && isValidId(adminUid) && isValidAdmin(incoming()) &&
+        incoming().uid == adminUid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isBootstrappedOwner() && isValidId(adminUid) && isValidAdmin(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['email', 'name', 'updatedAt']);
+      allow delete: if isBootstrappedOwner() && isValidId(adminUid);
+    }
+
+    // --- Shop Collections (Strictly Verified Shop Owner / Admin) ---
+    match /shop_users/{userDocId} {
+      allow get: if isAdmin() && isValidId(userDocId);
+      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isAdmin() && isValidId(userDocId) && isValidShopUser(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(userDocId) && isValidShopUser(incoming()) &&
+        incoming().ownerEmail == existing().ownerEmail &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['id', 'username', 'role', 'phone', 'permissions', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(userDocId);
+    }
+
+    match /shop_products/{productDocId} {
+      allow get: if isAdmin() && isValidId(productDocId);
+      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isAdmin() && isValidId(productDocId) && isValidShopProduct(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(productDocId) && isValidShopProduct(incoming()) &&
+        incoming().ownerEmail == existing().ownerEmail &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['id', 'rowId', 'sl', 'category', 'name', 'price', 'costPrice', 'stockQty', 'lowStockLimit', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(productDocId);
+    }
+
+    match /shop_customers/{customerDocId} {
+      allow get: if isAdmin() && isValidId(customerDocId);
+      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isAdmin() && isValidId(customerDocId) && isValidShopCustomer(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(customerDocId) && isValidShopCustomer(incoming()) &&
+        incoming().ownerEmail == existing().ownerEmail &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['id', 'rowId', 'sl', 'name', 'phone', 'address', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(customerDocId);
+    }
+
+    match /shop_sales/{saleDocId} {
+      allow get: if isAdmin() && isValidId(saleDocId);
+      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isAdmin() && isValidId(saleDocId) && isValidShopSale(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(saleDocId) && isValidShopSale(incoming()) &&
+        incoming().ownerEmail == existing().ownerEmail &&
+        incoming().invoiceNo == existing().invoiceNo &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'id', 'rowId', 'timestamp', 'rawDate', 'date', 'user',
+          'customer', 'phone', 'address', 'category', 'desc',
+          'subtotal', 'discount', 'grandTotal', 'paid', 'due', 'items', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(saleDocId);
+    }
+
+    match /shop_due_ledger/{dueDocId} {
+      allow get: if isAdmin() && isValidId(dueDocId);
+      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isAdmin() && isValidId(dueDocId) && isValidShopDueRecord(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(dueDocId) && isValidShopDueRecord(incoming()) &&
+        incoming().ownerEmail == existing().ownerEmail &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'id', 'rowId', 'date', 'customer', 'phone', 'address',
+          'type', 'desc', 'due', 'paid', 'user', 'timestamp', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(dueDocId);
+    }
+
+    match /shop_expenses/{expenseDocId} {
+      allow get: if isAdmin() && isValidId(expenseDocId);
+      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isAdmin() && isValidId(expenseDocId) && isValidShopExpense(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(expenseDocId) && isValidShopExpense(incoming()) &&
+        incoming().ownerEmail == existing().ownerEmail &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'id', 'rowId', 'expId', 'timestamp', 'date', 'category', 'desc', 'amount', 'user', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(expenseDocId);
+    }
+
+    match /shop_purchases/{purchaseDocId} {
+      allow get: if isAdmin() && isValidId(purchaseDocId);
+      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isAdmin() && isValidId(purchaseDocId) && isValidShopPurchase(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(purchaseDocId) && isValidShopPurchase(incoming()) &&
+        incoming().ownerEmail == existing().ownerEmail &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'id', 'rowId', 'date', 'timestamp', 'product', 'category',
+          'qty', 'unitCost', 'totalCost', 'supplier', 'notes', 'user', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(purchaseDocId);
+    }
+
+    match /shop_cash_closings/{closingDocId} {
+      allow get: if isAdmin() && isValidId(closingDocId);
+      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isAdmin() && isValidId(closingDocId) && isValidShopCashClosing(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(closingDocId) && isValidShopCashClosing(incoming()) &&
+        incoming().ownerEmail == existing().ownerEmail &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'id', 'rowId', 'date', 'closedAt', 'user', 'openingCash', 'prevShortageDeducted',
+          'salesInflow', 'dueInflow', 'totalInflow', 'expenseOutflow', 'expectedCash',
+          'actualCash', 'difference', 'status', 'notes', 'denominations', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(closingDocId);
+    }
+
+    match /shop_meta/{metaDocId} {
+      allow get: if isAdmin() && isValidId(metaDocId);
+      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isAdmin() && isValidId(metaDocId) && isValidShopMeta(incoming()) &&
+        incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isAdmin() && isValidId(metaDocId) && isValidShopMeta(incoming()) &&
+        incoming().ownerEmail == existing().ownerEmail &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'id', 'linkedSheetId', 'linkedSheetUrl', 'lastBackupTime', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(metaDocId);
+    }
+  }
+}

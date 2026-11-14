@@ -268,3 +268,13 @@ export function isDateTodayOrYesterday(dateStr?: string): boolean {
   return allowed.has(cleanDate);
 }
 
+export function cleanDueDescription(desc?: string, fallback = '--'): string {
+  let text = (desc || '').trim();
+  if (!text) return fallback;
+  text = text.replace(/^(?:Memo|Invoice)\s*#\d+\s*(?:[-–:]\s*)?/i, '').trim();
+  if (text.startsWith('[') && text.endsWith(']') && !text.slice(1, -1).includes('[')) {
+    text = text.slice(1, -1).trim();
+  }
+  return text || fallback;
+}
+

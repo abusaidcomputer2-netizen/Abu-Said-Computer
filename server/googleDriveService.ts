@@ -477,7 +477,7 @@ export async function appendSaleToSpreadsheet(
         sale.customer || 'General Customer',
         sale.phone || '',
         'Sales Memo',
-        `Memo #${sale.invoiceNo}${sale.desc ? ` [${sale.desc}]` : ''}`,
+        sale.desc ? String(sale.desc).trim() : (sale.category || 'Sales Memo'),
         sale.due,
         0,
         sale.user,
