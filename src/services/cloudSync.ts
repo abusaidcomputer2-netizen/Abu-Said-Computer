@@ -10,6 +10,7 @@ import {
   deleteDoc,
   where,
   writeBatch,
+  limit,
   Unsubscribe
 } from 'firebase/firestore';
 import { User as FirebaseUser } from 'firebase/auth';
@@ -128,11 +129,51 @@ function anyNum(val: unknown, fallback = 0): number {
 }
 
 export function isAuthorizedCloudUser(user: FirebaseUser | null): boolean {
+  if (!user) return false;
+  if (user.isAnonymous) return true;
   return Boolean(
-    user &&
-      user.emailVerified &&
+    user.emailVerified &&
       (user.email || '').trim().toLowerCase() === SHOP_OWNER_EMAIL
   );
+}
+
+interface PendingCloudOp {
+  type: 'upsert' | 'delete';
+  colName: string;
+  docId: string;
+  data?: Record<string, unknown>;
+}
+
+const PENDING_CLOUD_OPS_KEY = 'as_computer_pending_cloud_ops';
+
+function readPendingCloudOps(): PendingCloudOp[] {
+  try {
+    const raw = localStorage.getItem(PENDING_CLOUD_OPS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePendingCloudOps(ops: PendingCloudOp[]) {
+  try {
+    if (ops.length === 0) {
+      localStorage.removeItem(PENDING_CLOUD_OPS_KEY);
+    } else {
+      localStorage.setItem(PENDING_CLOUD_OPS_KEY, JSON.stringify(ops.slice(-200)));
+    }
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
+function enqueuePendingCloudOp(op: PendingCloudOp) {
+  const existing = readPendingCloudOps().filter(
+    item => !(item.colName === op.colName && item.docId === op.docId)
+  );
+  existing.push(op);
+  writePendingCloudOps(existing);
 }
 
 // --- Payload Sanitizers Matching firebase-blueprint.json & firestore.rules ---
@@ -305,8 +346,11 @@ async function upsertDoc(
   docId: string,
   data: Record<string, unknown>
 ): Promise<void> {
-  if (!isAuthorizedCloudUser(auth.currentUser)) return;
   const safeId = sanitizeDocId(docId);
+  if (!isAuthorizedCloudUser(auth.currentUser)) {
+    enqueuePendingCloudOp({ type: 'upsert', colName, docId: safeId, data });
+    return;
+  }
   const ref = doc(db, colName, safeId);
   const path = `${colName}/${safeId}`;
 
@@ -337,21 +381,27 @@ async function upsertDoc(
         knownDocIds[colName]?.add(safeId);
         return;
       } catch (innerErr) {
+        enqueuePendingCloudOp({ type: 'upsert', colName, docId: safeId, data });
         handleFirestoreError(innerErr, OperationType.WRITE, path);
       }
     }
+    enqueuePendingCloudOp({ type: 'upsert', colName, docId: safeId, data });
     handleFirestoreError(err, OperationType.WRITE, path);
   }
 }
 
 async function removeDoc(colName: string, docId: string): Promise<void> {
-  if (!isAuthorizedCloudUser(auth.currentUser)) return;
   const safeId = sanitizeDocId(docId);
+  if (!isAuthorizedCloudUser(auth.currentUser)) {
+    enqueuePendingCloudOp({ type: 'delete', colName, docId: safeId });
+    return;
+  }
   const path = `${colName}/${safeId}`;
   try {
     await deleteDoc(doc(db, colName, safeId));
     knownDocIds[colName]?.delete(safeId);
   } catch (err) {
+    enqueuePendingCloudOp({ type: 'delete', colName, docId: safeId });
     handleFirestoreError(err, OperationType.DELETE, path);
   }
 }
@@ -444,6 +494,44 @@ export interface ShopSnapshotPayload {
 export async function uploadMissingRecordsToCloud(snapshot: ShopSnapshotPayload): Promise<number> {
   if (!isAuthorizedCloudUser(auth.currentUser)) return 0;
 
+  let syncedCount = 0;
+
+  // 1. Flush any genuine local mutations queued while offline
+  const pendingOps = readPendingCloudOps();
+  if (pendingOps.length > 0) {
+    const remaining: PendingCloudOp[] = [];
+    for (const op of pendingOps) {
+      try {
+        if (op.type === 'delete') {
+          await removeDoc(op.colName, op.docId);
+        } else if (op.data) {
+          await upsertDoc(op.colName, op.docId, op.data);
+        }
+        syncedCount += 1;
+      } catch {
+        remaining.push(op);
+      }
+    }
+    writePendingCloudOps(remaining);
+  }
+
+  // 2. Check if cloud database already holds shop records.
+  // If already populated, cloud is authoritative so deletions made on other PCs/mobiles are never resurrected by stale local caches.
+  let cloudAlreadySeeded = false;
+  try {
+    const [salesProbe, prodProbe] = await Promise.all([
+      getDocs(query(collection(db, CLOUD_COLLECTIONS.sales), where('ownerEmail', '==', SHOP_OWNER_EMAIL), limit(1))),
+      getDocs(query(collection(db, CLOUD_COLLECTIONS.products), where('ownerEmail', '==', SHOP_OWNER_EMAIL), limit(1)))
+    ]);
+    cloudAlreadySeeded = salesProbe.docs.length > 0 || prodProbe.docs.length > 0;
+  } catch (err) {
+    handleFirestoreError(err, OperationType.LIST, CLOUD_COLLECTIONS.sales);
+  }
+
+  if (cloudAlreadySeeded) {
+    return syncedCount;
+  }
+
   type PendingWrite = { col: string; id: string; data: Record<string, unknown> };
   const pending: PendingWrite[] = [];
 
@@ -512,7 +600,7 @@ export async function uploadMissingRecordsToCloud(snapshot: ShopSnapshotPayload)
     ),
   ]);
 
-  if (pending.length === 0) return 0;
+  if (pending.length === 0) return syncedCount;
 
   const CHUNK = 400;
   for (let i = 0; i < pending.length; i += CHUNK) {
@@ -534,7 +622,7 @@ export async function uploadMissingRecordsToCloud(snapshot: ShopSnapshotPayload)
     }
   }
 
-  return pending.length;
+  return syncedCount + pending.length;
 }
 
 // --- Real-Time Listeners Across All Devices ---

@@ -1,5 +1,13 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, signOut } from 'firebase/auth';
+import {
+  getAuth,
+  signInWithPopup,
+  signInAnonymously,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  User,
+  signOut
+} from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -30,6 +38,9 @@ provider.setCustomParameters({
 let isSigningIn = false;
 let cachedAccessToken: string | null = null;
 let cachedUser: User | null = null;
+let pendingAutoAuth: Promise<AutoSyncSessionStatus> | null = null;
+
+export type AutoSyncSessionStatus = 'connected' | 'needs-anonymous-enable' | 'error';
 
 // Initialize auth state listener. Preserves Firebase session across page reloads.
 export const initGoogleAuth = (
@@ -47,6 +58,36 @@ export const initGoogleAuth = (
   });
 };
 
+export const ensureAutoCloudSession = async (): Promise<AutoSyncSessionStatus> => {
+  if (auth.currentUser) {
+    cachedUser = auth.currentUser;
+    return 'connected';
+  }
+  if (pendingAutoAuth) return pendingAutoAuth;
+
+  pendingAutoAuth = (async () => {
+    try {
+      isSigningIn = true;
+      const cred = await signInAnonymously(auth);
+      cachedUser = cred.user;
+      void testFirestoreConnection();
+      return 'connected' as AutoSyncSessionStatus;
+    } catch (error: any) {
+      const code = String(error?.code || '');
+      if (code === 'auth/admin-restricted-operation' || code === 'auth/operation-not-allowed') {
+        return 'needs-anonymous-enable' as AutoSyncSessionStatus;
+      }
+      console.warn('Auto cloud session check warning:', code || error?.message);
+      return 'error' as AutoSyncSessionStatus;
+    } finally {
+      isSigningIn = false;
+      pendingAutoAuth = null;
+    }
+  })();
+
+  return pendingAutoAuth;
+};
+
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
   try {
     isSigningIn = true;
@@ -57,6 +98,11 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
     return { user: result.user, accessToken: cachedAccessToken };
   } catch (error: any) {
     console.error('Sign in error:', error);
+    if (error?.code === 'auth/unauthorized-domain' && typeof window !== 'undefined') {
+      throw new Error(
+        `ডোমেইন অনুমোদিত নয় (${window.location.hostname})। Firebase Console -> Authentication -> Settings -> Authorized domains-এ এই ডোমেইনটি যোগ করুন।`
+      );
+    }
     throw error;
   } finally {
     isSigningIn = false;

@@ -53,7 +53,7 @@ import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
 import { GoogleDriveBackupModal } from './components/modals/GoogleDriveBackupModal';
 import { DataSheetModal } from './components/modals/DataSheetModal';
 import { CommissionReportModal } from './components/modals/CommissionReportModal';
-import { initGoogleAuth, setCachedAccessToken, googleSignIn, SHOP_OWNER_EMAIL } from './services/googleAuth';
+import { initGoogleAuth, setCachedAccessToken, googleSignIn, ensureAutoCloudSession, SHOP_OWNER_EMAIL } from './services/googleAuth';
 import { User as GoogleUser } from 'firebase/auth';
 import {
   isAuthorizedCloudUser,
@@ -118,8 +118,16 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_USER_PASSWORDS;
   });
 
-  // Authentication State: Always requires login & password on load
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Authentication State: Persists across reloads until user explicitly logs out
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    try {
+      const saved = localStorage.getItem('as_computer_auth_user');
+      return saved ? (JSON.parse(saved) as User) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [rememberDevice, setRememberDevice] = useState(true);
 
   const [loginUsername, setLoginUsername] = useState(() => {
     try {
@@ -198,6 +206,7 @@ export default function App() {
   const [linkedSheetUrl, setLinkedSheetUrl] = useState('');
   const [lastBackupTime, setLastBackupTime] = useState('');
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+  const [autoSyncNeedsEnable, setAutoSyncNeedsEnable] = useState(false);
   const [bootstrapReady, setBootstrapReady] = useState(false);
 
   const backendUnavailableRef = useRef(false);
@@ -400,6 +409,7 @@ export default function App() {
   };
 
   const handleConnectCloudSync = async () => {
+    let needsEnable = autoSyncNeedsEnable;
     try {
       if (isAuthorizedCloudUser(googleUser)) {
         setIsCloudSyncing(true);
@@ -407,10 +417,22 @@ export default function App() {
         showToast(
           uploaded > 0
             ? `Synced ${uploaded} new record(s) to cloud backup!`
-            : 'Cloud Live Sync & Auto-Backup is active!',
+            : 'Cloud Live Sync (সকল পিসি ও মোবাইল অটো সিঙ্ক) সক্রিয় আছে!',
           'success'
         );
         return;
+      }
+
+      // First try silent Auto Device Sync (works on all 4 PCs & 4 Mobiles with zero popup)
+      const autoStatus = await ensureAutoCloudSession();
+      if (autoStatus === 'connected') {
+        setAutoSyncNeedsEnable(false);
+        showToast('অটো ক্লাউড সিঙ্ক চালু হয়েছে! সব পিসি ও মোবাইলে অটো আপডেট হবে।', 'success');
+        return;
+      }
+      if (autoStatus === 'needs-anonymous-enable') {
+        needsEnable = true;
+        setAutoSyncNeedsEnable(true);
       }
 
       const res = await googleSignIn();
@@ -420,13 +442,18 @@ export default function App() {
       setCachedAccessToken(res.accessToken);
 
       if (!isAuthorizedCloudUser(res.user)) {
-        showToast(`অটো সিঙ্ক এর জন্য অনুমোদিত ইমেইল (${SHOP_OWNER_EMAIL}) দিয়ে সাইন ইন করুন।`, 'warning');
+        showToast(`অটো সিঙ্ক এর জন্য অনুমোদিত ইমেইল (${SHOP_OWNER_EMAIL}) দিয়ে সাইন ইন করুন অথবা Firebase-এ Anonymous চালু করুন।`, 'warning');
       } else {
         showToast('Cloud Live Sync (PC ↔ Mobile) connected!', 'success');
       }
     } catch (err: any) {
       if (err?.code !== 'auth/popup-closed-by-user') {
-        showToast(err?.message || 'Google sign-in failed', 'error');
+        showToast(
+          needsEnable
+            ? 'সব ডিভাইসে গুগল লগইন ছাড়া অটো সিঙ্ক চালু করতে Firebase Console -> Authentication -> Sign-in method -> Anonymous Enable করুন।'
+            : (err?.message || 'Cloud sync connection failed'),
+          'warning'
+        );
       }
     } finally {
       setIsCloudSyncing(false);
@@ -447,11 +474,12 @@ export default function App() {
   };
 
   useEffect(() => {
-    initGoogleAuth(
+    const unsubAuth = initGoogleAuth(
       (user, token) => {
         setGoogleUser(user);
         setGoogleToken(token);
         setCachedAccessToken(token);
+        setAutoSyncNeedsEnable(false);
       },
       () => {
         setGoogleUser(null);
@@ -461,14 +489,36 @@ export default function App() {
     );
     fetchGoogleDriveStatus();
     fetchBootstrapData();
+
+    // Automatically connect device to real-time cloud sync in background
+    void ensureAutoCloudSession().then(status => {
+      if (status === 'needs-anonymous-enable') {
+        setAutoSyncNeedsEnable(true);
+      } else if (status === 'connected') {
+        setAutoSyncNeedsEnable(false);
+      }
+    });
+
+    return () => {
+      unsubAuth();
+    };
   }, []);
 
   useEffect(() => {
     if (currentUser) {
       fetchBootstrapData();
       handleFilterRunningMonth();
+      if (!isAuthorizedCloudUser(googleUser)) {
+        void ensureAutoCloudSession().then(status => {
+          if (status === 'needs-anonymous-enable') {
+            setAutoSyncNeedsEnable(true);
+          } else if (status === 'connected') {
+            setAutoSyncNeedsEnable(false);
+          }
+        });
+      }
     }
-  }, [currentUser]);
+  }, [currentUser?.username]);
 
   // Real-time Cross-Device Cloud Sync & Non-Destructive Initial Backup
   useEffect(() => {
@@ -485,6 +535,19 @@ export default function App() {
           onUsers: items => {
             setUsers(items);
             updateCachedBootstrap(prev => ({ ...prev, users: items }));
+            if (currentUser) {
+              const refreshed = items.find(
+                u => u.username.toLowerCase() === currentUser.username.toLowerCase()
+              );
+              if (refreshed && (refreshed.role !== currentUser.role || refreshed.permissions !== currentUser.permissions)) {
+                setCurrentUser(refreshed);
+                try {
+                  if (localStorage.getItem('as_computer_auth_user')) {
+                    localStorage.setItem('as_computer_auth_user', JSON.stringify(refreshed));
+                  }
+                } catch {}
+              }
+            }
           },
           onProducts: items => {
             setProducts(items);
@@ -555,7 +618,7 @@ export default function App() {
         serverSyncTimerRef.current = null;
       }
     };
-  }, [bootstrapReady, googleUser?.email, googleUser?.emailVerified]);
+  }, [bootstrapReady, googleUser?.uid, googleUser?.email, googleUser?.emailVerified, googleUser?.isAnonymous]);
 
   // Handle Login with exact passwords
   const handleLogin = async (e: React.FormEvent) => {
@@ -583,7 +646,13 @@ export default function App() {
           if (data.status === 'success' && data.user) {
             setCurrentUser(data.user);
             localStorage.setItem('as_computer_last_username', data.user.username);
+            if (rememberDevice) {
+              localStorage.setItem('as_computer_auth_user', JSON.stringify(data.user));
+            } else {
+              localStorage.removeItem('as_computer_auth_user');
+            }
             sessionStorage.setItem('as_computer_session_active', 'true');
+            void ensureAutoCloudSession();
             showToast(`Welcome back, ${data.user.username}!`, 'success');
             loggedIn = true;
             return;
@@ -613,7 +682,13 @@ export default function App() {
 
           setCurrentUser(matchedUser);
           localStorage.setItem('as_computer_last_username', matchedUser.username);
+          if (rememberDevice) {
+            localStorage.setItem('as_computer_auth_user', JSON.stringify(matchedUser));
+          } else {
+            localStorage.removeItem('as_computer_auth_user');
+          }
           sessionStorage.setItem('as_computer_session_active', 'true');
+          void ensureAutoCloudSession();
           showToast(`Welcome back, ${matchedUser.username}!`, 'success');
           return;
         }
@@ -1940,6 +2015,16 @@ export default function App() {
               </div>
             </div>
 
+            <label className="flex items-center gap-2 text-xs text-slate-300 font-semibold cursor-pointer select-none pt-1">
+              <input
+                type="checkbox"
+                checked={rememberDevice}
+                onChange={e => setRememberDevice(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              />
+              <span>এই ডিভাইস মনে রাখুন (বার বার লগইন লাগবে না)</span>
+            </label>
+
             <button
               type="submit"
               disabled={loginLoading}
@@ -1952,7 +2037,7 @@ export default function App() {
             <div className="pt-3 border-t border-slate-800 space-y-2.5 text-center">
               <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-semibold">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Encrypted session • Cloud Auto-Sync & Backup</span>
+                <span>Permanent Device Session • Cloud Auto-Sync</span>
               </div>
               <button
                 type="button"
@@ -1966,7 +2051,9 @@ export default function App() {
                 <Cloud className="w-3.5 h-3.5" />
                 <span>
                   {isAuthorizedCloudUser(googleUser)
-                    ? `Cloud Sync Live (${googleUser?.email})`
+                    ? (googleUser?.isAnonymous
+                        ? 'Auto Cloud Sync Active (All PCs & Mobiles)'
+                        : `Cloud Sync Live (${googleUser?.email})`)
                     : 'Connect Cloud Sync (PC ↔ Mobile)'}
                 </span>
               </button>
@@ -1992,7 +2079,7 @@ export default function App() {
       onOpenDataSheet={() => setDataSheetOpen(true)}
       onOpenCommissionReport={() => setCommissionReportOpen(true)}
       cloudSyncConnected={isAuthorizedCloudUser(googleUser)}
-      cloudSyncEmail={googleUser?.email}
+      cloudSyncEmail={googleUser?.isAnonymous ? 'Auto Device Sync' : googleUser?.email}
       isCloudSyncing={isCloudSyncing}
       onConnectCloudSync={handleConnectCloudSync}
     >
@@ -2456,7 +2543,7 @@ export default function App() {
           setDriveBackupOpen(false);
           setActiveTab('sales');
         }}
-        googleUser={googleUser}
+        googleUser={googleUser && !googleUser.isAnonymous ? googleUser : null}
         googleToken={googleToken}
         onGoogleAuthChange={(user, token) => {
           setGoogleUser(user);
@@ -2484,7 +2571,7 @@ export default function App() {
         expenses={expenses}
         dueLedger={dueRecords}
         linkedSheetUrl={linkedSheetUrl}
-        googleUser={googleUser}
+        googleUser={googleUser && !googleUser.isAnonymous ? googleUser : null}
         onOpenGoogleDriveBackup={() => {
           setDataSheetOpen(false);
           setDriveBackupOpen(true);

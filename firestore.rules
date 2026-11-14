@@ -36,6 +36,13 @@ service cloud.firestore {
         (isVerifiedEmail() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
 
+    function isShopSyncDevice() {
+      return isAdmin() || (
+        isSignedIn() &&
+        request.auth.token.firebase.sign_in_provider == 'anonymous'
+      );
+    }
+
     function isShopOwnerEmail(val) {
       return val is string && val == 'abusaidcomputer2@gmail.com';
     }
@@ -249,7 +256,7 @@ service cloud.firestore {
 
     // --- Connection Check Document ---
     match /test/connection {
-      allow get: if isVerifiedEmail();
+      allow get: if isSignedIn();
       allow list, create, update, delete: if false;
     }
 
@@ -269,52 +276,52 @@ service cloud.firestore {
       allow delete: if isBootstrappedOwner() && isValidId(adminUid);
     }
 
-    // --- Shop Collections (Strictly Verified Shop Owner / Admin) ---
+    // --- Shop Collections (Owner, Admins & Authenticated Shop Sync Devices) ---
     match /shop_users/{userDocId} {
-      allow get: if isAdmin() && isValidId(userDocId);
-      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
-      allow create: if isAdmin() && isValidId(userDocId) && isValidShopUser(incoming()) &&
+      allow get: if isShopSyncDevice() && isValidId(userDocId);
+      allow list: if isShopSyncDevice() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isShopSyncDevice() && isValidId(userDocId) && isValidShopUser(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
-      allow update: if isAdmin() && isValidId(userDocId) && isValidShopUser(incoming()) &&
+      allow update: if isShopSyncDevice() && isValidId(userDocId) && isValidShopUser(incoming()) &&
         incoming().ownerEmail == existing().ownerEmail &&
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time &&
         incoming().diff(existing()).affectedKeys().hasOnly(['id', 'username', 'role', 'phone', 'permissions', 'updatedAt']);
-      allow delete: if isAdmin() && isValidId(userDocId);
+      allow delete: if isShopSyncDevice() && isValidId(userDocId);
     }
 
     match /shop_products/{productDocId} {
-      allow get: if isAdmin() && isValidId(productDocId);
-      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
-      allow create: if isAdmin() && isValidId(productDocId) && isValidShopProduct(incoming()) &&
+      allow get: if isShopSyncDevice() && isValidId(productDocId);
+      allow list: if isShopSyncDevice() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isShopSyncDevice() && isValidId(productDocId) && isValidShopProduct(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
-      allow update: if isAdmin() && isValidId(productDocId) && isValidShopProduct(incoming()) &&
+      allow update: if isShopSyncDevice() && isValidId(productDocId) && isValidShopProduct(incoming()) &&
         incoming().ownerEmail == existing().ownerEmail &&
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time &&
         incoming().diff(existing()).affectedKeys().hasOnly(['id', 'rowId', 'sl', 'category', 'name', 'price', 'costPrice', 'stockQty', 'lowStockLimit', 'updatedAt']);
-      allow delete: if isAdmin() && isValidId(productDocId);
+      allow delete: if isShopSyncDevice() && isValidId(productDocId);
     }
 
     match /shop_customers/{customerDocId} {
-      allow get: if isAdmin() && isValidId(customerDocId);
-      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
-      allow create: if isAdmin() && isValidId(customerDocId) && isValidShopCustomer(incoming()) &&
+      allow get: if isShopSyncDevice() && isValidId(customerDocId);
+      allow list: if isShopSyncDevice() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isShopSyncDevice() && isValidId(customerDocId) && isValidShopCustomer(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
-      allow update: if isAdmin() && isValidId(customerDocId) && isValidShopCustomer(incoming()) &&
+      allow update: if isShopSyncDevice() && isValidId(customerDocId) && isValidShopCustomer(incoming()) &&
         incoming().ownerEmail == existing().ownerEmail &&
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time &&
         incoming().diff(existing()).affectedKeys().hasOnly(['id', 'rowId', 'sl', 'name', 'phone', 'address', 'updatedAt']);
-      allow delete: if isAdmin() && isValidId(customerDocId);
+      allow delete: if isShopSyncDevice() && isValidId(customerDocId);
     }
 
     match /shop_sales/{saleDocId} {
-      allow get: if isAdmin() && isValidId(saleDocId);
-      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
-      allow create: if isAdmin() && isValidId(saleDocId) && isValidShopSale(incoming()) &&
+      allow get: if isShopSyncDevice() && isValidId(saleDocId);
+      allow list: if isShopSyncDevice() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isShopSyncDevice() && isValidId(saleDocId) && isValidShopSale(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
-      allow update: if isAdmin() && isValidId(saleDocId) && isValidShopSale(incoming()) &&
+      allow update: if isShopSyncDevice() && isValidId(saleDocId) && isValidShopSale(incoming()) &&
         incoming().ownerEmail == existing().ownerEmail &&
         incoming().invoiceNo == existing().invoiceNo &&
         incoming().createdAt == existing().createdAt &&
@@ -324,15 +331,15 @@ service cloud.firestore {
           'customer', 'phone', 'address', 'category', 'desc',
           'subtotal', 'discount', 'grandTotal', 'paid', 'due', 'items', 'updatedAt'
         ]);
-      allow delete: if isAdmin() && isValidId(saleDocId);
+      allow delete: if isShopSyncDevice() && isValidId(saleDocId);
     }
 
     match /shop_due_ledger/{dueDocId} {
-      allow get: if isAdmin() && isValidId(dueDocId);
-      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
-      allow create: if isAdmin() && isValidId(dueDocId) && isValidShopDueRecord(incoming()) &&
+      allow get: if isShopSyncDevice() && isValidId(dueDocId);
+      allow list: if isShopSyncDevice() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isShopSyncDevice() && isValidId(dueDocId) && isValidShopDueRecord(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
-      allow update: if isAdmin() && isValidId(dueDocId) && isValidShopDueRecord(incoming()) &&
+      allow update: if isShopSyncDevice() && isValidId(dueDocId) && isValidShopDueRecord(incoming()) &&
         incoming().ownerEmail == existing().ownerEmail &&
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time &&
@@ -340,30 +347,30 @@ service cloud.firestore {
           'id', 'rowId', 'date', 'customer', 'phone', 'address',
           'type', 'desc', 'due', 'paid', 'user', 'timestamp', 'updatedAt'
         ]);
-      allow delete: if isAdmin() && isValidId(dueDocId);
+      allow delete: if isShopSyncDevice() && isValidId(dueDocId);
     }
 
     match /shop_expenses/{expenseDocId} {
-      allow get: if isAdmin() && isValidId(expenseDocId);
-      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
-      allow create: if isAdmin() && isValidId(expenseDocId) && isValidShopExpense(incoming()) &&
+      allow get: if isShopSyncDevice() && isValidId(expenseDocId);
+      allow list: if isShopSyncDevice() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isShopSyncDevice() && isValidId(expenseDocId) && isValidShopExpense(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
-      allow update: if isAdmin() && isValidId(expenseDocId) && isValidShopExpense(incoming()) &&
+      allow update: if isShopSyncDevice() && isValidId(expenseDocId) && isValidShopExpense(incoming()) &&
         incoming().ownerEmail == existing().ownerEmail &&
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time &&
         incoming().diff(existing()).affectedKeys().hasOnly([
           'id', 'rowId', 'expId', 'timestamp', 'date', 'category', 'desc', 'amount', 'user', 'updatedAt'
         ]);
-      allow delete: if isAdmin() && isValidId(expenseDocId);
+      allow delete: if isShopSyncDevice() && isValidId(expenseDocId);
     }
 
     match /shop_purchases/{purchaseDocId} {
-      allow get: if isAdmin() && isValidId(purchaseDocId);
-      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
-      allow create: if isAdmin() && isValidId(purchaseDocId) && isValidShopPurchase(incoming()) &&
+      allow get: if isShopSyncDevice() && isValidId(purchaseDocId);
+      allow list: if isShopSyncDevice() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isShopSyncDevice() && isValidId(purchaseDocId) && isValidShopPurchase(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
-      allow update: if isAdmin() && isValidId(purchaseDocId) && isValidShopPurchase(incoming()) &&
+      allow update: if isShopSyncDevice() && isValidId(purchaseDocId) && isValidShopPurchase(incoming()) &&
         incoming().ownerEmail == existing().ownerEmail &&
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time &&
@@ -371,15 +378,15 @@ service cloud.firestore {
           'id', 'rowId', 'date', 'timestamp', 'product', 'category',
           'qty', 'unitCost', 'totalCost', 'supplier', 'notes', 'user', 'updatedAt'
         ]);
-      allow delete: if isAdmin() && isValidId(purchaseDocId);
+      allow delete: if isShopSyncDevice() && isValidId(purchaseDocId);
     }
 
     match /shop_cash_closings/{closingDocId} {
-      allow get: if isAdmin() && isValidId(closingDocId);
-      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
-      allow create: if isAdmin() && isValidId(closingDocId) && isValidShopCashClosing(incoming()) &&
+      allow get: if isShopSyncDevice() && isValidId(closingDocId);
+      allow list: if isShopSyncDevice() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isShopSyncDevice() && isValidId(closingDocId) && isValidShopCashClosing(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
-      allow update: if isAdmin() && isValidId(closingDocId) && isValidShopCashClosing(incoming()) &&
+      allow update: if isShopSyncDevice() && isValidId(closingDocId) && isValidShopCashClosing(incoming()) &&
         incoming().ownerEmail == existing().ownerEmail &&
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time &&
@@ -388,22 +395,22 @@ service cloud.firestore {
           'salesInflow', 'dueInflow', 'totalInflow', 'expenseOutflow', 'expectedCash',
           'actualCash', 'difference', 'status', 'notes', 'denominations', 'updatedAt'
         ]);
-      allow delete: if isAdmin() && isValidId(closingDocId);
+      allow delete: if isShopSyncDevice() && isValidId(closingDocId);
     }
 
     match /shop_meta/{metaDocId} {
-      allow get: if isAdmin() && isValidId(metaDocId);
-      allow list: if isBootstrappedOwner() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
-      allow create: if isAdmin() && isValidId(metaDocId) && isValidShopMeta(incoming()) &&
+      allow get: if isShopSyncDevice() && isValidId(metaDocId);
+      allow list: if isShopSyncDevice() && existing().ownerEmail == 'abusaidcomputer2@gmail.com';
+      allow create: if isShopSyncDevice() && isValidId(metaDocId) && isValidShopMeta(incoming()) &&
         incoming().createdAt == request.time && incoming().updatedAt == request.time;
-      allow update: if isAdmin() && isValidId(metaDocId) && isValidShopMeta(incoming()) &&
+      allow update: if isShopSyncDevice() && isValidId(metaDocId) && isValidShopMeta(incoming()) &&
         incoming().ownerEmail == existing().ownerEmail &&
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time &&
         incoming().diff(existing()).affectedKeys().hasOnly([
           'id', 'linkedSheetId', 'linkedSheetUrl', 'lastBackupTime', 'updatedAt'
         ]);
-      allow delete: if isAdmin() && isValidId(metaDocId);
+      allow delete: if isShopSyncDevice() && isValidId(metaDocId);
     }
   }
 }
