@@ -287,7 +287,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                 1. Total Sales (Billed)
               </span>
               <div className="text-xl sm:text-2xl print:text-lg font-black text-blue-900 font-tabular">
-                Tk {formatCurrency(netSalesBilled)}
+                {formatCurrency(netSalesBilled)}
               </div>
               <span className="text-[9px] sm:text-[10px] text-blue-600 font-semibold">
                 {filteredSales.length} Memos
@@ -299,7 +299,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                 2. Cash Collection
               </span>
               <div className="text-xl sm:text-2xl print:text-lg font-black text-emerald-800 font-tabular">
-                Tk {formatCurrency(totalCashInflow)}
+                {formatCurrency(totalCashInflow)}
               </div>
               <span className="text-[9px] sm:text-[10px] text-emerald-700 font-semibold">
                 (Current + Past Due)
@@ -311,7 +311,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                 3. Total Outflow
               </span>
               <div className="text-xl sm:text-2xl print:text-lg font-black text-rose-700 font-tabular">
-                Tk {formatCurrency(totalOutflow)}
+                {formatCurrency(totalOutflow)}
               </div>
               <span className="text-[9px] sm:text-[10px] text-rose-600 font-semibold">
                 {filteredExpenses.length} Entries
@@ -323,7 +323,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                 4. Net Drawer Cash
               </span>
               <div className="text-xl sm:text-2xl print:text-lg font-black text-teal-800 font-tabular">
-                Tk {formatCurrency(netDrawerCash)}
+                {formatCurrency(netDrawerCash)}
               </div>
               <span className="text-[9px] sm:text-[10px] text-teal-700 font-semibold">
                 (Inflow - Outflow)
@@ -353,19 +353,19 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                   <tr>
                     <td className="py-2 px-3.5 print:py-1.5 print:px-3 border-r border-slate-200">Photocopy Services</td>
                     <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-blue-900 font-tabular">
-                      Tk {formatCurrency(pSales)}
+                      {formatCurrency(pSales)}
                     </td>
                   </tr>
                   <tr>
                     <td className="py-2 px-3.5 print:py-1.5 print:px-3 border-r border-slate-200">Online Applications</td>
                     <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-blue-900 font-tabular">
-                      Tk {formatCurrency(oSales)}
+                      {formatCurrency(oSales)}
                     </td>
                   </tr>
                   <tr>
                     <td className="py-2 px-3.5 print:py-1.5 print:px-3 border-r border-slate-200">Stationery Products</td>
                     <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-blue-900 font-tabular">
-                      Tk {formatCurrency(sSales)}
+                      {formatCurrency(sSales)}
                     </td>
                   </tr>
                   <tr className="bg-slate-50">
@@ -373,7 +373,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Gross Subtotal:
                     </td>
                     <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-slate-900 font-tabular">
-                      Tk {formatCurrency(subtotal)}
+                      {formatCurrency(subtotal)}
                     </td>
                   </tr>
                   <tr className="bg-slate-50">
@@ -381,7 +381,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Less Discounts:
                     </td>
                     <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-rose-600 font-tabular">
-                      -Tk {formatCurrency(discounts)}
+                      -{formatCurrency(discounts)}
                     </td>
                   </tr>
                   <tr className="bg-blue-50/50">
@@ -389,7 +389,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Net Sales Billed:
                     </td>
                     <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right font-black text-blue-900 font-tabular text-sm print:text-xs">
-                      Tk {formatCurrency(netSalesBilled)}
+                      {formatCurrency(netSalesBilled)}
                     </td>
                   </tr>
                   <tr>
@@ -397,7 +397,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Cash Received from Sales:
                     </td>
                     <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-slate-900 font-tabular">
-                      Tk {formatCurrency(cashFromSales)}
+                      {formatCurrency(cashFromSales)}
                     </td>
                   </tr>
                   <tr>
@@ -405,7 +405,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Previous Due Collected:
                     </td>
                     <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-emerald-700 font-tabular">
-                      Tk {formatCurrency(dueCollected)}
+                      {formatCurrency(dueCollected)}
                     </td>
                   </tr>
                 </tbody>
@@ -415,7 +415,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Total Cash Inflow (Drawer):
                     </td>
                     <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right font-black text-sm sm:text-base print:text-sm text-emerald-900 font-tabular">
-                      Tk {formatCurrency(totalCashInflow)}
+                      {formatCurrency(totalCashInflow)}
                     </td>
                   </tr>
                 </tfoot>
@@ -452,7 +452,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       <tr key={c}>
                         <td className="py-2 px-3.5 print:py-1.5 print:px-3 border-r border-slate-200 font-bold text-slate-700">{c}</td>
                         <td className="py-2 px-3.5 print:py-1.5 print:px-3 text-right font-black text-rose-700 font-tabular">
-                          Tk {formatCurrency(expCatMap[c])}
+                          {formatCurrency(expCatMap[c])}
                         </td>
                       </tr>
                     ))
@@ -464,7 +464,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                       Total Outflow (Expenses + Purchases):
                     </td>
                     <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right font-black text-sm sm:text-base print:text-sm text-rose-800 font-tabular">
-                      Tk {formatCurrency(totalOutflow)}
+                      {formatCurrency(totalOutflow)}
                     </td>
                   </tr>
                 </tfoot>
@@ -487,7 +487,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                   1. Previous Due
                 </span>
                 <span className="text-lg sm:text-2xl print:text-base font-black text-slate-900 font-tabular">
-                  Tk {formatCurrency(prevDue)}
+                  {formatCurrency(prevDue)}
                 </span>
               </div>
 
@@ -496,7 +496,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                   2. New Billed Due
                 </span>
                 <span className="text-lg sm:text-2xl print:text-base font-black text-amber-700 font-tabular">
-                  Tk {formatCurrency(newDueBilled)}
+                  {formatCurrency(newDueBilled)}
                 </span>
               </div>
 
@@ -505,7 +505,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                   3. Due Collected
                 </span>
                 <span className="text-lg sm:text-2xl print:text-base font-black text-emerald-700 font-tabular">
-                  Tk {formatCurrency(dueCollected)}
+                  {formatCurrency(dueCollected)}
                 </span>
               </div>
 
@@ -514,7 +514,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                   4. Total Net Due
                 </span>
                 <span className="text-lg sm:text-2xl print:text-base font-black text-rose-800 font-tabular">
-                  Tk {formatCurrency(totalNetDue)}
+                  {formatCurrency(totalNetDue)}
                 </span>
               </div>
             </div>
@@ -526,6 +526,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
           reportTitle="Financial Statement (P&L)"
           printTimestamp={nowFormatted}
           currentUser={currentUser}
+          hideShopInfo={true}
           leftSignatureLabel="CHECKED & VERIFIED BY"
           rightSignatureLabel="AUTHORIZED SIGNATURE"
         />

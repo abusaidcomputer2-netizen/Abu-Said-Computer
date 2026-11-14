@@ -99,7 +99,7 @@ export const Layout: React.FC<LayoutProps> = ({
   const navItems = [
     { id: 'sales' as ActiveTab, label: 'Sales & Invoices', icon: Receipt, perm: 'memo' },
     { id: 'dashboard' as ActiveTab, label: 'Analytics Dashboard', icon: LayoutDashboard, perm: 'memo' },
-    { id: 'due' as ActiveTab, label: 'Due Ledger', icon: BookMarked, perm: 'due', badge: totalOutstandingDue > 0 ? `Tk ${formatCurrency(totalOutstandingDue)}` : null, badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+    { id: 'due' as ActiveTab, label: 'Due Ledger', icon: BookMarked, perm: 'due', badge: totalOutstandingDue > 0 ? formatCurrency(totalOutstandingDue) : null, badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
     { id: 'customers' as ActiveTab, label: 'Customer Directory', icon: Users, perm: 'customer' },
     { id: 'cust_sales' as ActiveTab, label: 'Customer Sales', icon: TrendingUp, perm: 'cust_sales' },
     { id: 'cash_closing' as ActiveTab, label: 'Daily Cash Closing', icon: Coins, perm: 'cash_closing' },

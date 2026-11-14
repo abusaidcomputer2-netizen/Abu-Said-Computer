@@ -343,7 +343,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     e.preventDefault();
 
     if (paidVal > grandTotal + 0.001) {
-      showToast(`পেইড টাকা (Tk ${formatCurrency(paidVal)}) মোট বিল (Tk ${formatCurrency(grandTotal)}) থেকে বেশি হতে পারবে না!`, 'error');
+      showToast(`পেইড টাকা (${formatCurrency(paidVal)}) মোট বিল (${formatCurrency(grandTotal)}) থেকে বেশি হতে পারবে না!`, 'error');
       return;
     }
 
@@ -449,7 +449,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         const origGrand = Math.round((editingSale.grandTotal || 0) * 100) / 100;
         const newGrand = Math.round(grandTotal * 100) / 100;
         if (Math.abs(newGrand - origGrand) > 0.01) {
-          showToast(`পুরাতন মেমোর টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল Tk ${formatCurrency(origGrand)}, কিন্তু বর্তমান পরিমাণ Tk ${formatCurrency(newGrand)}। টাকা কম বা বেশি হলে সেভ হবে না।`, 'error');
+          showToast(`পুরাতন মেমোর টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল ${formatCurrency(origGrand)}, কিন্তু বর্তমান পরিমাণ ${formatCurrency(newGrand)}। টাকা কম বা বেশি হলে সেভ হবে না।`, 'error');
           return;
         }
       }
@@ -538,7 +538,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 text-xs text-amber-300 flex items-start gap-2.5">
           <span className="text-base">⚠️</span>
           <div>
-            <span className="font-bold">পুরাতন মেমো এডিট মোড:</span> কাস্টমার তথ্য, কাজের নোট বা আইটেম সংশোধন করা যাবে, তবে সর্বমোট টাকার পরিমাণ (<strong className="text-white underline">Tk {formatCurrency(editingSale.grandTotal)}</strong>) অবশ্যই অপরিবর্তিত থাকতে হবে। টাকা কম বা বেশি হলে সেভ হবে না।
+            <span className="font-bold">পুরাতন মেমো এডিট মোড:</span> কাস্টমার তথ্য, কাজের নোট বা আইটেম সংশোধন করা যাবে, তবে সর্বমোট টাকার পরিমাণ (<strong className="text-white underline">{formatCurrency(editingSale.grandTotal)}</strong>) অবশ্যই অপরিবর্তিত থাকতে হবে। টাকা কম বা বেশি হলে সেভ হবে না।
           </div>
         </div>
       )}
@@ -553,7 +553,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
               </label>
               {currentCustomerDue > 0 && (
                 <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-bold">
-                  Due: Tk {formatCurrency(currentCustomerDue)}
+                  Due: {formatCurrency(currentCustomerDue)}
                 </span>
               )}
             </div>
@@ -567,13 +567,13 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
             />
             <datalist id="customerDatalist">
               {customers.map(c => {
-                const dueAmt = customerSummaries.find(cs => 
-                  cs.name.toLowerCase() === c.name.toLowerCase() ||
-                  (c.phone && cs.phone && cs.phone.trim() === c.phone.trim())
+                const dueAmt = (
+                  (c.phone ? customerSummaries.find(cs => cs.phone && cs.phone.trim() === c.phone.trim()) : null)
+                  || customerSummaries.find(cs => cs.name.toLowerCase() === c.name.toLowerCase())
                 )?.netBalance || 0;
                 return (
                   <option key={c.id} value={c.name}>
-                    {c.phone ? `${c.phone} • ` : ''}{c.address ? `${c.address} • ` : ''}{dueAmt > 0 ? `(Previous Due: Tk ${formatCurrency(dueAmt)})` : '(No Due)'}
+                    {c.phone ? `${c.phone} • ` : ''}{c.address ? `${c.address} • ` : ''}{dueAmt > 0 ? `(Previous Due: ${formatCurrency(dueAmt)})` : '(No Due)'}
                   </option>
                 );
               })}
@@ -742,7 +742,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                       className="w-12 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center text-white font-bold font-tabular"
                     />
                     <span className="flex-grow text-right text-xs font-black text-emerald-400 font-tabular">
-                      Tk {formatCurrency(it.total)}
+                      {formatCurrency(it.total)}
                     </span>
                     <button
                       type="button"
@@ -778,7 +778,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
           <div className="flex justify-between items-center text-slate-300 font-bold">
             <span>Subtotal:</span>
             <span className="font-black text-white text-sm sm:text-base font-tabular">
-              Tk {formatCurrency(subtotal)}
+              {formatCurrency(subtotal)}
             </span>
           </div>
 
@@ -798,7 +798,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
           <div className="flex justify-between items-center pt-2 border-t border-slate-800 bg-blue-600/10 p-2.5 rounded-xl border border-blue-500/20">
             <span className="font-black text-xs sm:text-sm text-blue-300">Grand Total:</span>
             <span className="font-black text-white text-lg sm:text-xl font-tabular">
-              Tk {formatCurrency(grandTotal)}
+              {formatCurrency(grandTotal)}
             </span>
           </div>
 
@@ -822,7 +822,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
               />
               <span className={`text-[9px] block mt-0.5 ${isPaidExceedingTotal ? 'text-rose-400 font-bold' : 'text-slate-400'}`}>
                 {isPaidExceedingTotal
-                  ? `⚠️ পেইড টাকা বিল (Tk ${formatCurrency(grandTotal)}) থেকে বেশি হতে পারবে না!`
+                  ? `⚠️ পেইড টাকা বিল (${formatCurrency(grandTotal)}) থেকে বেশি হতে পারবে না!`
                   : isPaidAuto
                   ? '* Auto 100% paid'
                   : '* Partial payment specified'}
@@ -836,7 +836,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                   dueVal > 0 ? 'text-rose-400' : 'text-emerald-400'
                 }`}
               >
-                Tk {formatCurrency(dueVal)}
+                {formatCurrency(dueVal)}
               </span>
               <span className={`text-[9px] text-right font-medium ${dueVal > 0 ? 'text-rose-400' : 'text-slate-400'}`}>
                 {dueVal > 0 ? 'Auto logged to Due Ledger' : 'Fully Paid (No Due)'}
@@ -848,7 +848,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
             <div className="flex justify-between items-center text-xs p-2.5 bg-rose-950/40 border border-rose-500/40 rounded-xl text-rose-300 font-bold">
               <span>Customer Previous Due:</span>
               <span className="font-black text-rose-300 font-tabular">
-                Tk {formatCurrency(currentCustomerDue)}
+                {formatCurrency(currentCustomerDue)}
               </span>
             </div>
           )}
@@ -856,7 +856,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
             <div className="flex justify-between items-center text-xs p-2.5 bg-rose-600/20 border border-rose-500/50 rounded-xl text-white font-bold">
               <span className="text-rose-200">Total Due (Previous + Current):</span>
               <span className="font-black text-rose-300 text-sm font-tabular">
-                Tk {formatCurrency(currentCustomerDue + dueVal)}
+                {formatCurrency(currentCustomerDue + dueVal)}
               </span>
             </div>
           )}

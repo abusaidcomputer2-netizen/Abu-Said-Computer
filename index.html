@@ -56,6 +56,29 @@
             return true;
           }
         }, true);
+
+        // Disable right-click context menu across the site
+        document.addEventListener('contextmenu', function(e) {
+          e.preventDefault();
+          return false;
+        }, true);
+
+        // Disable DevTools, View Source, and Save Page shortcuts (preserve Ctrl+P, copy/paste, inputs)
+        document.addEventListener('keydown', function(e) {
+          var key = (e.key || '').toLowerCase();
+          var ctrlOrMeta = e.ctrlKey || e.metaKey;
+          if (
+            e.key === 'F12' ||
+            e.keyCode === 123 ||
+            (ctrlOrMeta && e.shiftKey && (key === 'i' || key === 'j' || key === 'c' || key === 'k')) ||
+            (e.metaKey && e.altKey && (key === 'i' || key === 'j' || key === 'c' || key === 'k' || key === 'u')) ||
+            (ctrlOrMeta && !e.shiftKey && !e.altKey && (key === 'u' || key === 's'))
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        }, true);
       })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">

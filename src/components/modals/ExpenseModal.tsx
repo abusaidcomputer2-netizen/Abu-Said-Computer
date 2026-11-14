@@ -112,7 +112,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
       const origAmt = Math.round((editingOrigAmount || 0) * 100) / 100;
       const newAmt = Math.round(amt * 100) / 100;
       if (Math.abs(newAmt - origAmt) > 0.01) {
-        showToast(`পুরাতন খরচে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল Tk ${formatCurrency(origAmt)}, কিন্তু বর্তমান পরিমাণ Tk ${formatCurrency(newAmt)}। টাকা কম বা বেশি হলে সেভ হবে না।`, 'error');
+        showToast(`পুরাতন খরচে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল ${formatCurrency(origAmt)}, কিন্তু বর্তমান পরিমাণ ${formatCurrency(newAmt)}। টাকা কম বা বেশি হলে সেভ হবে না।`, 'error');
         return;
       }
     }
@@ -169,7 +169,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
                 Recent Expense Entries
               </h4>
               <span className="text-xs text-rose-400 font-black font-tabular">
-                Total: Tk {formatCurrency(totalExpense)} ({filteredExpenses.length} Entries)
+                Total: {formatCurrency(totalExpense)} ({filteredExpenses.length} Entries)
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -219,14 +219,14 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
                       <td className="p-3 font-bold text-rose-300">{formatExpenseCategoryEn(e.category)}</td>
                       <td className="p-3 text-slate-300 text-xs">{e.desc || '--'}</td>
                       <td className="p-3 text-right font-black text-rose-400 font-tabular">
-                        {e.amount > 0 ? `Tk ${formatCurrency(e.amount)}` : <span className="text-slate-500 font-bold">--</span>}
+                        {e.amount > 0 ? formatCurrency(e.amount) : <span className="text-slate-500 font-bold">--</span>}
                       </td>
                       <td className="p-3 text-center space-x-1.5 whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => handleEdit(e)}
                           className="p-1 text-amber-400 hover:text-amber-300 cursor-pointer"
-                          title={isDateTodayOrYesterday(e.date) ? 'Edit Expense (Today/Yesterday)' : `Edit Expense (Old Record: Amount Tk ${e.amount} cannot change)`}
+                          title={isDateTodayOrYesterday(e.date) ? 'Edit Expense (Today/Yesterday)' : `Edit Expense (Old Record: Amount ${formatCurrency(e.amount)} cannot change)`}
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>

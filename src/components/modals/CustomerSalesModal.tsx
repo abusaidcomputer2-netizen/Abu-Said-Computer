@@ -55,7 +55,7 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
     const d = s.rawDate || s.date;
     if (startDate && d < startDate) return false;
     if (endDate && d > endDate) return false;
-    if (selectedCustomer && s.customer.toLowerCase() !== selectedCustomer.toLowerCase()) return false;
+    if (selectedCustomer && (s.customer || '').trim().toLowerCase() !== selectedCustomer.trim().toLowerCase()) return false;
 
     if (search) {
       const q = search.toLowerCase();
@@ -80,13 +80,17 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
   }> = {};
 
   filteredSales.forEach(s => {
-    const name = s.customer || 'Cash Customer';
-    if (!custMap[name]) {
-      const matched = customers.find(c => c.name.toLowerCase() === name.toLowerCase());
-      custMap[name] = {
-        name,
+    const rawName = (s.customer || 'Cash Customer').trim() || 'Cash Customer';
+    const key = rawName.toLowerCase();
+    if (!custMap[key]) {
+      const cleanPhone = (s.phone || '').trim();
+      const matched = (cleanPhone ? customers.find(c => (c.phone || '').trim() === cleanPhone) : null)
+        || customers.find(c => c.name.trim().toLowerCase() === key);
+      const isCash = key === 'cash customer';
+      custMap[key] = {
+        name: rawName,
         phone: s.phone || matched?.phone || '--',
-        address: resolveCustomerAddress(name, matched?.address),
+        address: isCash ? '--' : (s.address || resolveCustomerAddress(rawName, matched?.address)),
         memoCount: 0,
         totalPurchased: 0,
         totalPaid: 0,
@@ -95,12 +99,12 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
       };
     }
 
-    custMap[name].memoCount++;
-    custMap[name].totalPurchased += s.grandTotal || 0;
-    custMap[name].totalPaid += s.paid || 0;
-    custMap[name].totalDue += s.due || 0;
-    if ((s.rawDate || s.date) >= custMap[name].lastPurchaseDate) {
-      custMap[name].lastPurchaseDate = s.rawDate || s.date;
+    custMap[key].memoCount++;
+    custMap[key].totalPurchased += s.grandTotal || 0;
+    custMap[key].totalPaid += s.paid || 0;
+    custMap[key].totalDue += s.due || 0;
+    if ((s.rawDate || s.date) >= custMap[key].lastPurchaseDate) {
+      custMap[key].lastPurchaseDate = s.rawDate || s.date;
     }
   });
 
@@ -238,14 +242,14 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
           <div className="bg-slate-950 border border-emerald-500/30 p-3 rounded-2xl">
             <span className="text-[10px] font-bold text-emerald-400 uppercase block">Total Purchased</span>
             <div className="text-lg sm:text-xl font-black text-emerald-400 font-tabular">
-              Tk {formatCurrency(totalSales)}
+              {formatCurrency(totalSales)}
             </div>
           </div>
           <div className="bg-slate-950 border border-amber-500/30 p-3 rounded-2xl">
             <span className="text-[10px] font-bold text-amber-400 uppercase block">Paid / Due</span>
             <div className="text-xs sm:text-sm font-black text-white mt-1 font-tabular">
-              <span className="text-emerald-400">Tk {formatCurrency(totalPaid)}</span> /{' '}
-              <span className="text-rose-400">Tk {formatCurrency(totalDue)}</span>
+              <span className="text-emerald-400">{formatCurrency(totalPaid)}</span> /{' '}
+              <span className="text-rose-400">{formatCurrency(totalDue)}</span>
             </div>
           </div>
         </div>
@@ -312,11 +316,11 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
                         </td>
                         <td className="p-3 text-center font-bold text-blue-300 font-tabular">{c.memoCount} Memos</td>
                         <td className="p-3 text-right font-black text-emerald-400 font-tabular">
-                          Tk {formatCurrency(c.totalPurchased)}
+                          {formatCurrency(c.totalPurchased)}
                         </td>
-                        <td className="p-3 text-right text-emerald-300 font-tabular">Tk {formatCurrency(c.totalPaid)}</td>
+                        <td className="p-3 text-right text-emerald-300 font-tabular">{formatCurrency(c.totalPaid)}</td>
                         <td className={`p-3 text-right font-tabular ${c.totalDue > 0 ? 'text-rose-400 font-bold' : 'text-slate-400'}`}>
-                          Tk {formatCurrency(c.totalDue)}
+                          {formatCurrency(c.totalDue)}
                         </td>
                         <td className="p-3 text-center text-slate-400 whitespace-nowrap">
                           {formatDateDisplay(c.lastPurchaseDate)}
@@ -377,11 +381,11 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
                           {s.desc && <div className="text-[10px] text-slate-400 mt-0.5">{s.desc}</div>}
                         </td>
                         <td className="p-3 text-right font-black text-emerald-400 font-tabular">
-                          Tk {formatCurrency(s.grandTotal)}
+                          {formatCurrency(s.grandTotal)}
                         </td>
-                        <td className="p-3 text-right text-emerald-300 font-tabular">Tk {formatCurrency(s.paid)}</td>
+                        <td className="p-3 text-right text-emerald-300 font-tabular">{formatCurrency(s.paid)}</td>
                         <td className={`p-3 text-right font-tabular ${s.due > 0 ? 'text-rose-400 font-bold' : 'text-slate-400'}`}>
-                          Tk {formatCurrency(s.due)}
+                          {formatCurrency(s.due)}
                         </td>
                         <td className="p-3 text-center">
                           <button

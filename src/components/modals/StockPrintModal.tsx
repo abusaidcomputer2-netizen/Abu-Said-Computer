@@ -100,7 +100,7 @@ export const StockPrintModal: React.FC<StockPrintModalProps> = ({ products, curr
             </div>
             <div className="border-r border-slate-200 pr-1">
               <span className="text-[10px] font-bold text-emerald-700 uppercase block">Cost Valuation</span>
-              <span className="text-sm font-black text-emerald-700 font-tabular">Tk {formatCurrency(totalValuation)}</span>
+              <span className="text-sm font-black text-emerald-700 font-tabular">{formatCurrency(totalValuation)}</span>
             </div>
             <div className="bg-rose-50 py-1 rounded-xl border border-rose-200">
               <span className="text-[10px] font-bold text-rose-800 uppercase block">Low Stock</span>
@@ -136,16 +136,16 @@ export const StockPrintModal: React.FC<StockPrintModalProps> = ({ products, curr
                     </td>
                     <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 font-bold text-slate-900">{p.name}</td>
                     <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right border-r border-slate-200 text-slate-700 font-tabular">
-                      Tk {formatCurrency(c)}
+                      {formatCurrency(c)}
                     </td>
                     <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right border-r border-slate-200 text-slate-900 font-semibold font-tabular">
-                      Tk {formatCurrency(p.price)}
+                      {formatCurrency(p.price)}
                     </td>
                     <td className="py-2.5 px-3 print:py-2 print:px-2 text-center border-r border-slate-200 font-black text-blue-900 font-tabular">
                       {q}
                     </td>
                     <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right border-r border-slate-200 font-black text-emerald-900 font-tabular">
-                      Tk {formatCurrency(val)}
+                      {formatCurrency(val)}
                     </td>
                     <td className="py-2.5 px-3 print:py-2 print:px-2 text-center font-bold">
                       {isOut ? (
@@ -167,7 +167,7 @@ export const StockPrintModal: React.FC<StockPrintModalProps> = ({ products, curr
                   {totalUnits} Units
                 </td>
                 <td className="py-2.5 px-3 text-right text-emerald-900 font-black font-tabular">
-                  Tk {formatCurrency(totalValuation)}
+                  {formatCurrency(totalValuation)}
                 </td>
                 <td className="py-2.5 px-2 text-center text-slate-500 font-bold">Active Inventory</td>
               </tr>

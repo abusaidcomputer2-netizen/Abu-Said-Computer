@@ -611,7 +611,7 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
                         {p.name}
                       </td>
                       <td className="py-3 px-4 text-right font-black font-tabular text-emerald-400 text-sm">
-                        Tk {formatCurrency(p.price)}
+                        {formatCurrency(p.price)}
                       </td>
                     </tr>
                   ))
@@ -656,10 +656,10 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
                       </td>
                       <td className="p-3 text-slate-400">{d.desc || '-'}</td>
                       <td className="p-3 text-right font-black font-tabular text-rose-400">
-                        {d.due > 0 ? `Tk ${formatCurrency(d.due)}` : '-'}
+                        {d.due > 0 ? formatCurrency(d.due) : '-'}
                       </td>
                       <td className="p-3 text-right font-black font-tabular text-emerald-400">
-                        {d.paid > 0 ? `Tk ${formatCurrency(d.paid)}` : '-'}
+                        {d.paid > 0 ? formatCurrency(d.paid) : '-'}
                       </td>
                       <td className="p-3 text-slate-400">{d.user}</td>
                     </tr>
@@ -696,7 +696,7 @@ export const DataSheetModal: React.FC<DataSheetModalProps> = ({
                       <td className="p-3 font-bold text-white">{e.category}</td>
                       <td className="p-3 text-slate-400">{e.desc || '-'}</td>
                       <td className="p-3 text-right font-black font-tabular text-rose-400">
-                        Tk {formatCurrency(e.amount)}
+                        {formatCurrency(e.amount)}
                       </td>
                       <td className="p-3 text-slate-400">{e.user || 'Staff'}</td>
                     </tr>

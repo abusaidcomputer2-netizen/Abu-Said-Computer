@@ -217,12 +217,12 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                     )}
                   </td>
                   <td className="p-3 text-right font-black text-emerald-400 text-sm font-tabular whitespace-nowrap">
-                    Tk {formatCurrency(s.grandTotal)}
+                    {formatCurrency(s.grandTotal)}
                   </td>
                   <td className="p-3 text-center whitespace-nowrap">
                     {s.due > 0 ? (
                       <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
-                        Due: Tk {formatCurrency(s.due)}
+                        Due: {formatCurrency(s.due)}
                       </span>
                     ) : (
                       <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold">
@@ -258,7 +258,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                       title={
                         isMemoEditable(s.rawDate || s.date)
                           ? 'Edit Memo (Today or Yesterday - Free to edit)'
-                          : `Edit Memo (Old Record: Grand Total Tk ${s.grandTotal} must remain identical)`
+                          : `Edit Memo (Old Record: Grand Total ${formatCurrency(s.grandTotal)} must remain identical)`
                       }
                     >
                       <Edit3 className="w-3.5 h-3.5" />

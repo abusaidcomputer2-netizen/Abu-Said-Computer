@@ -133,7 +133,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
                       {c.count} Entries
                     </td>
                     <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right font-black text-rose-700 font-tabular text-sm">
-                      Tk {formatCurrency(c.amount)}
+                      {formatCurrency(c.amount)}
                     </td>
                   </tr>
                 ))}
@@ -147,7 +147,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
                     {expenses.length} Entries
                   </td>
                   <td className="py-2.5 px-3 text-right text-base text-rose-900 font-black font-tabular">
-                    Tk {formatCurrency(totalAmount)}
+                    {formatCurrency(totalAmount)}
                   </td>
                 </tr>
               </tfoot>
@@ -179,7 +179,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
                       {e.desc || '--'}
                     </td>
                     <td className="py-2.5 px-3.5 print:py-2 print:px-3 text-right font-black text-rose-700 font-tabular">
-                      {e.amount > 0 ? `Tk ${formatCurrency(e.amount)}` : '--'}
+                      {e.amount > 0 ? formatCurrency(e.amount) : '--'}
                     </td>
                   </tr>
                 ))}
@@ -190,7 +190,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
                     Total Operating Expenses:
                   </td>
                   <td className="py-2.5 px-3 text-right text-base text-rose-900 font-black font-tabular">
-                    Tk {formatCurrency(totalAmount)}
+                    {formatCurrency(totalAmount)}
                   </td>
                 </tr>
               </tfoot>
@@ -203,6 +203,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
           reportTitle="Operating Expenses Statement"
           printTimestamp={nowFormatted}
           currentUser={currentUser}
+          hideShopInfo={true}
           leftSignatureLabel="APPROVED BY"
           rightSignatureLabel="AUTHORIZED SIGNATURE"
         />

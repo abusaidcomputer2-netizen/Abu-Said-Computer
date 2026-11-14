@@ -215,6 +215,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, currentUser, o
             reportTitle="Sales Invoice"
             printTimestamp={printTimestamp}
             currentUser={currentUser || sale.user}
+            hideShopInfo={false}
             showCustomerSignature={true}
             showAuthorizedSignature={true}
             rightBadge={
@@ -225,7 +226,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, currentUser, o
                       DUE
                     </span>
                     <span className="block text-xs font-black text-rose-800 mt-1 font-tabular">
-                      Due Amount: Tk {formatCurrency(sale.due)}
+                      Due Amount: {formatCurrency(sale.due)}
                     </span>
                   </div>
                 </div>

@@ -660,7 +660,7 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
     if (paidNum > grandNum + 0.01) {
       return res.status(400).json({
         status: 'error',
-        message: `পেইড টাকা (Tk ${paidNum}) মোট বিল (Tk ${grandNum}) থেকে বেশি হতে পারবে না!`
+        message: `পেইড টাকা (${paidNum}) মোট বিল (${grandNum}) থেকে বেশি হতে পারবে না!`
       });
     }
 
@@ -812,7 +812,7 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
       if (Math.abs(newGrand - origGrand) > 0.01) {
         return res.status(400).json({
           status: 'error',
-          message: `পুরাতন মেমোতে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল Tk ${origGrand}, কিন্তু বর্তমান পরিমাণ Tk ${newGrand}। টাকা কম বা বেশি হলে সেভ হবে না।`
+          message: `পুরাতন মেমোতে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল ${origGrand}, কিন্তু বর্তমান পরিমাণ ${newGrand}। টাকা কম বা বেশি হলে সেভ হবে না।`
         });
       }
     }
@@ -822,7 +822,7 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
     if (paidNum > grandNum + 0.01) {
       return res.status(400).json({
         status: 'error',
-        message: `পেইড টাকা (Tk ${paidNum}) মোট বিল (Tk ${grandNum}) থেকে বেশি হতে পারবে না!`
+        message: `পেইড টাকা (${paidNum}) মোট বিল (${grandNum}) থেকে বেশি হতে পারবে না!`
       });
     }
 
@@ -1350,7 +1350,7 @@ apiRouter.put('/expenses/:id', (req: Request, res: Response) => {
       if (Math.abs(newAmt - origAmt) > 0.01) {
         return res.status(400).json({
           status: 'error',
-          message: `পুরাতন খরচে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ বন্ধ! মূল পরিমাণ ছিল Tk ${origAmt}, কিন্তু বর্তমান পরিমাণ Tk ${newAmt}।`
+          message: `পুরাতন খরচে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ বন্ধ! মূল পরিমাণ ছিল ${origAmt}, কিন্তু বর্তমান পরিমাণ ${newAmt}।`
         });
       }
     }
@@ -1382,6 +1382,7 @@ apiRouter.delete('/expenses/:id', (req: Request, res: Response) => {
     }
 
     runSql('DELETE FROM expenses WHERE id = ?', [id]);
+    saveDatabase();
     return res.json({ status: 'success', message: 'Expense deleted successfully' });
   } catch (err: any) {
     return res.status(500).json({ status: 'error', message: err.message });

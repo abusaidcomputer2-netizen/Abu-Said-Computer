@@ -63,6 +63,12 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
     activePaid += r.paid || 0;
   });
   const activeNet = activeBilled - activePaid;
+  const isUnfilteredAll =
+    selectedFilterCust === 'ALL' &&
+    !filterStartDate &&
+    !filterEndDate &&
+    !filterMonth &&
+    !searchQuery.trim();
 
   const handleCustomerSelectChange = (val: string) => {
     if (!val) {
@@ -149,7 +155,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
             <div>
               <span className="text-[10px] uppercase font-bold text-rose-400 block">Total Due Billed (Dr)</span>
               <div className="text-lg font-black text-white font-tabular">
-                Tk {formatCurrency(selectedFilterCust === 'ALL' ? dueTotals.shopTotalDue : activeBilled)}
+                {formatCurrency(isUnfilteredAll ? dueTotals.shopTotalDue : activeBilled)}
               </div>
             </div>
             <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
@@ -161,7 +167,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
             <div>
               <span className="text-[10px] uppercase font-bold text-emerald-400 block">Total Paid (Cr)</span>
               <div className="text-lg font-black text-white font-tabular">
-                Tk {formatCurrency(selectedFilterCust === 'ALL' ? dueTotals.shopTotalPaid : activePaid)}
+                {formatCurrency(isUnfilteredAll ? dueTotals.shopTotalPaid : activePaid)}
               </div>
             </div>
             <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -175,7 +181,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                 Current Outstanding (Net Due)
               </span>
               <div className="text-2xl sm:text-3xl font-black text-white font-tabular">
-                Tk {formatCurrency(selectedFilterCust === 'ALL' ? dueTotals.netDue : activeNet)}
+                {formatCurrency(isUnfilteredAll ? dueTotals.netDue : activeNet)}
               </div>
             </div>
             <div className="w-9 h-9 rounded-xl bg-white/20 text-amber-300 flex items-center justify-center">
@@ -215,7 +221,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                 <option value="ALL">All Due Customers ({customerSummaries.length})</option>
                 {customerSummaries.map((c, idx) => (
                   <option key={`${c.name}::${c.phone || idx}`} value={c.name}>
-                    {c.name}{c.phone ? ` (${c.phone})` : ''} (Due: Tk {formatCurrency(c.netBalance)})
+                    {c.name}{c.phone ? ` (${c.phone})` : ''} (Due: {formatCurrency(c.netBalance)})
                   </option>
                 ))}
               </select>
@@ -312,10 +318,10 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                     </td>
                     <td className="p-3 text-slate-300 text-xs">{r.desc || '--'}</td>
                     <td className="p-3 text-right font-black text-rose-400 font-tabular">
-                      {r.due > 0 ? `Tk ${formatCurrency(r.due)}` : '-'}
+                      {r.due > 0 ? formatCurrency(r.due) : '-'}
                     </td>
                     <td className="p-3 text-right font-black text-emerald-400 font-tabular">
-                      {r.paid > 0 ? `Tk ${formatCurrency(r.paid)}` : '-'}
+                      {r.paid > 0 ? formatCurrency(r.paid) : '-'}
                     </td>
                   </tr>
                 ))
@@ -353,7 +359,7 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
                 <option value="">Select customer...</option>
                 {customerSummaries.map((c, idx) => (
                   <option key={`${c.name}::${c.phone || idx}`} value={`${c.name}::${c.phone || ''}`}>
-                    {c.name}{c.phone ? ` (${c.phone})` : ''} (Due: Tk {formatCurrency(c.netBalance)})
+                    {c.name}{c.phone ? ` (${c.phone})` : ''} (Due: {formatCurrency(c.netBalance)})
                   </option>
                 ))}
               </select>

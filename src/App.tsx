@@ -593,7 +593,7 @@ export default function App() {
       throw new Error('At least one item is required to create an invoice!');
     }
     if ((parseFloat(payload.paid) || 0) > (parseFloat(payload.grandTotal) || 0) + 0.01) {
-      throw new Error(`পেইড টাকা মোট বিল (Tk ${formatCurrency(payload.grandTotal || 0)}) থেকে বেশি হতে পারবে না!`);
+      throw new Error(`পেইড টাকা মোট বিল (${formatCurrency(payload.grandTotal || 0)}) থেকে বেশি হতে পারবে না!`);
     }
 
     const isEdit = !!payload.id;
@@ -660,7 +660,7 @@ export default function App() {
         const origGrand = Math.round((origSale.grandTotal || 0) * 100) / 100;
         const newGrand = Math.round((finalRecord.grandTotal || 0) * 100) / 100;
         if (Math.abs(newGrand - origGrand) > 0.01) {
-          throw new Error(`পুরাতন মেমোতে মোট টাকার পরিমাণ পরিবর্তন করা যাবে না! মূল বিল ছিল Tk ${origGrand}।`);
+          throw new Error(`পুরাতন মেমোতে মোট টাকার পরিমাণ পরিবর্তন করা যাবে না! মূল বিল ছিল ${origGrand}।`);
         }
       }
 
@@ -734,11 +734,43 @@ export default function App() {
 
       const { customerSummaries: newSummaries, dueTotals: newTotals } = recalculateDueSummaries(updatedDue);
 
+      // Sync Customers directory locally if new customer or missing contact info
+      let updatedCustomers = customers;
+      const finalName = (finalRecord.customer || '').trim();
+      if (!isCashCust && finalName && (cleanPhone || finalCustAddress)) {
+        if (matchedCust) {
+          const nextPhone = matchedCust.phone || cleanPhone;
+          const nextAddr = matchedCust.address || finalCustAddress;
+          if (nextPhone !== matchedCust.phone || nextAddr !== matchedCust.address) {
+            updatedCustomers = customers.map(c =>
+              c.id === matchedCust.id ? { ...c, phone: nextPhone, address: nextAddr } : c
+            );
+          }
+        } else {
+          const nextSl = customers.length > 0 ? Math.max(...customers.map(c => c.sl || 0)) + 1 : 1;
+          const newCustId = Date.now() + 1;
+          updatedCustomers = [
+            ...customers,
+            {
+              id: newCustId,
+              rowId: newCustId,
+              sl: nextSl,
+              name: finalName,
+              phone: cleanPhone,
+              address: finalCustAddress
+            }
+          ];
+        }
+      }
+
       setProducts(updatedProducts);
       setSales(updatedSales);
       setDueRecords(updatedDue);
       setCustomerSummaries(newSummaries);
       setDueTotals(newTotals);
+      if (updatedCustomers !== customers) {
+        setCustomers(updatedCustomers);
+      }
 
       updateCachedBootstrap(prev => ({
         ...prev,
@@ -747,7 +779,8 @@ export default function App() {
         sales: updatedSales,
         dueRecords: updatedDue,
         customerSummaries: newSummaries,
-        dueTotals: newTotals
+        dueTotals: newTotals,
+        customers: updatedCustomers
       }));
     } else {
       await fetchBootstrapData();
@@ -1107,7 +1140,7 @@ export default function App() {
         const origAmt = Math.round((existingExp.amount || 0) * 100) / 100;
         const newAmt = Math.round(amt * 100) / 100;
         if (Math.abs(newAmt - origAmt) > 0.01) {
-          throw new Error(`পুরাতন খরচে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ বন্ধ! মূল পরিমাণ ছিল Tk ${origAmt}।`);
+          throw new Error(`পুরাতন খরচে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ বন্ধ! মূল পরিমাণ ছিল ${origAmt}।`);
         }
       }
 
