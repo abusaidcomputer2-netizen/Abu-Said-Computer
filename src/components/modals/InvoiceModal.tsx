@@ -104,7 +104,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ sale, currentUser, o
                 </div>
                 <div className="text-slate-700 font-medium text-xs sm:text-sm">
                   <span className="font-semibold text-slate-600">Address:</span>{' '}
-                  {sale.address || (sale.customer?.toLowerCase() === 'cash customer' ? '-' : 'Paduar Bazar, Cumilla')}
+                  {sale.address && sale.address.trim() ? sale.address.trim() : '-'}
                 </div>
               </div>
 

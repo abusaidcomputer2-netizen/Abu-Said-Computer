@@ -319,6 +319,10 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
   const paidVal = isPaidAuto ? grandTotal : (paid === '' ? 0 : parseFloat(paid) || 0);
   const dueVal = Math.max(0, Math.round(grandTotal - paidVal));
   const isPaidExceedingTotal = paidVal > grandTotal + 0.001;
+  const isOldMemoEdit = Boolean(editingSale && !isDateTodayOrYesterday(editingSale.rawDate || editingSale.date));
+  const origGrandTotal = editingSale ? Math.round((editingSale.grandTotal || 0) * 100) / 100 : 0;
+  const origPaidAmount = editingSale ? Math.round((editingSale.paid || 0) * 100) / 100 : 0;
+  const isOldMemoAmountMismatch = isOldMemoEdit && Math.abs(Math.round(grandTotal) - origGrandTotal) > 0.01;
 
   const hasOutOfStockStationery = (() => {
     const requestedTotals: Record<string, number> = {};
@@ -391,7 +395,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     }
 
     const trimmedCustName = (customerName || '').trim();
-    const isBlankOrCash = !trimmedCustName || trimmedCustName.toLowerCase() === 'cash customer';
+    const isBlankOrCash = !trimmedCustName || /^cash customer(\s*\(\d+\))?$/i.test(trimmedCustName);
     const finalCustName = isBlankOrCash ? 'Cash Customer' : trimmedCustName;
     const isCashCustomer = finalCustName.toLowerCase() === 'cash customer';
 
@@ -406,6 +410,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     };
 
     // Mobile no and address are ONLY mandatory for Due (বাকী) customers!
+    let finalAddress = '';
     if (dueVal > 0) {
       if (isCashCustomer) {
         showToast('Customer Name is required for Due transactions (cannot be Cash Customer)!', 'warning');
@@ -426,32 +431,22 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         showToast('Customer Address is required for Due customers!', 'warning');
         return;
       }
-    }
-
-    // Address only comes from customer list (or entered if due), otherwise empty
-    let finalAddress = (customerAddress || '').trim();
-    if (!finalAddress && !isCashCustomer) {
-      const match = findCustMatch();
-      if (match && match.address) {
-        finalAddress = match.address.trim();
-      }
-    }
-    if (isCashCustomer) {
-      finalAddress = '';
+      finalAddress = addr;
     }
 
     // Rule:
     // Today or Yesterday: Edited freely without conditions
-    // Old Memos: Total amount MUST remain exactly identical! Cannot be higher or lower.
-    if (editingSale) {
-      const isRecent = isDateTodayOrYesterday(editingSale.rawDate || editingSale.date);
-      if (!isRecent) {
-        const origGrand = Math.round((editingSale.grandTotal || 0) * 100) / 100;
-        const newGrand = Math.round(grandTotal * 100) / 100;
-        if (Math.abs(newGrand - origGrand) > 0.01) {
-          showToast(`পুরাতন মেমোর টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল ${formatCurrency(origGrand)}, কিন্তু বর্তমান পরিমাণ ${formatCurrency(newGrand)}। টাকা কম বা বেশি হলে সেভ হবে না।`, 'error');
-          return;
-        }
+    // Old Memos: Total amount and paid amount MUST remain exactly identical! Cannot be higher or lower.
+    if (editingSale && isOldMemoEdit) {
+      const newGrand = Math.round(grandTotal * 100) / 100;
+      const newPaid = Math.round(paidVal * 100) / 100;
+      if (Math.abs(newGrand - origGrandTotal) > 0.01) {
+        showToast(`পুরাতন মেমোর টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল ${formatCurrency(origGrandTotal)}, কিন্তু বর্তমান পরিমাণ ${formatCurrency(newGrand)}। টাকা কম বা বেশি হলে সেভ হবে না।`, 'error');
+        return;
+      }
+      if (Math.abs(newPaid - origPaidAmount) > 0.01) {
+        showToast(`পুরাতন মেমোতে পেইড টাকা পরিবর্তন করা যাবে না! মূল পেইড ছিল ${formatCurrency(origPaidAmount)}।`, 'error');
+        return;
       }
     }
 
@@ -603,7 +598,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                 type="text"
                 value={customerAddress}
                 onChange={e => setCustomerAddress(e.target.value)}
-                placeholder="Address (e.g. Paduar Bazar, Cumilla) *"
+                placeholder="Customer Address *"
                 className={`w-full bg-slate-950 border ${!customerAddress.trim() ? 'border-amber-500/60' : 'border-slate-700/80'} rounded-2xl px-3.5 py-2.5 text-sm text-white font-semibold focus:outline-none focus:border-blue-500`}
               />
             </div>
@@ -783,14 +778,20 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
           </div>
 
           <div className="flex justify-between items-center text-slate-300 font-bold">
-            <span>Discount:</span>
+            <span>
+              Discount:{isOldMemoEdit && <span className="ml-1.5 text-[10px] text-amber-400">(Locked)</span>}
+            </span>
             <input
               type="number"
               min="0"
               step="any"
+              disabled={isOldMemoEdit}
+              readOnly={isOldMemoEdit}
               value={discount || ''}
               onChange={e => setDiscount(parseFloat(e.target.value) || 0)}
-              className="w-24 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1 text-right text-amber-400 font-black text-sm sm:text-base focus:outline-none focus:border-blue-500 font-tabular"
+              className={`w-24 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1 text-right text-amber-400 font-black text-sm sm:text-base focus:outline-none focus:border-blue-500 font-tabular ${
+                isOldMemoEdit ? 'opacity-60 cursor-not-allowed' : ''
+              }`}
               placeholder="0"
             />
           </div>
@@ -802,26 +803,49 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
             </span>
           </div>
 
+          {isOldMemoEdit && (
+            <div
+              className={`flex justify-between items-center text-[11px] p-2.5 rounded-xl border font-bold ${
+                isOldMemoAmountMismatch
+                  ? 'bg-rose-500/15 border-rose-500/50 text-rose-300'
+                  : 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
+              }`}
+            >
+              <span>
+                {isOldMemoAmountMismatch
+                  ? `⚠️ মূল বিল ${formatCurrency(origGrandTotal)} হতে হবে (পার্থক্য: ${formatCurrency(grandTotal - origGrandTotal)})`
+                  : `✓ টাকার পরিমাণ ঠিক আছে (${formatCurrency(origGrandTotal)} Locked)`}
+              </span>
+              <span className="font-tabular font-black">{formatCurrency(origGrandTotal)}</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-2 pt-1">
             <div className={`bg-slate-900 border p-2.5 rounded-xl ${isPaidExceedingTotal ? 'border-rose-500/70' : 'border-emerald-500/30'}`}>
               <label className={`block text-[10px] font-bold uppercase mb-0.5 ${isPaidExceedingTotal ? 'text-rose-400' : 'text-emerald-400'}`}>
-                Paid Amount
+                Paid Amount{isOldMemoEdit && ' (Locked)'}
               </label>
               <input
                 type="number"
                 min="0"
                 step="any"
+                disabled={isOldMemoEdit}
+                readOnly={isOldMemoEdit}
                 value={isPaidAuto ? grandTotal : paid}
                 onChange={e => handlePaidChange(e.target.value)}
                 placeholder="0"
                 className={`w-full bg-slate-950 border rounded-lg px-2.5 py-1 text-right font-black text-sm sm:text-base focus:outline-none font-tabular ${
+                  isOldMemoEdit ? 'opacity-60 cursor-not-allowed ' : ''
+                }${
                   isPaidExceedingTotal
                     ? 'border-rose-500 text-rose-400'
                     : 'border-emerald-500/50 text-emerald-400'
                 }`}
               />
               <span className={`text-[9px] block mt-0.5 ${isPaidExceedingTotal ? 'text-rose-400 font-bold' : 'text-slate-400'}`}>
-                {isPaidExceedingTotal
+                {isOldMemoEdit
+                  ? '* Old memo payment locked'
+                  : isPaidExceedingTotal
                   ? `⚠️ পেইড টাকা বিল (${formatCurrency(grandTotal)}) থেকে বেশি হতে পারবে না!`
                   : isPaidAuto
                   ? '* Auto 100% paid'
@@ -865,9 +889,9 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isSubmitting || hasOutOfStockStationery || isPaidExceedingTotal}
+          disabled={isSubmitting || hasOutOfStockStationery || isPaidExceedingTotal || isOldMemoAmountMismatch}
           className={`w-full text-white font-black py-3.5 rounded-2xl shadow-lg transition flex items-center justify-center gap-2.5 text-base cursor-pointer disabled:opacity-60 ${
-            hasOutOfStockStationery || isPaidExceedingTotal
+            hasOutOfStockStationery || isPaidExceedingTotal || isOldMemoAmountMismatch
               ? 'bg-rose-950/80 border border-rose-500/60 text-rose-300 cursor-not-allowed shadow-none'
               : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-600/25'
           }`}
@@ -881,6 +905,11 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
             <span className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
               <span>⚠️ Paid Amount Exceeds Bill (Save Blocked)</span>
+            </span>
+          ) : isOldMemoAmountMismatch ? (
+            <span className="flex items-center gap-2 text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+              <span>⚠️ পূর্বের মেমোর মোট টাকা ({formatCurrency(origGrandTotal)}) সমান হতে হবে</span>
             </span>
           ) : (
             <>

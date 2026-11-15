@@ -47,7 +47,7 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
         return {
           name: fromSummary?.name || fromRecord?.customer || selectedCust,
           phone: fromSummary?.phone || fromRecord?.phone || '--',
-          address: fromSummary?.address || fromRecord?.address || 'Paduar Bazar, Cumilla',
+          address: fromSummary?.address || fromRecord?.address || '--',
         };
       })()
     : null;

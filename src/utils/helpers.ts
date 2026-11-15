@@ -129,10 +129,10 @@ export function normalizeCategory(cat?: string): 'Photocopy' | 'Online Applicati
   return 'Online Application';
 }
 
-export function resolveCustomerAddress(custName?: string, savedAddress?: string): string {
+export function resolveCustomerAddress(_custName?: string, savedAddress?: string): string {
   const addr = (savedAddress || '').trim();
-  if (addr && addr !== '--' && addr !== 'N/A' && addr !== 'Cumilla') return addr;
-  return 'Paduar Bazar, Cumilla';
+  if (addr && addr !== '--' && addr !== 'N/A') return addr;
+  return '--';
 }
 
 const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
@@ -249,23 +249,31 @@ export function recalculateDueSummaries(dueRecords: any[] = []) {
 export function isDateTodayOrYesterday(dateStr?: string): boolean {
   if (!dateStr) return false;
   const now = new Date();
-  const getDates = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const bdTime = new Date(d.getTime() + (6 * 60 + d.getTimezoneOffset()) * 60000);
-    const bdy = bdTime.getFullYear();
-    const bdm = String(bdTime.getMonth() + 1).padStart(2, '0');
-    const bdDay = String(bdTime.getDate()).padStart(2, '0');
-    return [`${y}-${m}-${day}`, `${bdy}-${bdm}-${bdDay}`];
-  };
+  const bdNow = new Date(now.getTime() + (6 * 60 + now.getTimezoneOffset()) * 60000);
+  const bdYesterday = new Date(bdNow.getTime() - 24 * 60 * 60 * 1000);
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  const todayVariants = getDates(now);
-  const yesterdayVariants = getDates(new Date(now.getTime() - 24 * 60 * 60 * 1000));
-  const allowed = new Set([...todayVariants, ...yesterdayVariants]);
+  const allowed = new Set([fmt(bdNow), fmt(bdYesterday)]);
 
-  const cleanDate = dateStr.substring(0, 10).replace(/\//g, '-');
-  return allowed.has(cleanDate);
+  let raw = String(dateStr).trim();
+  if (raw.includes('T')) raw = raw.split('T')[0];
+  if (raw.includes(' ') && raw.length > 10) raw = raw.split(' ')[0];
+  raw = raw.replace(/\//g, '-');
+
+  const mmmMatch = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(raw);
+  if (mmmMatch) {
+    const months: Record<string, string> = {
+      jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+      jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
+    };
+    const mNum = months[mmmMatch[2].toLowerCase()];
+    if (mNum) {
+      raw = `${mmmMatch[3]}-${mNum}-${mmmMatch[1].padStart(2, '0')}`;
+    }
+  }
+
+  return allowed.has(raw.substring(0, 10));
 }
 
 export function cleanDueDescription(desc?: string, fallback = '--'): string {

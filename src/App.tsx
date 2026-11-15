@@ -65,7 +65,6 @@ import {
   deleteProductFromCloud,
   syncCustomerToCloud,
   deleteCustomerFromCloud,
-  clearAllCustomersInCloud,
   syncDueRecordToCloud,
   syncExpenseToCloud,
   deleteExpenseFromCloud,
@@ -158,14 +157,14 @@ export default function App() {
   // Active Navigation & View - Primary page is Dashboard
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
-  // Filters State
-  const initialCurrentYm = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-  const [filterStartDate, setFilterStartDate] = useState('');
-  const [filterEndDate, setFilterEndDate] = useState('');
-  const [filterMonth, setFilterMonth] = useState(initialCurrentYm);
+  // Filters State - Always auto-filter to Today
+  const initialToday = getLocalDateStr();
+  const [filterStartDate, setFilterStartDate] = useState(initialToday);
+  const [filterEndDate, setFilterEndDate] = useState(initialToday);
+  const [filterMonth, setFilterMonth] = useState('');
   const [searchMemo, setSearchMemo] = useState('');
   const [filterStaff, setFilterStaff] = useState('ALL');
-  const [activeFilterBadge, setActiveFilterBadge] = useState(() => formatMmmYyyy(initialCurrentYm));
+  const [activeFilterBadge, setActiveFilterBadge] = useState(() => `Today (${initialToday})`);
 
   // Modals & Action States
   const [editingSale, setEditingSale] = useState<SaleRecord | null>(null);
@@ -507,7 +506,7 @@ export default function App() {
   useEffect(() => {
     if (currentUser) {
       fetchBootstrapData();
-      handleFilterRunningMonth();
+      handleFilterToday();
       if (!isAuthorizedCloudUser(googleUser)) {
         void ensureAutoCloudSession().then(status => {
           if (status === 'needs-anonymous-enable') {
@@ -746,6 +745,7 @@ export default function App() {
     setCurrentUser(null);
     setLoginPassword('');
     setActiveTab('dashboard');
+    handleFilterToday();
     localStorage.removeItem('as_computer_auth_user');
     showToast('Logged out successfully', 'info');
   };
@@ -895,8 +895,11 @@ export default function App() {
     const normPhone = cleanPhone.replace(/[\s\-\(\)]/g, '');
     const matchedCust = (normPhone ? customers.find(c => (c.phone || '').replace(/[\s\-\(\)]/g, '') === normPhone) : null)
       || customers.find(c => c.name.toLowerCase() === (payload.customer || '').trim().toLowerCase());
-    const isCashCust = (payload.customer || '').trim().toLowerCase() === 'cash customer';
-    const finalCustAddress = isCashCust ? '' : ((payload.address || '').trim() || matchedCust?.address || '');
+    const rawCustName = (payload.customer || '').trim();
+    const normalizedCustName = !rawCustName || /^cash customer(\s*\(\d+\))?$/i.test(rawCustName) ? 'Cash Customer' : rawCustName;
+    const isCashCust = normalizedCustName.toLowerCase() === 'cash customer';
+    const payloadDue = parseFloat(payload.due) || 0;
+    const finalCustAddress = isCashCust ? '' : ((payload.address || '').trim() || (payloadDue > 0 ? (matchedCust?.address || '') : ''));
     const categorySummary = Array.from(new Set((payload.items || []).map((i: any) => i.category).filter(Boolean))).join(', ') || 'Photocopy';
 
     const fallbackRecord: SaleRecord = {
@@ -915,7 +918,7 @@ export default function App() {
       rawDate: origSale?.rawDate || todayLocal,
       date: origSale?.date || todayLocal,
       user: origSale?.user || payload.user || currentUser?.username || 'Md Abu Said',
-      customer: payload.customer || 'Cash Customer',
+      customer: normalizedCustName,
       phone: cleanPhone,
       address: finalCustAddress,
       category: categorySummary,
@@ -950,6 +953,11 @@ export default function App() {
         const newGrand = Math.round((finalRecord.grandTotal || 0) * 100) / 100;
         if (Math.abs(newGrand - origGrand) > 0.01) {
           throw new Error(`পুরাতন মেমোতে মোট টাকার পরিমাণ পরিবর্তন করা যাবে না! মূল বিল ছিল ${origGrand}।`);
+        }
+        const origPaid = Math.round((origSale.paid || 0) * 100) / 100;
+        const newPaid = Math.round((finalRecord.paid || 0) * 100) / 100;
+        if (Math.abs(newPaid - origPaid) > 0.01) {
+          throw new Error(`পুরাতন মেমোতে পেইড টাকা পরিবর্তন করা যাবে না! মূল পেইড ছিল ${origPaid}।`);
         }
       }
 
@@ -1754,24 +1762,6 @@ export default function App() {
     }
   };
 
-  const handleClearAllCustomers = async () => {
-    const prevIds = customers.map(c => c.id);
-    try {
-      const { ok, data, error, backendUnavailable } = await safeFetchJson<any>('/api/customers', { method: 'DELETE' });
-      if (data?.status === 'error' || (!ok && !backendUnavailable)) {
-        showToast(data?.message || error || 'Failed to delete all customers', 'error');
-      } else {
-        setCustomers([]);
-        updateCachedBootstrap(prev => ({ ...prev, customers: [] }));
-        void clearAllCustomersInCloud(prevIds);
-        showToast(data?.message || 'All customers permanently deleted', 'success');
-      }
-      if (!backendUnavailable) await fetchBootstrapData();
-    } catch {
-      showToast('Failed to delete all customers', 'error');
-    }
-  };
-
   const handleSubmitProduct = async (payload: any) => {
     const isEdit = !!payload.id;
     const pid = payload.id || Date.now();
@@ -2470,7 +2460,6 @@ export default function App() {
           }}
           onSubmitCustomer={handleSubmitCustomer}
           onDeleteCustomer={handleDeleteCustomer}
-          onClearAllCustomers={handleClearAllCustomers}
           showToast={showToast}
         />
       )}

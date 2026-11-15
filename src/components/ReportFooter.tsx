@@ -40,19 +40,17 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
           @bottom-left {
             content: "${footerLeftText}";
             font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
-            font-size: 9px;
+            font-size: 8.5px;
             line-height: 1.3;
             font-weight: 500;
             color: #475569;
             border-top: 1px solid #cbd5e1;
             vertical-align: top;
             padding-top: 5px;
+            white-space: nowrap;
           }
           @bottom-center {
-            content: "\\00a0";
-            font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
-            font-size: 9px;
-            line-height: 1.3;
+            content: "";
             border-top: 1px solid #cbd5e1;
             vertical-align: top;
             padding-top: 5px;
@@ -60,7 +58,7 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
           @bottom-right {
             content: "Page " counter(page) " of " counter(pages);
             font-family: 'Plus Jakarta Sans', 'Hind Siliguri', sans-serif;
-            font-size: 9px;
+            font-size: 8.5px;
             line-height: 1.3;
             font-weight: 700;
             color: #334155;
@@ -129,11 +127,11 @@ export const ReportFooter: React.FC<ReportFooterProps> = ({
       )}
 
       {/* Bottom Document Audit Meta Line: Shown in Screen Preview; in Print, @page margin-box renders this exact row on every page */}
-      <div className="print-doc-footer mt-auto border-t border-slate-300 pt-2 flex justify-between items-center text-[10px] sm:text-[11px] text-slate-600 font-medium print:hidden">
-        <div>
-          {reportTitle} - Printed : {printTimestamp} {currentUser ? `• ${currentUser}` : ''}
+      <div className="print-doc-footer mt-auto border-t border-slate-300 pt-2 flex flex-nowrap justify-between items-center gap-3 text-[9.5px] sm:text-[10.5px] text-slate-600 font-medium print:hidden">
+        <div className="whitespace-nowrap truncate min-w-0">
+          {reportTitle} - Printed : {printTimestamp}{currentUser ? ` • ${currentUser}` : ''}
         </div>
-        <div className="font-bold text-slate-700 whitespace-nowrap">
+        <div className="font-bold text-slate-700 whitespace-nowrap flex-shrink-0">
           {pageInfo || 'Page 1 of 1'}
         </div>
       </div>

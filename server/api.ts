@@ -433,27 +433,35 @@ apiRouter.delete('/products/:id', (req: Request, res: Response) => {
   }
 });
 
-// Helper to verify if a record date is Today or Yesterday
+// Helper to verify if a record date is Today or Yesterday (Bangladesh Time)
 export function isDateTodayOrYesterday(dateStr?: string): boolean {
   if (!dateStr) return false;
   const now = new Date();
-  const getDates = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const bdTime = new Date(d.getTime() + (6 * 60 + d.getTimezoneOffset()) * 60000);
-    const bdy = bdTime.getFullYear();
-    const bdm = String(bdTime.getMonth() + 1).padStart(2, '0');
-    const bdDay = String(bdTime.getDate()).padStart(2, '0');
-    return [`${y}-${m}-${day}`, `${bdy}-${bdm}-${bdDay}`];
-  };
+  const bdNow = new Date(now.getTime() + (6 * 60 + now.getTimezoneOffset()) * 60000);
+  const bdYesterday = new Date(bdNow.getTime() - 24 * 60 * 60 * 1000);
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-  const todayVariants = getDates(now);
-  const yesterdayVariants = getDates(new Date(now.getTime() - 24 * 60 * 60 * 1000));
-  const allowed = new Set([...todayVariants, ...yesterdayVariants]);
+  const allowed = new Set([fmt(bdNow), fmt(bdYesterday)]);
 
-  const cleanDate = dateStr.substring(0, 10).replace(/\//g, '-');
-  return allowed.has(cleanDate);
+  let raw = String(dateStr).trim();
+  if (raw.includes('T')) raw = raw.split('T')[0];
+  if (raw.includes(' ') && raw.length > 10) raw = raw.split(' ')[0];
+  raw = raw.replace(/\//g, '-');
+
+  const mmmMatch = /^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/.exec(raw);
+  if (mmmMatch) {
+    const months: Record<string, string> = {
+      jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+      jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
+    };
+    const mNum = months[mmmMatch[2].toLowerCase()];
+    if (mNum) {
+      raw = `${mmmMatch[3]}-${mNum}-${mmmMatch[1].padStart(2, '0')}`;
+    }
+  }
+
+  return allowed.has(raw.substring(0, 10));
 }
 
 // ---------------- CUSTOMERS ----------------
@@ -704,12 +712,13 @@ apiRouter.post('/sales', (req: Request, res: Response) => {
     }
 
     const dueVal = parseFloat(due) || 0;
-    const finalCustName = (customer || '').trim() || 'Cash Customer';
+    const rawCustTrim = (customer || '').trim();
+    const finalCustName = !rawCustTrim || /^cash customer(\s*\(\d+\))?$/i.test(rawCustTrim) ? 'Cash Customer' : rawCustTrim;
     const isCashCustomer = finalCustName.toLowerCase() === 'cash customer';
     const cleanPhone = phone ? phone.trim() : '';
 
     let cleanAddress = isCashCustomer ? '' : (address && address.trim() ? address.trim() : '');
-    if (!cleanAddress && !isCashCustomer) {
+    if (dueVal > 0 && !cleanAddress && !isCashCustomer) {
       cleanAddress = lookupCustomerAddress(finalCustName, cleanPhone);
     }
 
@@ -846,7 +855,7 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
 
     // Rules:
     // Today or Yesterday: Edited freely without conditions
-    // Old Memos: Total amount MUST remain exactly identical! Cannot be higher or lower.
+    // Old Memos: Total amount and paid amount MUST remain exactly identical! Cannot be higher or lower.
     const isRecent = isDateTodayOrYesterday(existing.date);
     if (!isRecent) {
       const origGrand = Math.round((parseFloat(existing.grand_total) || 0) * 100) / 100;
@@ -855,6 +864,14 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
         return res.status(400).json({
           status: 'error',
           message: `পুরাতন মেমোতে টাকার পরিমাণ পরিবর্তন করা সম্পূর্ণ নিষিদ্ধ! মূল পরিমাণ ছিল ${origGrand}, কিন্তু বর্তমান পরিমাণ ${newGrand}। টাকা কম বা বেশি হলে সেভ হবে না।`
+        });
+      }
+      const origPaid = Math.round((parseFloat(existing.paid) || 0) * 100) / 100;
+      const newPaidCheck = Math.round((parseFloat(paid) || 0) * 100) / 100;
+      if (Math.abs(newPaidCheck - origPaid) > 0.01) {
+        return res.status(400).json({
+          status: 'error',
+          message: `পুরাতন মেমোতে পেইড টাকা পরিবর্তন করা যাবে না! মূল পেইড ছিল ${origPaid}।`
         });
       }
     }
@@ -869,11 +886,12 @@ apiRouter.put('/sales/:id', (req: Request, res: Response) => {
     }
 
     const dueVal = parseFloat(due) || 0;
-    const finalUpdateCust = (customer || '').trim() || 'Cash Customer';
+    const rawUpdateCustTrim = (customer || '').trim();
+    const finalUpdateCust = !rawUpdateCustTrim || /^cash customer(\s*\(\d+\))?$/i.test(rawUpdateCustTrim) ? 'Cash Customer' : rawUpdateCustTrim;
     const isCashCust = finalUpdateCust.toLowerCase() === 'cash customer';
     const cleanUpdatePhone = phone ? phone.trim() : '';
     let cleanUpdateAddress = isCashCust ? '' : (address && address.trim() ? address.trim() : '');
-    if (!cleanUpdateAddress && !isCashCust) {
+    if (dueVal > 0 && !cleanUpdateAddress && !isCashCust) {
       cleanUpdateAddress = lookupCustomerAddress(finalUpdateCust, cleanUpdatePhone);
     }
 

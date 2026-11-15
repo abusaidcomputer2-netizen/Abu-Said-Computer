@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AlertTriangle, Trash2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { SaleRecord } from '../../types';
-import { formatCurrency, formatDateDisplay } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, isDateTodayOrYesterday } from '../../utils/helpers';
 
 interface DeleteMemoModalProps {
   sale: SaleRecord | null;
@@ -20,10 +20,16 @@ export const DeleteMemoModal: React.FC<DeleteMemoModalProps> = ({
 
   if (!sale) return null;
 
-  const handleNext = () => setStep(2);
+  const isDeletable = isDateTodayOrYesterday(sale.rawDate || sale.date);
+
+  const handleNext = () => {
+    if (!isDeletable) return;
+    setStep(2);
+  };
   const handleBack = () => setStep(1);
 
   const handleExecute = async () => {
+    if (!isDeletable) return;
     if (confirmText.trim().toUpperCase() !== 'DELETE') return;
     setIsDeleting(true);
     try {
