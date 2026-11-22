@@ -761,8 +761,7 @@ export default function App() {
   };
 
   const handleFilterRunningMonth = () => {
-    const now = new Date();
-    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const ym = getLocalDateStr().slice(0, 7);
     setFilterMonth(ym);
     setFilterStartDate('');
     setFilterEndDate('');
@@ -808,7 +807,7 @@ export default function App() {
       if (s.user.toLowerCase() !== filterStaff.toLowerCase()) return false;
     }
 
-    const d = s.rawDate || s.date;
+    const d = (s.rawDate || s.date || '').slice(0, 10);
     if (filterMonth && !d.startsWith(filterMonth)) return false;
     if (filterStartDate && d < filterStartDate) return false;
     if (filterEndDate && d > filterEndDate) return false;
@@ -822,9 +821,13 @@ export default function App() {
   let statStationery = 0;
   let statCashCollection = 0;
   let statNewDue = 0;
+  let statSalesPaid = 0;
 
   filteredSales.forEach(s => {
     statNewDue += s.due || 0;
+    statSalesPaid += s.paid !== undefined && s.paid !== null
+      ? Number(s.paid) || 0
+      : Math.max(0, (s.grandTotal || 0) - (s.due || 0));
     const ratio = s.subtotal > 0 ? s.grandTotal / s.subtotal : 1.0;
 
     if (s.items && s.items.length > 0) {
@@ -846,22 +849,22 @@ export default function App() {
   // Dues paid in this filtered period
   let duePaidInPeriod = 0;
   dueRecords.forEach(d => {
-    if (filterMonth && !d.date.startsWith(filterMonth)) return;
-    if (filterStartDate && d.date < filterStartDate) return;
-    if (filterEndDate && d.date > filterEndDate) return;
+    const dt = (d.date || '').slice(0, 10);
+    if (filterMonth && !dt.startsWith(filterMonth)) return;
+    if (filterStartDate && dt < filterStartDate) return;
+    if (filterEndDate && dt > filterEndDate) return;
     duePaidInPeriod += d.paid || 0;
   });
 
-  const totalSalesBilled = statPhotocopy + statOnline + statStationery;
-  const cashFromSales = Math.max(0, totalSalesBilled - statNewDue);
-  statCashCollection = cashFromSales + duePaidInPeriod;
+  statCashCollection = statSalesPaid + duePaidInPeriod;
 
   // Expenses in filtered period
   let filteredExpenseTotal = 0;
   expenses.forEach(e => {
-    if (filterMonth && !e.date.startsWith(filterMonth)) return;
-    if (filterStartDate && e.date < filterStartDate) return;
-    if (filterEndDate && e.date > filterEndDate) return;
+    const dt = (e.date || '').slice(0, 10);
+    if (filterMonth && !dt.startsWith(filterMonth)) return;
+    if (filterStartDate && dt < filterStartDate) return;
+    if (filterEndDate && dt > filterEndDate) return;
     filteredExpenseTotal += e.amount || 0;
   });
 
@@ -1096,7 +1099,10 @@ export default function App() {
       const snap = await fetchBootstrapData();
       void syncSaleToCloud(finalRecord);
       if (snap) {
-        const itemNames = new Set((finalRecord.items || []).map(it => (it.name || '').trim().toLowerCase()));
+        const itemNames = new Set([
+          ...(finalRecord.items || []).map(it => (it.name || '').trim().toLowerCase()),
+          ...(origSale?.items || []).map(it => (it.name || '').trim().toLowerCase())
+        ]);
         snap.products.forEach(p => {
           if (itemNames.has(p.name.trim().toLowerCase())) {
             void syncProductToCloud(p);
@@ -2142,7 +2148,7 @@ export default function App() {
               online: statOnline,
               stationery: statStationery,
               cashCollection: statCashCollection,
-              outstandingDue: statNewDue,
+              outstandingDue: (isMemoSearch || filterStaff !== 'ALL') ? statNewDue : dueTotals.netDue,
               totalExpense: filteredExpenseTotal,
               cashBalance: statBalance
             }}

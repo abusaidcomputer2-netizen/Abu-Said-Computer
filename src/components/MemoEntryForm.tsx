@@ -410,7 +410,8 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
     };
 
     // Mobile no and address are ONLY mandatory for Due (বাকী) customers!
-    let finalAddress = '';
+    // Preserve explicit/saved address for non-cash customers, but NEVER auto-fill a default address.
+    let finalAddress = isCashCustomer ? '' : (customerAddress || '').trim();
     if (dueVal > 0) {
       if (isCashCustomer) {
         showToast('Customer Name is required for Due transactions (cannot be Cash Customer)!', 'warning');
@@ -420,7 +421,7 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
         showToast('Mobile Number is required for Due customers!', 'warning');
         return;
       }
-      let addr = (customerAddress || '').trim();
+      let addr = finalAddress;
       if (!addr) {
         const match = findCustMatch();
         if (match && match.address) {
@@ -648,6 +649,9 @@ export const MemoEntryForm: React.FC<MemoEntryFormProps> = ({
                       className="w-full bg-slate-950 border border-slate-700 text-xs text-white rounded-lg px-2 py-1.5 font-semibold focus:outline-none focus:border-blue-500"
                     >
                       <option value="">Select Item / Service...</option>
+                      {it.name && it.name !== '__custom__' && !categoryProducts.some(p => p.name === it.name) && (
+                        <option value={it.name}>{it.name}</option>
+                      )}
                       {categoryProducts.map(p => {
                         const isStationery = normalizeCategory(p.category) === 'Stationery Products';
                         const stock = isStationery

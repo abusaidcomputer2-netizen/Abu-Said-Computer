@@ -81,55 +81,85 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
 
   // System Inflow & Outflows calculated from live sales/dues/expenses for this date
   const dateSales = useMemo(() => {
-    return sales.filter(s => (s.rawDate || s.date) === closingDate);
+    return sales.filter(s => (s.rawDate || s.date || '').slice(0, 10) === closingDate);
   }, [sales, closingDate]);
 
   const liveSalesInflow = useMemo(() => {
-    return dateSales.reduce((sum, s) => sum + (s.paid !== undefined ? s.paid : s.grandTotal), 0);
+    return dateSales.reduce(
+      (sum, s) => sum + (s.paid !== undefined && s.paid !== null ? Number(s.paid) || 0 : Math.max(0, (s.grandTotal || 0) - (s.due || 0))),
+      0
+    );
   }, [dateSales]);
 
   const dateDues = useMemo(() => {
-    return dueRecords.filter(d => d.date === closingDate && d.paid > 0);
+    return dueRecords.filter(d => (d.date || '').slice(0, 10) === closingDate && (d.paid || 0) > 0);
   }, [dueRecords, closingDate]);
 
   const liveDueInflow = useMemo(() => {
-    return dateDues.reduce((sum, d) => sum + (d.paid || 0), 0);
+    return dateDues.reduce((sum, d) => sum + (Number(d.paid) || 0), 0);
   }, [dateDues]);
 
   const liveTotalInflow = liveSalesInflow + liveDueInflow;
 
   const dateExpenses = useMemo(() => {
-    return expenses.filter(e => e.date === closingDate);
+    return expenses.filter(e => (e.date || '').slice(0, 10) === closingDate);
   }, [expenses, closingDate]);
 
   const liveExpenseOutflow = useMemo(() => {
-    return dateExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    return dateExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
   }, [dateExpenses]);
 
-  // Opening Cash & Previous Shortage logic
-  // Resets to 0 on 1st of month!
+  // Opening Cash logic:
+  // Resets to 0 on 1st of month. On all other days, carries forward the true cumulative
+  // month-to-date cash balance up to the day before closingDate (including unclosed days
+  // and any recorded closing differences) so skipped closing days never wipe out cash.
   const dateParts = closingDate.split('-');
   const isDayOne = dateParts.length >= 3 && parseInt(dateParts[2], 10) === 1;
 
-  let calculatedOpeningCash = 0;
-  let calculatedPrevShortage = 0;
+  const calculatedOpeningCash = useMemo(() => {
+    if (isDayOne || dateParts.length < 3) return 0;
+    const monthPrefix = `${dateParts[0]}-${dateParts[1]}`;
 
-  if (existingSaved) {
-    calculatedOpeningCash = existingSaved.openingCash ?? 0;
-    calculatedPrevShortage = existingSaved.prevShortageDeducted ?? 0;
-  } else if (!isDayOne && dateParts.length >= 3) {
-    const yDate = new Date(parseInt(dateParts[0], 10), parseInt(dateParts[1], 10) - 1, parseInt(dateParts[2], 10) - 1);
-    const yr = yDate.getFullYear();
-    const mo = String(yDate.getMonth() + 1).padStart(2, '0');
-    const da = String(yDate.getDate()).padStart(2, '0');
-    const yDateStr = `${yr}-${mo}-${da}`;
-    const yClosing = cashClosings.find(c => c.date === yDateStr);
+    let priorSalesCash = 0;
+    sales.forEach(s => {
+      const dt = (s.rawDate || s.date || '').slice(0, 10);
+      if (dt.startsWith(monthPrefix) && dt < closingDate) {
+        const paidAmt =
+          s.paid !== undefined && s.paid !== null
+            ? Number(s.paid) || 0
+            : Math.max(0, (Number(s.grandTotal) || 0) - (Number(s.due) || 0));
+        priorSalesCash += paidAmt;
+      }
+    });
 
-    if (yClosing) {
-      calculatedOpeningCash = yClosing.actualCash > 0 ? yClosing.actualCash : 0;
-      calculatedPrevShortage = yClosing.difference < 0 ? Math.abs(yClosing.difference) : 0;
-    }
-  }
+    let priorDueCash = 0;
+    dueRecords.forEach(d => {
+      const dt = (d.date || '').slice(0, 10);
+      if (dt.startsWith(monthPrefix) && dt < closingDate && (d.paid || 0) > 0) {
+        priorDueCash += Number(d.paid) || 0;
+      }
+    });
+
+    let priorExpenses = 0;
+    expenses.forEach(e => {
+      const dt = (e.date || '').slice(0, 10);
+      if (dt.startsWith(monthPrefix) && dt < closingDate) {
+        priorExpenses += Number(e.amount) || 0;
+      }
+    });
+
+    let priorClosingDiffs = 0;
+    cashClosings.forEach(c => {
+      const dt = (c.date || '').slice(0, 10);
+      if (dt.startsWith(monthPrefix) && dt < closingDate) {
+        priorClosingDiffs += Number(c.difference) || 0;
+      }
+    });
+
+    return Math.round(priorSalesCash + priorDueCash - priorExpenses + priorClosingDiffs);
+  }, [isDayOne, closingDate, sales, dueRecords, expenses, cashClosings]);
+
+  const calculatedPrevShortage = 0;
 
   // Populate state when date or existing record changes
   useEffect(() => {
@@ -162,15 +192,15 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
     }
   }, [closingDate, existingSaved]);
 
-  // For locked (past) records, display frozen saved numbers; for editable days, use live/editable numbers
-  const openingCash = existingSaved ? existingSaved.openingCash : calculatedOpeningCash;
-  const prevShortage = existingSaved ? existingSaved.prevShortageDeducted : calculatedPrevShortage;
+  // For locked (past) records, display frozen saved numbers; for editable days (today & yesterday), use live numbers
+  const openingCash = (!isEditable && existingSaved) ? existingSaved.openingCash : calculatedOpeningCash;
+  const prevShortage = (!isEditable && existingSaved) ? existingSaved.prevShortageDeducted : calculatedPrevShortage;
   const salesInflow = (!isEditable && existingSaved) ? existingSaved.salesInflow : liveSalesInflow;
   const dueInflow = (!isEditable && existingSaved) ? existingSaved.dueInflow : liveDueInflow;
   const totalInflow = (!isEditable && existingSaved) ? existingSaved.totalInflow : liveTotalInflow;
   const expenseOutflow = (!isEditable && existingSaved) ? existingSaved.expenseOutflow : liveExpenseOutflow;
-  const expectedCash = (!isEditable && existingSaved) 
-    ? existingSaved.expectedCash 
+  const expectedCash = (!isEditable && existingSaved)
+    ? existingSaved.expectedCash
     : (openingCash + totalInflow - prevShortage - expenseOutflow);
 
   // Physical actual cash calculation
@@ -201,11 +231,11 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
   };
 
   const handlePrintCurrent = () => {
-    const recordToPrint: CashClosingRecord = existingSaved || {
-      id: `temp-${closingDate}`,
-      rowId: 0,
+    const recordToPrint: CashClosingRecord = (!isEditable && existingSaved) ? existingSaved : {
+      id: existingSaved?.id || `temp-${closingDate}`,
+      rowId: existingSaved?.rowId || 0,
       date: closingDate,
-      closedAt: new Date().toISOString(),
+      closedAt: existingSaved?.closedAt || new Date().toISOString(),
       user: currentUser,
       openingCash,
       prevShortageDeducted: prevShortage,
@@ -550,7 +580,7 @@ export const CashClosingModal: React.FC<CashClosingModalProps> = ({
                               {dateSales.map(s => (
                                 <div key={s.id} className="flex justify-between text-slate-300">
                                   <span>#{s.invoiceNo} • {s.customer} ({s.category})</span>
-                                  <span className="font-bold text-white">Paid: {formatCurrency(s.paid || s.grandTotal)}</span>
+                                  <span className="font-bold text-white">Paid: {formatCurrency(s.paid !== undefined && s.paid !== null ? s.paid : Math.max(0, (s.grandTotal || 0) - (s.due || 0)))}</span>
                                 </div>
                               ))}
                             </div>

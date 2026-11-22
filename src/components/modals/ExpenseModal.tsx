@@ -36,8 +36,8 @@ export const formatExpenseCategoryBn = (cat: string) => {
   if (c.includes('electric') || c.includes('বিদ্যুৎ')) return 'বিদ্যুৎ বিল';
   if (c.includes('internet') || c.includes('ইন্টারনেট')) return 'ইন্টারনেট বিল';
   if (c.includes('said') || c.includes('আবু সাঈদ')) return 'কর্মী বেতন ও ভাতা (Md Abu Said)';
-  if (c.includes('salary') || c.includes('staff') || c.includes('অল স্টাফ') || c.includes('কর্মী')) return 'কর্মী বেতন ও ভাতা (অল স্টাফ)';
   if (c.includes('খাবার') || c.includes('food') || c.includes('meal')) return 'কর্মী বেতন ও খাবার বিল';
+  if (c.includes('salary') || c.includes('staff') || c.includes('অল স্টাফ') || c.includes('কর্মী')) return 'কর্মী বেতন ও ভাতা (অল স্টাফ)';
   if (c.includes('ink') || c.includes('toner') || c.includes('কালি') || c.includes('টোনার')) return 'কালি ও টোনার';
   if (c.includes('repair') || c.includes('servicing') || c.includes('মেরামত')) return 'মেশিন মেরামত ও সার্ভিসিং';
   if (c.includes('tea') || c.includes('entertainment') || c.includes('আপ্যায়ন') || c.includes('চা')) return 'চা ও আপ্যায়ন';

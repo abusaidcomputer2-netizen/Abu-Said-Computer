@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, TrendingUp, Printer, Search, Users, FileText, Phone } from 'lucide-react';
 import { SaleRecord, Customer } from '../../types';
-import { formatCurrency, formatDateDisplay, resolveCustomerAddress } from '../../utils/helpers';
+import { formatCurrency, formatDateDisplay, resolveCustomerAddress, getBDNow } from '../../utils/helpers';
 
 interface CustomerSalesModalProps {
   sales: SaleRecord[];
@@ -25,7 +25,7 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
   const [endDate, setEndDate] = useState('');
 
   const setPeriod = (mode: 'all' | 'thisMonth' | 'lastMonth' | 'today') => {
-    const now = new Date();
+    const now = getBDNow();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
@@ -52,7 +52,7 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
 
   // Filter sales
   const filteredSales = sales.filter(s => {
-    const d = s.rawDate || s.date;
+    const d = (s.rawDate || s.date || '').slice(0, 10);
     if (startDate && d < startDate) return false;
     if (endDate && d > endDate) return false;
     if (selectedCustomer && (s.customer || '').trim().toLowerCase() !== selectedCustomer.trim().toLowerCase()) return false;
@@ -199,6 +199,9 @@ export const CustomerSalesModal: React.FC<CustomerSalesModalProps> = ({
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white font-semibold focus:outline-none"
               >
                 <option value="">All Customers</option>
+                {selectedCustomer && !customers.some(c => c.name.trim().toLowerCase() === selectedCustomer.trim().toLowerCase()) && (
+                  <option value={selectedCustomer}>{selectedCustomer}</option>
+                )}
                 {customers.map(c => (
                   <option key={c.id} value={c.name}>
                     {c.name}

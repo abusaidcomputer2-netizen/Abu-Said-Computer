@@ -30,7 +30,7 @@ import {
   Award
 } from 'lucide-react';
 import { SaleRecord, DueRecord, ExpenseRecord, Product, CustomerDueSummary } from '../types';
-import { formatCurrency, normalizeCategory, getLocalDateStr } from '../utils/helpers';
+import { formatCurrency, normalizeCategory, getLocalDateStr, getBDNow } from '../utils/helpers';
 
 interface DashboardViewProps {
   sales: SaleRecord[];
@@ -75,13 +75,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const todayStr = useMemo(() => getLocalDateStr(), []);
   const sevenDaysAgoStr = useMemo(() => {
-    const d = new Date();
+    const d = getBDNow();
     d.setDate(d.getDate() - 6);
     return getLocalDateStr(d);
   }, []);
   const currentMonthStr = useMemo(() => todayStr.slice(0, 7), [todayStr]);
   const lastMonthStr = useMemo(() => {
-    const d = new Date();
+    const d = getBDNow();
     d.setDate(1);
     d.setMonth(d.getMonth() - 1);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -139,7 +139,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Total cash drawer inflow
   const totalCashInflow = totalCashPaid + dueCollectedInPeriod;
-  const netCashInHand = Math.max(0, totalCashInflow - totalExpenseVal);
+  const netCashInHand = totalCashInflow - totalExpenseVal;
 
   // Category breakdown calculation
   const categoryStats = useMemo(() => {
@@ -233,7 +233,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     
     // Build last 14 days
     for (let i = 13; i >= 0; i--) {
-      const d = new Date();
+      const d = getBDNow();
       d.setDate(d.getDate() - i);
       const dateKey = getLocalDateStr(d);
       const dayLabel = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
@@ -256,16 +256,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const maxRevenue = Math.max(...trendData.map(t => t.revenue), 100);
   const maxCount = Math.max(...trendData.map(t => t.count), 5);
 
-  // Stock inventory valuation
+  // Stock inventory valuation (matches Stationery Stock Inventory & Report)
   const { totalStockCount, totalStockValue, lowStockCount } = useMemo(() => {
     let count = 0;
     let val = 0;
     let low = 0;
     products.forEach(p => {
-      if (p.stockQty !== null && p.stockQty !== undefined) {
-        count += p.stockQty;
-        val += p.stockQty * (p.costPrice || p.price);
-        if (p.stockQty <= (p.lowStockLimit || 5)) low += 1;
+      if (normalizeCategory(p.category) === 'Stationery Products') {
+        const qty = p.stockQty || 0;
+        const cost = p.costPrice || 0;
+        count += qty;
+        val += qty * cost;
+        if (qty <= (p.lowStockLimit || 5)) low += 1;
       }
     });
     return { totalStockCount: count, totalStockValue: val, lowStockCount: low };
@@ -376,10 +378,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-black text-emerald-400 tracking-tight">
-            {formatCurrency(totalCashPaid)}
+            {formatCurrency(totalCashInflow)}
           </div>
           <div className="text-[11px] text-slate-400 font-medium mt-1.5">
-            {totalBilled > 0 ? `${Math.round((totalCashPaid / totalBilled) * 100)}% realization` : '0% realization'}
+            {dueCollectedInPeriod > 0
+              ? `Sales ${formatCurrency(totalCashPaid)} + Due ${formatCurrency(dueCollectedInPeriod)}`
+              : (totalBilled > 0 ? `${Math.round((totalCashPaid / totalBilled) * 100)}% realization` : '0% realization')}
           </div>
         </div>
 
@@ -488,7 +492,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   activeMetric === 'revenue' ? 'bg-cyan-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Revenue (Tk )
+                Revenue
               </button>
               <button
                 type="button"
@@ -667,7 +671,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <Wallet className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Net Cash In Hand</span>
               </span>
-              <span className="text-emerald-400 font-black">{formatCurrency(netCashInHand)}</span>
+              <span className={`font-black ${netCashInHand < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>{formatCurrency(netCashInHand)}</span>
             </div>
             <div className="text-[10px] text-slate-500">
               Inflow: {formatCurrency(totalCashInflow)} • Outflow: {formatCurrency(totalExpenseVal)}

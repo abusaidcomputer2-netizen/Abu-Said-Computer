@@ -54,9 +54,10 @@ export const LedgerPrintModal: React.FC<LedgerPrintModalProps> = ({
 
   const filteredRecords = records.filter(r => {
     if (isSingle && r.customer.trim().toLowerCase() !== selectedCust.trim().toLowerCase()) return false;
-    if (month && r.date && !r.date.startsWith(month)) return false;
-    if (startDate && r.date && r.date < startDate) return false;
-    if (endDate && r.date && r.date > endDate) return false;
+    const dt = (r.date || '').slice(0, 10);
+    if (month && dt && !dt.startsWith(month)) return false;
+    if (startDate && dt && dt < startDate) return false;
+    if (endDate && dt && dt > endDate) return false;
     return true;
   });
 

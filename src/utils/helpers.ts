@@ -1,7 +1,13 @@
-export function getLocalDateStr(d: Date = new Date()): string {
-  const yr = d.getFullYear();
-  const mo = String(d.getMonth() + 1).padStart(2, '0');
-  const da = String(d.getDate()).padStart(2, '0');
+export function getBDNow(): Date {
+  const now = new Date();
+  return new Date(now.getTime() + (6 * 60 + now.getTimezoneOffset()) * 60000);
+}
+
+export function getLocalDateStr(d?: Date): string {
+  const target = d || getBDNow();
+  const yr = target.getFullYear();
+  const mo = String(target.getMonth() + 1).padStart(2, '0');
+  const da = String(target.getDate()).padStart(2, '0');
   return `${yr}-${mo}-${da}`;
 }
 

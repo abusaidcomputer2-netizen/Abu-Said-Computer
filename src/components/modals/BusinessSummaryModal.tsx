@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { X, Printer, PieChart, Building2, TrendingUp, Receipt, BookMarked, Wallet } from 'lucide-react';
 import { SaleRecord, ExpenseRecord, DueRecord } from '../../types';
-import { formatCurrency, formatInvoicePrintTimestamp, formatPeriodHeader } from '../../utils/helpers';
+import { formatCurrency, formatInvoicePrintTimestamp, formatPeriodHeader, getBDNow } from '../../utils/helpers';
+import { formatExpenseCategoryBn } from './ExpenseModal';
 import { ReportFooter } from '../ReportFooter';
 
 interface BusinessSummaryModalProps {
@@ -20,7 +21,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
   onClose
 }) => {
   const [filterMonth, setFilterMonth] = useState(() => {
-    const now = new Date();
+    const now = getBDNow();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
   const [startDate, setStartDate] = useState('');
@@ -28,7 +29,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
   const nowFormatted = formatInvoicePrintTimestamp(new Date());
 
   const setPeriod = (mode: 'thisMonth' | 'lastMonth' | 'today' | 'all') => {
-    const now = new Date();
+    const now = getBDNow();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const d = String(now.getDate()).padStart(2, '0');
@@ -56,9 +57,9 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
     }
   };
 
-  // Filter records
+  // Filter records (normalized to YYYY-MM-DD)
   const filteredSales = sales.filter(s => {
-    const d = s.rawDate || s.date;
+    const d = (s.rawDate || s.date || '').slice(0, 10);
     if (filterMonth && !d.startsWith(filterMonth)) return false;
     if (startDate && d < startDate) return false;
     if (endDate && d > endDate) return false;
@@ -66,16 +67,18 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
   });
 
   const filteredExpenses = expenses.filter(e => {
-    if (filterMonth && !e.date.startsWith(filterMonth)) return false;
-    if (startDate && e.date < startDate) return false;
-    if (endDate && e.date > endDate) return false;
+    const d = (e.date || '').slice(0, 10);
+    if (filterMonth && !d.startsWith(filterMonth)) return false;
+    if (startDate && d < startDate) return false;
+    if (endDate && d > endDate) return false;
     return true;
   });
 
   const filteredDues = dueRecords.filter(d => {
-    if (filterMonth && !d.date.startsWith(filterMonth)) return false;
-    if (startDate && d.date < startDate) return false;
-    if (endDate && d.date > endDate) return false;
+    const dt = (d.date || '').slice(0, 10);
+    if (filterMonth && !dt.startsWith(filterMonth)) return false;
+    if (startDate && dt < startDate) return false;
+    if (endDate && dt > endDate) return false;
     return true;
   });
 
@@ -88,23 +91,28 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
   let netSalesBilled = 0;
   let newDueBilled = 0;
 
+  let cashFromSales = 0;
+
   filteredSales.forEach(s => {
     subtotal += s.subtotal || s.grandTotal;
     discounts += s.discount || 0;
     netSalesBilled += s.grandTotal;
     newDueBilled += s.due || 0;
+    cashFromSales += s.paid !== undefined && s.paid !== null
+      ? Number(s.paid) || 0
+      : Math.max(0, (s.grandTotal || 0) - (s.due || 0));
 
     const ratio = s.subtotal > 0 ? s.grandTotal / s.subtotal : 1.0;
     if (s.items && s.items.length > 0) {
       s.items.forEach(it => {
-        const cat = (it.category || s.category).toLowerCase();
-        const lineVal = (it.total || 0) * ratio;
+        const cat = (it.category || s.category || '').toLowerCase();
+        const lineVal = (it.total || (it.price * it.qty) || 0) * ratio;
         if (cat.includes('photocopy')) pSales += lineVal;
         else if (cat.includes('stationery')) sSales += lineVal;
         else oSales += lineVal;
       });
     } else {
-      const cat = s.category.toLowerCase();
+      const cat = (s.category || '').toLowerCase();
       if (cat.includes('photocopy')) pSales += s.grandTotal;
       else if (cat.includes('stationery')) sSales += s.grandTotal;
       else oSales += s.grandTotal;
@@ -113,29 +121,35 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
 
   // Due collected in period
   const dueCollected = filteredDues.reduce((sum, d) => sum + (d.paid || 0), 0);
-  const cashFromSales = Math.max(0, netSalesBilled - newDueBilled);
   const totalCashInflow = cashFromSales + dueCollected;
 
-  // Expenses breakdown
+  // Expenses breakdown (normalized Bengali category names)
   const expCatMap: Record<string, number> = {};
   let totalOutflow = 0;
   filteredExpenses.forEach(e => {
-    const c = e.category || 'General';
+    const c = formatExpenseCategoryBn(e.category);
     expCatMap[c] = (expCatMap[c] || 0) + (e.amount || 0);
     totalOutflow += e.amount || 0;
   });
 
   const netDrawerCash = totalCashInflow - totalOutflow;
 
-  // Overall shop net due
-  let allTimeBilled = 0;
-  let allTimePaid = 0;
-  dueRecords.forEach(d => {
-    allTimeBilled += d.due || 0;
-    allTimePaid += d.paid || 0;
-  });
-  const totalNetDue = Math.max(0, allTimeBilled - allTimePaid);
-  const prevDue = Math.max(0, totalNetDue - newDueBilled + dueCollected);
+  // Exact Period Due Reconciliation: Previous Due + New Billed Due - Due Collected = Ending Net Due
+  const periodStartBound = filterMonth ? `${filterMonth}-01` : startDate;
+  const ledgerDueInPeriod = filteredDues.reduce((sum, d) => sum + (d.due || 0), 0);
+  const effectiveNewDue = ledgerDueInPeriod > 0 ? ledgerDueInPeriod : newDueBilled;
+
+  let prevDueRaw = 0;
+  if (periodStartBound) {
+    dueRecords.forEach(d => {
+      const dt = (d.date || '').slice(0, 10);
+      if (dt && dt < periodStartBound) {
+        prevDueRaw += (d.due || 0) - (d.paid || 0);
+      }
+    });
+  }
+  const prevDue = Math.max(0, prevDueRaw);
+  const totalNetDue = Math.max(0, prevDue + effectiveNewDue - dueCollected);
 
   const periodLabel = formatPeriodHeader(startDate, endDate, filterMonth);
 
@@ -496,7 +510,7 @@ export const BusinessSummaryModal: React.FC<BusinessSummaryModalProps> = ({
                   2. New Billed Due
                 </span>
                 <span className="text-lg sm:text-2xl print:text-base font-black text-amber-700 font-tabular">
-                  {formatCurrency(newDueBilled)}
+                  {formatCurrency(effectiveNewDue)}
                 </span>
               </div>
 

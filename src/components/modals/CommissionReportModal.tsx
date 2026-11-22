@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Printer, Layers, Award, Users, UserCheck } from 'lucide-react';
 import { SaleRecord, User } from '../../types';
-import { formatCurrency, formatInvoicePrintTimestamp, formatPeriodHeader, normalizeCategory } from '../../utils/helpers';
+import { formatCurrency, formatInvoicePrintTimestamp, formatPeriodHeader, normalizeCategory, getBDNow } from '../../utils/helpers';
 import { ReportFooter } from '../ReportFooter';
 
 interface CommissionReportModalProps {
@@ -93,7 +93,7 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
   currentUser,
   onClose
 }) => {
-  const now = new Date();
+  const now = getBDNow();
   const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
   const [selectedStaff, setSelectedStaff] = useState<string>(currentUser.username || 'Md Abu Said');
@@ -121,7 +121,8 @@ export const CommissionReportModal: React.FC<CommissionReportModalProps> = ({
   const handleSetThisMonth = () => setSelectedMonth(currentMonthStr);
 
   const handleSetLastMonth = () => {
-    const d = new Date();
+    const d = getBDNow();
+    d.setDate(1);
     d.setMonth(d.getMonth() - 1);
     setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
   };

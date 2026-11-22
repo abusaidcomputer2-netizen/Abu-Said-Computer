@@ -49,9 +49,10 @@ export const DueLedgerModal: React.FC<DueLedgerModalProps> = ({
       const matchDesc = (r.desc || '').toLowerCase().includes(q);
       if (!matchName && !matchPhone && !matchDesc) return false;
     }
-    if (filterMonth && r.date && !r.date.startsWith(filterMonth)) return false;
-    if (filterStartDate && r.date && r.date < filterStartDate) return false;
-    if (filterEndDate && r.date && r.date > filterEndDate) return false;
+    const dt = (r.date || '').slice(0, 10);
+    if (filterMonth && dt && !dt.startsWith(filterMonth)) return false;
+    if (filterStartDate && dt && dt < filterStartDate) return false;
+    if (filterEndDate && dt && dt > filterEndDate) return false;
     return true;
   });
 

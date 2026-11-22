@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Printer, Receipt, Building2, Layers, List } from 'lucide-react';
 import { ExpenseRecord } from '../../types';
 import { formatCurrency, formatDateDisplay, formatInvoicePrintTimestamp } from '../../utils/helpers';
+import { formatExpenseCategoryBn } from './ExpenseModal';
 import { ReportFooter } from '../ReportFooter';
 
 interface ExpensePrintModalProps {
@@ -19,7 +20,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
   let totalAmount = 0;
 
   expenses.forEach(e => {
-    const c = e.category || 'Others';
+    const c = formatExpenseCategoryBn(e.category);
     if (!catMap[c]) catMap[c] = { category: c, count: 0, amount: 0 };
     catMap[c].count++;
     catMap[c].amount += e.amount || 0;
@@ -173,7 +174,7 @@ export const ExpensePrintModal: React.FC<ExpensePrintModalProps> = ({ expenses, 
                       {formatDateDisplay(e.date)}
                     </td>
                     <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 font-bold text-rose-800">
-                      {e.category}
+                      {formatExpenseCategoryBn(e.category)}
                     </td>
                     <td className="py-2.5 px-3.5 print:py-2 print:px-3 border-r border-slate-200 text-slate-700 text-xs">
                       {e.desc || '--'}
